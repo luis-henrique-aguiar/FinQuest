@@ -55,7 +55,7 @@ jobs:
           cache: "maven"
 
       - name: Run Backend Tests with Maven
-        run: ./mvnw test -B
+        run: ./mvnw test -B -Dspring.profiles.active=test
 
   test-frontend:
     needs: changes
