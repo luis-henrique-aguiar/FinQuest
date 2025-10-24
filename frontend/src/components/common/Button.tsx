@@ -17,6 +17,7 @@ interface ButtonOwnProps {
   disabled?: boolean;
   type?: 'button' | 'submit' | 'reset';
   style?: React.CSSProperties;
+  'data-testid'?: string;
 }
 
 type ButtonProps = ButtonOwnProps;
@@ -160,7 +161,8 @@ export const Button: React.FC<ButtonProps> = ({
   className,
   disabled,
   type = 'button',
-  style, // --- ALTERAÇÃO 2: Recebemos a prop 'style' aqui ---
+  style,
+  'data-testid': dataTestId,
 }) => {
   return (
     <ButtonContainer
@@ -175,6 +177,7 @@ export const Button: React.FC<ButtonProps> = ({
       disabled={disabled}
       type={type}
       style={style}
+      data-testid={dataTestId}
     >
       {icon && icon}
       {children}

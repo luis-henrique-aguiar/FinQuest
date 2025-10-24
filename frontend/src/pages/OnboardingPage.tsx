@@ -66,7 +66,7 @@ export const OnboardingPage: React.FC<{ onComplete: () => void }> = ({
             </S.AnimationContainer>
             <S.Title>{currentStepData.title}</S.Title>
             <S.Text>{currentStepData.description}</S.Text>
-            <Button size="large" onClick={handleNext}>
+            <Button size="large" onClick={handleNext} data-testid="button-onboarding">
               {isLastStep ? "Começar Agora" : "Próximo"}
             </Button>
           </S.Slide>

@@ -2,8 +2,6 @@ import { createGlobalStyle } from 'styled-components';
 import { type Theme } from '../styles/theme';
 
 export const GlobalStyles = createGlobalStyle<{ theme: Theme }>`
-  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Nunito+Sans:wght@400;600;700&display=swap');
-  
   * {
     margin: 0;
     padding: 0;
