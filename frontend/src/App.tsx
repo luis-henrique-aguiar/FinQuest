@@ -19,6 +19,7 @@ import { AuthLayout } from "./components/layout/AuthLayout";
 import LandingPage from "./pages/LandingPage";
 import RegisterPage from "./pages/RegisterPage";
 import { ToastProvider } from "./context/ToastContext";
+import { AuthProvider } from "./context/AuthContext";
 
 const AppRoutes = () => {
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(() => {
@@ -56,9 +57,11 @@ function App() {
   return (
     <ThemeProvider>
       <ToastProvider>
-        <Router>
-          <AppRoutes />
-        </Router>
+        <AuthProvider>
+          <Router>
+            <AppRoutes />
+          </Router>
+        </AuthProvider>
       </ToastProvider>
     </ThemeProvider>
   );
