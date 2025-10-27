@@ -5,10 +5,13 @@ import "@fontsource/poppins/700.css";
 import "@fontsource/nunito-sans/400.css";
 import "@fontsource/nunito-sans/600.css";
 import "@fontsource/nunito-sans/700.css";
-import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
+
+import { Navigate, Route, BrowserRouter as Router, Routes } from "react-router-dom";
 import { useState } from "react";
 import { ThemeProvider } from "./context/ThemeContext";
 import OnboardingPage from "./pages/OnboardingPage";
+import { AuthLayout } from "./components/layout/AuthLayout";
+import LandingPage from "./pages/LandingPage";
 
 const AppRoutes = () => {
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(() => {
@@ -20,7 +23,7 @@ const AppRoutes = () => {
     setHasCompletedOnboarding(true);
   };
 
-  if (true || hasCompletedOnboarding) {
+  if (!hasCompletedOnboarding) {
     return (
       <Routes>
         <Route
@@ -30,6 +33,15 @@ const AppRoutes = () => {
       </Routes>
     );
   }
+
+  return (
+    <Routes>
+        <Route element={<AuthLayout />}>
+          <Route path="/" element={<LandingPage />} />{" "}
+          <Route path="*" element={<Navigate to="/" />} />{" "}
+        </Route>
+    </Routes>
+  );
 };
 
 function App() {
