@@ -1,37 +1,94 @@
 import React, { useState } from "react";
-import { User, Mail, Lock, ArrowRight, Check } from "react-feather";
+import {
+  User,
+  Mail,
+  Lock,
+  ArrowRight,
+  Check,
+  AlertCircle,
+} from "react-feather";
 import { useNavigate } from "react-router-dom";
 import Lottie from "lottie-react";
 import * as S from "./RegisterPage.styles";
 import { BenefitItem } from "../components/auth/BenefitItem";
 import { InputGroup } from "../components/auth/InputGroup";
 import mascotWaveAnimation from "../assets/animations/fox_greetings.json";
+import { useAuth } from "../hooks/useAuth";
+import { useToast } from "../hooks/useToast";
+
+interface FormErrors {
+  name?: string;
+  email?: string;
+  password?: string;
+  general?: string;
+}
 
 const RegisterPage = () => {
   const navigate = useNavigate();
+  const { register } = useAuth();
+  const { addToast } = useToast();
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordStrength, setPasswordStrength] = useState(0);
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [isLoading, setIsLoading] = useState(false);
+
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const validateForm = (): boolean => {
+    const newErrors: FormErrors = {};
+    let isValid = true;
+
+    if (!name.trim()) {
+      newErrors.name = "Nome é obrigatório.";
+      isValid = false;
+    }
+    if (!email) {
+      newErrors.email = "Email é obrigatório.";
+      isValid = false;
+    } else if (!validateEmail(email)) {
+      newErrors.email = "Formato de email inválido.";
+      isValid = false;
+    }
+    if (!password) {
+      newErrors.password = "Senha é obrigatória.";
+      isValid = false;
+    } else if (password.length < 6) {
+      newErrors.password = "Senha deve ter no mínimo 6 caracteres.";
+      isValid = false;
+    }
+    // Consideramos força >= 2 como aceitável para registro
+    else if (passwordStrength < 2 && password.length >= 6) {
+      newErrors.password =
+        "Senha muito fraca. Tente combinar letras maiúsculas, minúsculas, números ou símbolos.";
+      isValid = false;
+    }
+
+    setErrors(newErrors);
+    return isValid;
+  };
 
   const calculatePasswordStrength = (pass: string): number => {
     let strength = 0;
-    if (pass.length >= 6) strength++;
+    if (pass.length >= 6) strength++; // Critério mínimo
     if (pass.length >= 10) strength++;
-    // Regex para verificar minúsculas E maiúsculas
-    if (/[a-z]/.test(pass) && /[A-Z]/.test(pass)) strength++;
-    // Regex para verificar números
-    if (/[0-9]/.test(pass)) strength++;
-    // Regex para verificar símbolos
-    if (/[^a-zA-Z0-9]/.test(pass)) strength++;
-    // Limita a força a 4 para a barra de progresso visual
-    return Math.min(strength, 4);
+    if (/[a-z]/.test(pass) && /[A-Z]/.test(pass)) strength++; // Mix de caixa
+    if (/\d/.test(pass)) strength++; // Números
+    if (/[^a-zA-Z0-9]/.test(pass)) strength++; // Símbolos
+    return Math.min(strength, 4); // Limita visualmente a 4 barras
   };
 
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newPassword = e.target.value;
     setPassword(newPassword);
     setPasswordStrength(calculatePasswordStrength(newPassword));
+    if (errors.password)
+      setErrors((prev) => ({ ...prev, password: undefined }));
   };
 
   const getPasswordStrengthText = (): string => {
@@ -45,25 +102,62 @@ const RegisterPage = () => {
       case 3:
         return "Senha boa";
       case 4:
+      case 5:
         return "Senha forte!";
       default:
         return "";
     }
   };
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrors({}); // Limpa erros antigos
+    if (!validateForm()) {
+      addToast("Por favor, corrija os erros no formulário.", "error");
+      return; // Interrompe se a validação local falhar
+    }
+
+    // Validação extra de força mínima para submeter
     if (passwordStrength < 2) {
-      // TODO: Usar Toast para feedback de erro
-      alert(
-        "⚠️ Por favor, escolha uma senha mais forte para proteger sua conta!"
-      );
+      setErrors({
+        password:
+          "Senha muito fraca. Tente combinar letras maiúsculas, minúsculas, números ou símbolos.",
+      });
+      addToast("Por favor, use uma senha mais forte.", "error");
       return;
     }
-    // TODO: Implementar chamada real de registro (AuthContext/Firebase/API)
-    console.log("Registrando:", { name, email, password });
-    alert(`🎉 Bem-vindo ao FinQuest, ${name}! Conta criada (simulação).`);
-    // navigate('/home'); // Navegar após registro bem-sucedido
+    setIsLoading(true);
+
+    try {
+      // Chama a função 'register' real do AuthContext
+      await register(name, email, password);
+
+      addToast(
+        `🎉 Bem-vindo(a) ao FinQuest, ${name}! Conta criada com sucesso.`,
+        "success"
+      );
+      navigate("/home"); // Navega para a home APÓS o registro bem-sucedido
+    } catch (error: any) {
+      console.error("Erro no registro:", error);
+      let errorMessage =
+        "Ocorreu um erro inesperado ao criar sua conta. Tente novamente.";
+      // Mapeia erros específicos do Firebase
+      if (error.code === "auth/email-already-in-use") {
+        errorMessage = "Este email já está cadastrado. Tente fazer login.";
+        setErrors({ email: errorMessage });
+      } else if (error.code === "auth/weak-password") {
+        errorMessage = "A senha fornecida é muito fraca pelo Firebase."; // Pode acontecer mesmo com nossa validação
+        setErrors({ password: errorMessage });
+      } else if (error.code === "auth/invalid-email") {
+        errorMessage = "O formato do email fornecido é inválido.";
+        setErrors({ email: errorMessage });
+      } else {
+        setErrors({ general: errorMessage }); // Erro geral
+      }
+      addToast(errorMessage, "error"); // Exibe o erro como Toast
+    } finally {
+      setIsLoading(false); // Desativa o loading
+    }
   };
 
   // Animação para os shapes flutuantes de fundo
@@ -144,6 +238,7 @@ const RegisterPage = () => {
               repeatType: "loop",
             }}
           >
+            {/* Usando a animação Lottie importada */}
             <Lottie animationData={mascotWaveAnimation} loop={true} />
           </S.MascotAnimationContainer>
           <h1>Junte-se ao FinQuest!</h1>
@@ -172,8 +267,8 @@ const RegisterPage = () => {
           </S.FormHeader>
 
           {/* Usando FormElement como <form> */}
-          <S.FormElement onSubmit={handleRegister}>
-            {/* Usando o componente InputGroup */}
+          <S.FormElement onSubmit={handleRegister} noValidate>
+            {/* Input de Nome com Erro */}
             <InputGroup
               id="name"
               label="Nome Completo"
@@ -181,9 +276,22 @@ const RegisterPage = () => {
               type="text"
               placeholder="Como você quer ser chamado?"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => {
+                setName(e.target.value);
+                if (errors.name)
+                  setErrors((prev) => ({ ...prev, name: undefined }));
+              }}
               required
+              aria-invalid={!!errors.name}
+              aria-describedby="name-error"
             />
+            {errors.name && (
+              <S.ErrorMessage id="name-error">
+                <AlertCircle size={14} /> {errors.name}
+              </S.ErrorMessage>
+            )}
+
+            {/* Input de Email com Erro */}
             <InputGroup
               id="email"
               label="Email"
@@ -191,10 +299,22 @@ const RegisterPage = () => {
               type="email"
               placeholder="seu@email.com"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                if (errors.email)
+                  setErrors((prev) => ({ ...prev, email: undefined }));
+              }}
               required
+              aria-invalid={!!errors.email}
+              aria-describedby="email-error"
             />
-            {/* Input de Senha com Indicador (mantido aqui pela lógica específica) */}
+            {errors.email && (
+              <S.ErrorMessage id="email-error">
+                <AlertCircle size={14} /> {errors.email}
+              </S.ErrorMessage>
+            )}
+
+            {/* Input de Senha com Indicador e Erro */}
             <S.InputGroupStyled>
               <S.Label htmlFor="password">Senha</S.Label>
               <S.InputWrapper>
@@ -207,7 +327,8 @@ const RegisterPage = () => {
                   onChange={handlePasswordChange}
                   required
                   minLength={6}
-                  aria-describedby="password-hint" // Para acessibilidade
+                  aria-invalid={!!errors.password}
+                  aria-describedby="password-hint password-error"
                 />
               </S.InputWrapper>
               {/* Indicador de Força */}
@@ -228,31 +349,51 @@ const RegisterPage = () => {
                 </>
               )}
             </S.InputGroupStyled>
+            {errors.password && (
+              <S.ErrorMessage id="password-error">
+                <AlertCircle size={14} /> {errors.password}
+              </S.ErrorMessage>
+            )}
 
             <S.TermsText>
               Ao criar conta, você concorda com nossos{" "}
-              <button type="button" onClick={() => alert("Mostrar Termos")}>
+              <button type="button" onClick={() => navigate("/terms")}>
                 Termos
               </button>{" "}
               e{" "}
-              <button
-                type="button"
-                onClick={() => alert("Mostrar Privacidade")}
-              >
+              <button type="button" onClick={() => navigate("/privacy")}>
                 Privacidade
               </button>
               .
             </S.TermsText>
 
-            {/* Usando o Button genérico */}
+            {/* Erro Geral */}
+            {errors.general && (
+              <S.ErrorMessage role="alert">
+                <AlertCircle size={14} /> {errors.general}
+              </S.ErrorMessage>
+            )}
+
+            {/* Botão com Estado de Loading */}
             <S.SubmitButton
               type="submit"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              disabled={!name || !email || !password || passwordStrength < 2}
+              whileHover={!isLoading ? { scale: 1.02 } : undefined} // Desativa hover se loading
+              whileTap={!isLoading ? { scale: 0.98 } : undefined} // Desativa tap se loading
+              disabled={
+                isLoading || !name || !email || !password || password.length < 6
+              } // Mantém a lógica de disabled
             >
-              Criar Minha Conta
-              <ArrowRight size={20} />
+              {isLoading ? (
+                <>
+                  <S.Spinner /> {/* Mostra spinner se loading */}
+                  <span>Criando conta...</span>
+                </>
+              ) : (
+                <>
+                  <span>Criar Minha Conta</span>
+                  <ArrowRight size={20} />
+                </>
+              )}
             </S.SubmitButton>
           </S.FormElement>
 
@@ -261,8 +402,6 @@ const RegisterPage = () => {
           <S.LoginPrompt>
             Já tem uma conta?{" "}
             <button type="button" onClick={() => navigate("/login")}>
-              {" "}
-              {/* Navega para Login */}
               Faça login
             </button>
           </S.LoginPrompt>

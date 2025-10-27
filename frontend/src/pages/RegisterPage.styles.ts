@@ -191,7 +191,7 @@ export const FormHeader = styled.div`
   }
 `;
 
-export const FormElement = styled.div`
+export const FormElement = styled.form`
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
@@ -384,5 +384,31 @@ export const LoginPrompt = styled.div`
       opacity: 0.8;
       text-decoration: underline;
     }
+  }
+`;
+
+export const ErrorMessage = styled.div`
+  color: ${({ theme }) => theme.colors.error}; /* Usa a cor de erro do tema */
+  font-size: 0.85rem; /* Tamanho pequeno */
+  font-weight: 500; /* Levemente destacado */
+  margin-top: -0.75rem; /* Puxa para mais perto do input acima */
+  margin-bottom: 0.5rem; /* Adiciona espaço antes do próximo elemento */
+  display: flex; /* Para alinhar o ícone com o texto */
+  align-items: center; /* Centraliza verticalmente o ícone */
+  gap: 0.3rem; /* Espaço entre o ícone e o texto */
+`;
+
+// Lembre-se também de adicionar o Spinner se ainda não o fez:
+export const Spinner = styled.div`
+  border: 2px solid rgba(255, 255, 255, 0.3); /* Cor base do spinner */
+  border-top: 2px solid #fff; /* Cor da parte que gira */
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  animation: spin 1s linear infinite;
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
   }
 `;
