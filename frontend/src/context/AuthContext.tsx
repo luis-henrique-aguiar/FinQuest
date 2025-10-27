@@ -1,13 +1,19 @@
-import React, { createContext, useState, type ReactNode, useEffect } from 'react';
+import React, {
+  createContext,
+  useState,
+  type ReactNode,
+  useEffect,
+} from "react";
 import {
   type User as FirebaseUser,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
-  updateProfile
-} from 'firebase/auth';
-import { auth } from '../firebase';
+  updateProfile,
+} from "firebase/auth";
+import { auth } from "../firebase";
+import FullScreenLoader from "../components/common/FullScreenLoader";
 
 interface User {
   uid: string;
@@ -26,16 +32,26 @@ export interface AuthContextType {
   logout: () => Promise<void>;
 }
 
-export const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const AuthContext = createContext<AuthContextType | undefined>(
+  undefined
+);
 
-export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: ReactNode }> = ({
+  children,
+}) => {
   const [user, setUser] = useState<User | null>(null);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
+      console.log(
+        "onAuthStateChanged executado. fbUser:",
+        fbUser ? fbUser.uid : null
+      );
+
       setFirebaseUser(fbUser);
+
       if (fbUser) {
         console.log("onAuthStateChanged: Logado - UID:", fbUser.uid);
         const mappedUser: User = {
@@ -49,23 +65,36 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         console.log("onAuthStateChanged: Deslogado");
         setUser(null);
       }
-      if (isLoading) {
-        setIsLoading(false);
-      }
+
+      setIsLoading(false);
     });
 
-    return () => unsubscribe();
-  }, [isLoading]);
+    return () => {
+      console.log("AuthContext: Desinscrevendo listener onAuthStateChanged.");
+      unsubscribe();
+    };
+  }, []);
 
-  const register = async (name: string, email: string, password: string): Promise<void> => {
-    console.log('AuthContext: Tentando registrar com Firebase...', { name, email });
+  const register = async (
+    name: string,
+    email: string,
+    password: string
+  ): Promise<void> => {
+    console.log("AuthContext: Tentando registrar com Firebase...", {
+      name,
+      email,
+    });
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
       if (userCredential.user) {
         await updateProfile(userCredential.user, { displayName: name });
-        console.log('AuthContext: Perfil Firebase atualizado com nome.');
+        console.log("AuthContext: Perfil Firebase atualizado com nome.");
       }
-      console.log('AuthContext: Registro Firebase bem-sucedido!');
+      console.log("AuthContext: Registro Firebase bem-sucedido!");
     } catch (error: any) {
       console.error("Erro no registro Firebase:", error);
       throw error;
@@ -73,10 +102,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const login = async (email: string, password: string): Promise<void> => {
-    console.log('AuthContext: Tentando logar com Firebase...', { email });
+    console.log("AuthContext: Tentando logar com Firebase...", { email });
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      console.log('AuthContext: Login Firebase bem-sucedido!');
+      console.log("AuthContext: Login Firebase bem-sucedido!");
     } catch (error: any) {
       console.error("Erro no login Firebase:", error);
       throw error;
@@ -84,10 +113,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const logout = async (): Promise<void> => {
-    console.log('AuthContext: Fazendo logout com Firebase...');
+    console.log("AuthContext: Fazendo logout com Firebase...");
     try {
       await signOut(auth);
-      console.log('AuthContext: Logout Firebase concluído.');
+      console.log("AuthContext: Logout Firebase concluído.");
     } catch (error: any) {
       console.error("Erro no logout Firebase:", error);
       throw error;
@@ -105,8 +134,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   if (isLoading) {
-      // Pode retornar um componente de Spinner/Loading global aqui se preferir
-      return null;
+    return <FullScreenLoader />;
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
