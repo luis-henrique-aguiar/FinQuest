@@ -3,7 +3,9 @@ package br.edu.ifsp.prsi.finquest.dto;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import lombok.Getter;
 
+@Getter
 public class RegisterUserDTO {
 
     @NotBlank
@@ -14,8 +16,4 @@ public class RegisterUserDTO {
     @NotBlank
     @Size(max = 255)
     private String name;
-
-    @NotBlank
-    @Size(max = 255, min = 6)
-    private String password;
 }

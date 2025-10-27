@@ -23,9 +23,6 @@ public class User {
     @Column(name = "email", nullable = false, unique = true)
     private String email;
 
-    @Column(name = "password", nullable = false)
-    private String password;
-
     @Column(name = "total_fin_points")
     private int totalFinPoints;
 
