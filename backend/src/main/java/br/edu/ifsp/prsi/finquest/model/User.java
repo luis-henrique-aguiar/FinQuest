@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 @Entity
 @Table(name = "users")
@@ -13,9 +14,8 @@ import java.math.BigDecimal;
 public class User {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id", nullable = false)
-    private Long id;
+    @Column(name = "id", nullable = false, unique = true)
+    private UUID id;
 
     @Column(name = "name", nullable = false)
     private String name;
@@ -31,4 +31,5 @@ public class User {
 
     @Column(name = "avatar_url")
     private String avatarUrl;
+
 }
