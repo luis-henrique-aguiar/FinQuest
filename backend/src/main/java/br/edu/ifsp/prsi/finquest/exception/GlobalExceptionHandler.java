@@ -2,9 +2,9 @@ package br.edu.ifsp.prsi.finquest.exception;
 
 import br.edu.ifsp.prsi.finquest.dto.ErrorResponseDTO;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -24,7 +24,7 @@ public class GlobalExceptionHandler {
                 .toList();
 
         var errorResponse = ErrorResponseDTO.validation(
-                ex.getMessage(),
+                "Dados inválidos. Verifique os campos e tente novamente.",
                 fieldErrors,
                 request.getRequestURI()
         );
@@ -39,6 +39,16 @@ public class GlobalExceptionHandler {
                 request.getRequestURI()
         );
 
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponseDTO> handleDataIntegrityViolation(
+            DataIntegrityViolationException ex,
+            HttpServletRequest request) {
+        var errorResponse = ErrorResponseDTO.business(
+                "Erro ao processar a requisição devido a conflito de dados.",
+                request.getRequestURI());
         return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
     }
 
