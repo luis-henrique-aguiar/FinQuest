@@ -11,9 +11,11 @@ import {
   signOut,
   onAuthStateChanged,
   updateProfile,
+  deleteUser,
 } from "firebase/auth";
 import { auth } from "../firebase";
 import FullScreenLoader from "../components/common/FullScreenLoader";
+import api from "../services/api";
 
 interface User {
   uid: string;
@@ -80,23 +82,40 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     email: string,
     password: string
   ): Promise<void> => {
-    console.log("AuthContext: Tentando registrar com Firebase...", {
-      name,
-      email,
-    });
+    console.log("AuthContext: 1. Registrando no Firebase...");
+    let firebaseUser: FirebaseUser | null = null;
+    
     try {
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         email,
         password
       );
-      if (userCredential.user) {
-        await updateProfile(userCredential.user, { displayName: name });
-        console.log("AuthContext: Perfil Firebase atualizado com nome.");
-      }
-      console.log("AuthContext: Registro Firebase bem-sucedido!");
+      firebaseUser = userCredential.user;
+
+      await updateProfile(firebaseUser, { displayName: name });
+      console.log("AuthContext: 2. Perfil Firebase atualizado com nome.");
+
+      const registerBackendDTO = {
+        id: firebaseUser.uid,
+        email: firebaseUser.email,
+        name: name,
+      };
+
+      console.log("AuthContext: 3. Sincronizando com o backend Spring...");
+      await api.post("/users/auth/register", registerBackendDTO);
+      console.log("AuthContext: 4. Usuário sincronizado com o backend.");
     } catch (error: any) {
-      console.error("Erro no registro Firebase:", error);
+      console.error("Erro no fluxo de registro:", error);
+      if (firebaseUser) {
+        console.warn("Sincronização com backend falhou. Tentando reverter criação no Firebase...");
+        try {
+          await deleteUser(firebaseUser);
+          console.log("Rollback do Firebase concluído. Usuário deletado.");
+        } catch (deleteError) {
+          throw deleteError;
+        }
+      }
       throw error;
     }
   };

@@ -11,8 +11,8 @@ import java.util.UUID;
 @Getter
 public class RegisterUserDTO {
 
-    @NotNull(message = "O ID é obrigatório")
-    private UUID id;
+    @NotBlank(message = "O ID é obrigatório")
+    private String id;
 
     @NotBlank(message = "O email é obrigatório")
     @Email(message = "Email inválido")
