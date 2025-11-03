@@ -56,6 +56,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
       if (fbUser) {
         console.log("onAuthStateChanged: Logado - UID:", fbUser.uid);
+
+        if (import.meta.env.DEV) {
+          const token = await fbUser.getIdToken();
+          console.groupCollapsed('%c[DEBUG] Token de Autenticação (para Postman)', 'color: orange; font-weight: bold;');
+          console.log(token);
+          console.groupEnd();
+        }
+
         const mappedUser: User = {
           uid: fbUser.uid,
           email: fbUser.email,
