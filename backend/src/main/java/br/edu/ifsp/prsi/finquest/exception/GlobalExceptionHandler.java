@@ -1,6 +1,7 @@
 package br.edu.ifsp.prsi.finquest.exception;
 
 import br.edu.ifsp.prsi.finquest.dto.ErrorResponseDTO;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -60,5 +61,18 @@ public class GlobalExceptionHandler {
         );
 
         return ResponseEntity.internalServerError().body(errorResponse);
+    }
+
+    @ExceptionHandler(EntityNotFoundException.class)
+    public ResponseEntity<ErrorResponseDTO> handleEntityNotFoundException(
+            jakarta.persistence.EntityNotFoundException ex,
+            HttpServletRequest request) {
+
+        var errorResponse = ErrorResponseDTO.notFound(
+                ex.getMessage(),
+                request.getRequestURI()
+        );
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
     }
 }

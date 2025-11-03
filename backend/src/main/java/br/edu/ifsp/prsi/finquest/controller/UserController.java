@@ -1,6 +1,7 @@
 package br.edu.ifsp.prsi.finquest.controller;
 
 import br.edu.ifsp.prsi.finquest.dto.RegisterUserDTO;
+import br.edu.ifsp.prsi.finquest.dto.UserDTO;
 import br.edu.ifsp.prsi.finquest.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -32,5 +33,12 @@ public class UserController {
 
         userService.registerUser(registerUserDTO);
         return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<UserDTO> getUserById(@PathVariable String id) {
+
+        UserDTO userDTO = userService.findUserById(id);
+        return ResponseEntity.ok(userDTO);
     }
 }
