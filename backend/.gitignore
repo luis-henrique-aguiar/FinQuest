@@ -34,3 +34,4 @@ build/
 
 finquest-*.json
 application-dev.yml
+application-prod.yml

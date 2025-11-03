@@ -57,7 +57,9 @@ const AppRoutes = () => {
       </Route>
 
       <Route element={<ProtectedRoute />}>
+        <Route path="/" element={<HomePage />} />
         <Route path="/home" element={<HomePage />} />
+        <Route path="*" element={<Navigate to="/" />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" />} />
