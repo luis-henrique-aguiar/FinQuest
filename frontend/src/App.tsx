@@ -21,6 +21,9 @@ import RegisterPage from "./pages/RegisterPage";
 import { ToastProvider } from "./context/ToastContext";
 import { AuthProvider } from "./context/AuthContext";
 import LoginPage from "./pages/LoginPage";
+import { ProtectedRoute } from "./layout/ProtectedRoute";
+import HomePage from "./pages/HomePage";
+import { PublicOnlyRoute } from "./layout/PublicOnlyRoute";
 
 const AppRoutes = () => {
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(() => {
@@ -46,11 +49,18 @@ const AppRoutes = () => {
   return (
     <Routes>
       <Route element={<AuthLayout />}>
-        <Route path="/" element={<LandingPage />} />{" "}
-        <Route path="/register" element={<RegisterPage />} />{" "}
-        <Route path="/login" element={<LoginPage />} />{" "}
-        <Route path="*" element={<Navigate to="/" />} />{" "}
+        <Route path="/" element={<LandingPage />} />
+        <Route element={<PublicOnlyRoute />}>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+        </Route>
       </Route>
+
+      <Route element={<ProtectedRoute />}>
+        <Route path="/home" element={<HomePage />} />
+      </Route>
+
+      <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   );
 };

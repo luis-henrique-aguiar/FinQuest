@@ -1,12 +1,12 @@
+import React, { useState, type FormEvent } from "react";
+import { Mail, Lock, ArrowRight, AlertCircle } from "react-feather";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../hooks/useAuth";
-import { useToast } from "../hooks/useToast";
-import { useState } from "react";
-import * as S from "./LoginPage.styles";
 import Lottie from "lottie-react";
-import { AlertCircle, ArrowRight, Info, Mail, Lock } from "react-feather";
+import * as S from "./LoginPage.styles";
 import { InputGroup } from "../components/auth/InputGroup";
 import mascotWaveAnimation from "../assets/animations/fox_greetings.json";
+import { useAuth } from "../hooks/useAuth";
+import { useToast } from "../hooks/useToast";
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -18,31 +18,29 @@ const LoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Mantemos isso apenas para exibição no card de demo
-  const DEFAULT_USER = {
-    email: "admin@finquest.com",
-    password: "password123", // Senha mais forte para demo
-  };
-
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (!email || !password) {
+      setError("Por favor, preencha o email e a senha.");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      // Chama a função 'login' real do AuthContext
       await login(email, password);
-
-      addToast("Login realizado com sucesso!", "success");
-      navigate("/home"); // Redireciona para a dashboard principal
+      addToast("Bem-vindo(a) de volta.", "success");
+      navigate("/home");
     } catch (error: any) {
       console.error("Erro no login:", error);
       let errorMessage = "Ocorreu um erro inesperado. Tente novamente.";
-      // Mapeia erros comuns do Firebase
       if (
         error.code === "auth/invalid-credential" ||
         error.code === "auth/user-not-found" ||
-        error.code === "auth/wrong-password"
+        error.code === "auth/wrong-password" ||
+        error.code === "auth/invalid-email"
       ) {
         errorMessage = "Email ou senha inválidos. Verifique suas credenciais.";
       } else if (error.code === "auth/too-many-requests") {
@@ -56,14 +54,13 @@ const LoginPage: React.FC = () => {
     }
   };
 
-  // Animação para os shapes flutuantes
   const floatingAnimation = {
     y: [0, -20, 0],
     transition: {
       duration: 4,
       repeat: Infinity,
-      ease: "easeInOut" as const, // Corrigido com 'as const'
-      repeatType: "loop" as const, // Corrigido com 'as const'
+      ease: "easeInOut" as const,
+      repeatType: "loop" as const,
     },
   };
 
@@ -119,7 +116,32 @@ const LoginPage: React.FC = () => {
             objetivos hoje.
           </p>
 
-          <S.StatsRow>{/* ... Seus StatItems ... */}</S.StatsRow>
+          <S.StatsRow>
+            <S.StatItem
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.3 }}
+            >
+              <h3>7d</h3>
+              <p>Ofensiva</p>
+            </S.StatItem>
+            <S.StatItem
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.4 }}
+            >
+              <h3>1.2k</h3>
+              <p>FinPoints</p>
+            </S.StatItem>
+            <S.StatItem
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.5 }}
+            >
+              <h3>12</h3>
+              <p>Conquistas</p>
+            </S.StatItem>
+          </S.StatsRow>
         </S.BrandingContent>
       </S.BrandingSide>
 
@@ -135,22 +157,6 @@ const LoginPage: React.FC = () => {
             <p>Acesse sua conta e continue aprendendo</p>
           </S.FormHeader>
 
-          <S.DemoCredentials
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-          >
-            <Info size={20} color="#FD7E14" />
-            <div>
-              <h4>Credenciais de Demonstração</h4>
-              <p>
-                Email: <strong>{DEFAULT_USER.email}</strong>
-                <br />
-                Senha: <strong>{DEFAULT_USER.password}</strong>
-              </p>
-            </div>
-          </S.DemoCredentials>
-
           <S.FormElement onSubmit={handleLogin} noValidate>
             <InputGroup
               id="email"
@@ -165,8 +171,6 @@ const LoginPage: React.FC = () => {
             />
 
             <S.InputGroupStyled>
-              {" "}
-              {/* Usamos o Styled aqui por causa do link "Esqueceu sua senha?" */}
               <S.Label htmlFor="password">Senha</S.Label>
               <S.InputWrapper>
                 <Lock size={20} />
@@ -178,6 +182,7 @@ const LoginPage: React.FC = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   aria-invalid={!!error}
+                  aria-describedby="login-error"
                 />
               </S.InputWrapper>
               <S.ForgotPassword
@@ -190,28 +195,25 @@ const LoginPage: React.FC = () => {
 
             {/* Exibe erro geral de login */}
             {error && (
-              <S.ErrorMessage role="alert">
+              <S.ErrorMessage id="login-error" role="alert">
                 <AlertCircle size={14} /> {error}
               </S.ErrorMessage>
             )}
 
-            {/* Usando o Button genérico */}
             <S.SubmitButtonStyled
               type="submit"
-              whileHover={!isLoading ? { scale: 1.02 } : undefined} // Desativa hover se loading
-              whileTap={!isLoading ? { scale: 0.98 } : undefined} // Desativa tap se loading
-              disabled={
-                isLoading || !email || !password || password.length < 6
-              } // Mantém a lógica de disabled
+              whileHover={!isLoading ? { scale: 1.02 } : undefined}
+              whileTap={!isLoading ? { scale: 0.98 } : undefined}
+              disabled={isLoading || !email || !password}
             >
               {isLoading ? (
                 <>
-                  <S.Spinner /> {/* Mostra spinner se loading */}
-                  <span>Criando conta...</span>
+                  <S.Spinner />
+                  <span>Entrando...</span>
                 </>
               ) : (
                 <>
-                  <span>Criar Minha Conta</span>
+                  <span>Entrar na minha conta</span>
                   <ArrowRight size={20} />
                 </>
               )}
