@@ -1,10 +1,12 @@
 package br.edu.ifsp.prsi.finquest.service.impl;
 
 import br.edu.ifsp.prsi.finquest.dto.RegisterUserDTO;
+import br.edu.ifsp.prsi.finquest.dto.UserDTO;
 import br.edu.ifsp.prsi.finquest.exception.BusinessException;
 import br.edu.ifsp.prsi.finquest.model.User;
 import br.edu.ifsp.prsi.finquest.repository.UserRepository;
 import br.edu.ifsp.prsi.finquest.service.UserService;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,5 +41,10 @@ public class UserServiceImpl implements UserService {
         newUser.setName(registerUserDTO.name());
 
         return userRepository.save(newUser);
+    }
+
+    public UserDTO findUserById(String id){
+        User user = userRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado para o ID: " + id));
+        return UserDTO.convertToDTO(user);
     }
 }

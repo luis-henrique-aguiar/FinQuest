@@ -17,7 +17,7 @@ public class User {
     private String email;
 
     @Column(name = "total_fin_points")
-    private int totalFinPoints;
+    private Integer totalFinPoints;
 
     @Column(precision = 10, scale = 2)
     private BigDecimal budget;

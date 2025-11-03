@@ -1,8 +1,8 @@
 spring:
   datasource:
-    url: jdbc:mysql://localhost:3306/finquest_db
-    username: finquest_user
-    password: finquest_pwd
+    url: jdbc:mysql://localhost:3307/finquest_db
+    username: root
+    password: root
 
   jpa:
     hibernate:
