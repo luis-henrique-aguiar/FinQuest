@@ -62,7 +62,6 @@ const RegisterPage = () => {
       newErrors.password = "Senha deve ter no mínimo 6 caracteres.";
       isValid = false;
     }
-    // Consideramos força >= 2 como aceitável para registro
     else if (passwordStrength < 2 && password.length >= 6) {
       newErrors.password =
         "Senha muito fraca. Tente combinar letras maiúsculas, minúsculas, números ou símbolos.";
@@ -75,12 +74,12 @@ const RegisterPage = () => {
 
   const calculatePasswordStrength = (pass: string): number => {
     let strength = 0;
-    if (pass.length >= 6) strength++; // Critério mínimo
+    if (pass.length >= 6) strength++;
     if (pass.length >= 10) strength++;
-    if (/[a-z]/.test(pass) && /[A-Z]/.test(pass)) strength++; // Mix de caixa
-    if (/\d/.test(pass)) strength++; // Números
-    if (/[^a-zA-Z0-9]/.test(pass)) strength++; // Símbolos
-    return Math.min(strength, 4); // Limita visualmente a 4 barras
+    if (/[a-z]/.test(pass) && /[A-Z]/.test(pass)) strength++;
+    if (/\d/.test(pass)) strength++;
+    if (/[^a-zA-Z0-9]/.test(pass)) strength++;
+    return Math.min(strength, 4);
   };
 
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -111,13 +110,12 @@ const RegisterPage = () => {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrors({}); // Limpa erros antigos
+    setErrors({});
     if (!validateForm()) {
       addToast("Por favor, corrija os erros no formulário.", "error");
-      return; // Interrompe se a validação local falhar
+      return;
     }
 
-    // Validação extra de força mínima para submeter
     if (passwordStrength < 2) {
       setErrors({
         password:
@@ -129,49 +127,45 @@ const RegisterPage = () => {
     setIsLoading(true);
 
     try {
-      // Chama a função 'register' real do AuthContext
       await register(name, email, password);
 
       addToast(
-        `🎉 Bem-vindo(a) ao FinQuest, ${name}! Conta criada com sucesso.`,
+        `🎉 Bem-vindo(a) ao FinQuest, ${name}!`,
         "success"
       );
-      navigate("/home"); // Navega para a home APÓS o registro bem-sucedido
+      navigate("/home");
     } catch (error: any) {
       console.error("Erro no registro:", error);
       let errorMessage =
         "Ocorreu um erro inesperado ao criar sua conta. Tente novamente.";
-      // Mapeia erros específicos do Firebase
       if (error.code === "auth/email-already-in-use") {
         errorMessage = "Este email já está cadastrado. Tente fazer login.";
         setErrors({ email: errorMessage });
       } else if (error.code === "auth/weak-password") {
-        errorMessage = "A senha fornecida é muito fraca pelo Firebase."; // Pode acontecer mesmo com nossa validação
+        errorMessage = "A senha fornecida é muito fraca pelo Firebase.";
         setErrors({ password: errorMessage });
       } else if (error.code === "auth/invalid-email") {
         errorMessage = "O formato do email fornecido é inválido.";
         setErrors({ email: errorMessage });
       } else {
-        setErrors({ general: errorMessage }); // Erro geral
+        setErrors({ general: errorMessage });
       }
-      addToast(errorMessage, "error"); // Exibe o erro como Toast
+      addToast(errorMessage, "error");
     } finally {
-      setIsLoading(false); // Desativa o loading
+      setIsLoading(false);
     }
   };
 
-  // Animação para os shapes flutuantes de fundo
   const floatingAnimation = {
     y: [0, -20, 0],
     transition: {
-      duration: 5, // Duração um pouco maior
+      duration: 5,
       repeat: Infinity,
       ease: "easeInOut" as const,
       repeatType: "loop" as const,
     },
   };
 
-  // Dados para os itens de benefício
   const benefits = [
     {
       icon: <Check size={24} />,
@@ -198,7 +192,7 @@ const RegisterPage = () => {
       {/* --- Formas Flutuantes de Fundo --- */}
       <S.BackgroundShapes>
         <S.FloatingShape
-          $color="#28A745" // Verde
+          $color="#28A745"
           $size={400}
           $top="10%"
           $left="-10%"
@@ -208,13 +202,13 @@ const RegisterPage = () => {
           }}
         />
         <S.FloatingShape
-          $color="#007ACC" // Azul
+          $color="#007ACC"
           $size={350}
           $top="70%"
           $left="80%"
           animate={{
             y: floatingAnimation.y,
-            transition: { ...floatingAnimation.transition, delay: 1.5 }, // Delay diferente
+            transition: { ...floatingAnimation.transition, delay: 1.5 },
           }}
         />
       </S.BackgroundShapes>
@@ -228,7 +222,7 @@ const RegisterPage = () => {
         >
           <S.MascotAnimationContainer
             animate={{
-              y: [0, -10, 0], // Animação sutil
+              y: [0, -10, 0],
               rotate: [0, -3, 3, 0],
             }}
             transition={{
@@ -238,7 +232,6 @@ const RegisterPage = () => {
               repeatType: "loop",
             }}
           >
-            {/* Usando a animação Lottie importada */}
             <Lottie animationData={mascotWaveAnimation} loop={true} />
           </S.MascotAnimationContainer>
           <h1>Junte-se ao FinQuest!</h1>
@@ -248,7 +241,7 @@ const RegisterPage = () => {
           </p>
           <S.BenefitsList>
             {benefits.map((item, index) => (
-              <BenefitItem key={index} {...item} /> // Usando o componente BenefitItem
+              <BenefitItem key={index} {...item} />
             ))}
           </S.BenefitsList>
         </S.BrandingContent>
@@ -266,9 +259,7 @@ const RegisterPage = () => {
             <p>Comece sua jornada financeira hoje</p>
           </S.FormHeader>
 
-          {/* Usando FormElement como <form> */}
           <S.FormElement onSubmit={handleRegister} noValidate>
-            {/* Input de Nome com Erro */}
             <InputGroup
               id="name"
               label="Nome Completo"
@@ -291,7 +282,6 @@ const RegisterPage = () => {
               </S.ErrorMessage>
             )}
 
-            {/* Input de Email com Erro */}
             <InputGroup
               id="email"
               label="Email"
@@ -314,7 +304,6 @@ const RegisterPage = () => {
               </S.ErrorMessage>
             )}
 
-            {/* Input de Senha com Indicador e Erro */}
             <S.InputGroupStyled>
               <S.Label htmlFor="password">Senha</S.Label>
               <S.InputWrapper>
@@ -377,15 +366,15 @@ const RegisterPage = () => {
             {/* Botão com Estado de Loading */}
             <S.SubmitButton
               type="submit"
-              whileHover={!isLoading ? { scale: 1.02 } : undefined} // Desativa hover se loading
-              whileTap={!isLoading ? { scale: 0.98 } : undefined} // Desativa tap se loading
+              whileHover={!isLoading ? { scale: 1.02 } : undefined}
+              whileTap={!isLoading ? { scale: 0.98 } : undefined}
               disabled={
                 isLoading || !name || !email || !password || password.length < 6
-              } // Mantém a lógica de disabled
+              }
             >
               {isLoading ? (
                 <>
-                  <S.Spinner /> {/* Mostra spinner se loading */}
+                  <S.Spinner />
                   <span>Criando conta...</span>
                 </>
               ) : (

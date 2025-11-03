@@ -1,13 +1,9 @@
 spring:
-  devtools:
-    restart:
-      enabled: true
-      additional-paths: src/main/java
-      poll-interval: 1000
-      quiet-period: 500
-    livereload:
-      enabled: true
-      port: 35729
+  datasource:
+    url: jdbc:mysql://localhost:3306/finquest_db
+    username: finquest_user
+    password: finquest_pwd
+
   jpa:
     hibernate:
       ddl-auto: update
@@ -17,6 +13,18 @@ spring:
         format_sql: true
         use_sql_comments: true
 
+  devtools:
+    restart:
+      enabled: true
+      additional-paths: src/main/java
+      poll-interval: 1000ms
+      quiet-period: 500ms
+    livereload:
+      enabled: true
+      port: 35729
+
 logging:
   level:
     org.springframework.boot.devtools: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql: TRACE
