@@ -1,4 +1,3 @@
 package br.edu.ifsp.prsi.finquest.dto;
 
-public class TransactionDTO {
-}
+public record TransactionDTO() {}
