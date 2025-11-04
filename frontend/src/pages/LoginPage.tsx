@@ -187,7 +187,7 @@ const LoginPage: React.FC = () => {
               </S.InputWrapper>
               <S.ForgotPassword
                 type="button"
-                onClick={() => navigate("/forgot-password")}
+                onClick={() => navigate('/forgot-password')}
               >
                 Esqueceu sua senha?
               </S.ForgotPassword>
