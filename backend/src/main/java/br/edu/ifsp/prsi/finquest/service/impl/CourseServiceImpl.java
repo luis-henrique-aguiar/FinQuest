@@ -43,6 +43,6 @@ public class CourseServiceImpl implements CourseService {
                         course.getIcon(),
                         progressMap.getOrDefault(course.getId(), null)
                 ))
-                .collect(Collectors.toList());
+                .toList();
     }
 }
