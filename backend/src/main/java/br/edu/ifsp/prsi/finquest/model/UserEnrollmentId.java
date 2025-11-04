@@ -18,6 +18,14 @@ public class UserEnrollmentId implements Serializable {
         this.courseId = courseId;
     }
 
+    public String getUserId() {
+        return userId;
+    }
+
+    public UUID getCourseId() {
+        return courseId;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;

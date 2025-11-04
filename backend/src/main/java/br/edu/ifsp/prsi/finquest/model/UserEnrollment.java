@@ -19,7 +19,7 @@ public class UserEnrollment {
     private LocalDate completionDate;
 
     @Column(name = "progress", nullable = false)
-    private int progress;
+    private Integer progress;
 
     @ManyToOne
     @MapsId("userId")
@@ -66,11 +66,11 @@ public class UserEnrollment {
         this.completionDate = completionDate;
     }
 
-    public int getProgress() {
+    public Integer getProgress() {
         return progress;
     }
 
-    public void setProgress(int progress) {
+    public void setProgress(Integer progress) {
         this.progress = progress;
     }
 
