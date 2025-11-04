@@ -15,10 +15,12 @@
     "@fontsource/nunito-sans": "^5.2.7",
     "@fontsource/poppins": "^5.2.7",
     "framer-motion": "^12.23.24",
+    "gray-matter": "^4.0.3",
     "lottie-react": "^2.4.1",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-feather": "^2.0.10",
+    "react-markdown": "^10.1.0",
     "react-router-dom": "^7.9.4",
     "recharts": "^3.2.1",
     "styled-components": "^6.1.19"

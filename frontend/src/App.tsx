@@ -12,6 +12,7 @@ import { ThemeProvider } from "./context/ThemeContext";
 import OnboardingPage from "./pages/OnboardingPage";
 import { AuthLayout } from "./components/layout/AuthLayout";
 import LandingPage from "./pages/LandingPage";
+import LessonPage from "./pages/LessonPage";
 
 const AppRoutes = () => {
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(() => {
@@ -39,6 +40,7 @@ const AppRoutes = () => {
         <Route element={<AuthLayout />}>
           <Route path="/" element={<LandingPage />} />{" "}
           <Route path="*" element={<Navigate to="/" />} />{" "}
+          <Route path="/test" element={<LessonPage />} />
         </Route>
     </Routes>
   );
