@@ -6,7 +6,7 @@ import Button from "../components/common/Button";
 import MissionCard from "../components/gamification/MissionCard";
 import { DailyGoalItem } from "../components/home/DailyGoalItem";
 import * as S from "./HomePage.styles";
-import mascotGreetingAnimation from "../assets/animations/fox_idle.json";
+import greetingAnimation from "../assets/animations/hi_girl.json";
 
 export const HomePage: React.FC = () => {
   const navigate = useNavigate();
@@ -62,14 +62,13 @@ export const HomePage: React.FC = () => {
       <S.WelcomeSection padding="large">
         <S.WelcomeHeader>
           <S.WelcomeText>
-            {/* Nome do usuário vindo do AuthContext */}
             <h1>Olá, {userName}! 👋</h1>
             <p>Vamos continuar sua jornada financeira hoje?</p>
           </S.WelcomeText>
           <Lottie
-            animationData={mascotGreetingAnimation}
+            animationData={greetingAnimation}
             loop={true}
-            style={{ width: 130, height: 130, marginTop: "-20px" }}
+            style={{ width: 150, height: 150, marginTop: "-20px" }}
           />
         </S.WelcomeHeader>
         <Button onClick={() => navigate("/learn")}>Continuar Aprendendo</Button>
