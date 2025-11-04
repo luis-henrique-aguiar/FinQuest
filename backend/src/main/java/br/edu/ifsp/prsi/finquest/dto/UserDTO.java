@@ -3,6 +3,7 @@ package br.edu.ifsp.prsi.finquest.dto;
 import br.edu.ifsp.prsi.finquest.model.User;
 
 import java.math.BigDecimal;
+import java.util.Optional;
 
 public record UserDTO(
         String id,
@@ -25,7 +26,7 @@ public record UserDTO(
         user.setId(userDTO.id());
         user.setName(userDTO.name());
         user.setEmail(userDTO.email());
-        user.setTotalFinPoints(java.util.Optional.ofNullable(userDTO.totalFinPoints()).orElse(0));
+        user.setTotalFinPoints(Optional.ofNullable(userDTO.totalFinPoints()).orElse(0));
         user.setBudget(userDTO.budget() != null ? userDTO.budget() : BigDecimal.ZERO);
         user.setAvatarUrl(userDTO.avatarUrl() != null ? userDTO.avatarUrl() : DEFAULT_AVATAR_URL);
 
