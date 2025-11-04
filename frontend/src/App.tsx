@@ -25,6 +25,7 @@ import { ProtectedRoute } from "./layout/ProtectedRoute";
 import HomePage from "./pages/HomePage";
 import { PublicOnlyRoute } from "./layout/PublicOnlyRoute";
 import AppLayout from "./components/layout/AppLayout";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 
 const AppRoutes = () => {
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(() => {
@@ -54,6 +55,7 @@ const AppRoutes = () => {
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         </Route>
       </Route>
 
