@@ -4,16 +4,15 @@ import jakarta.persistence.Embeddable;
 
 import java.io.Serializable;
 import java.util.Objects;
-import java.util.UUID;
 
 @Embeddable
 public class UserEnrollmentId implements Serializable {
     private String userId;
-    private UUID courseId;
+    private String courseId;
 
     public UserEnrollmentId() {}
 
-    public UserEnrollmentId(String userId, UUID courseId) {
+    public UserEnrollmentId(String userId, String courseId) {
         this.userId = userId;
         this.courseId = courseId;
     }
@@ -22,7 +21,7 @@ public class UserEnrollmentId implements Serializable {
         return userId;
     }
 
-    public UUID getCourseId() {
+    public String getCourseId() {
         return courseId;
     }
 

@@ -10,8 +10,7 @@ import java.util.UUID;
 public class Course {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+    private String id;
 
     @Column(name = "title", nullable = false)
     private String title;
@@ -27,7 +26,7 @@ public class Course {
 
     public Course() {}
 
-    public Course(UUID id, String title, String description, String icon, Integer recFinPoints) {
+    public Course(String id, String title, String description, String icon, Integer recFinPoints) {
         this.id = id;
         this.title = title;
         this.description = description;
@@ -35,11 +34,11 @@ public class Course {
         this.recFinPoints = recFinPoints;
     }
 
-    public UUID getId() {
+    public String getId() {
         return id;
     }
 
-    public void setId(UUID id) {
+    public void setId(String id) {
         this.id = id;
     }
 

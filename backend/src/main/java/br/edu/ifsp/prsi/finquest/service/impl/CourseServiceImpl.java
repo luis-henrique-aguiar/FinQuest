@@ -27,7 +27,7 @@ public class CourseServiceImpl implements CourseService {
     public List<CourseProgressDTO> getCoursesForUser(String userId) {
         List<UserEnrollment> enrollments = enrollmentRepository.findByIdUserId(userId);
 
-        Map<UUID, Integer> progressMap = enrollments.stream()
+        Map<String, Integer> progressMap = enrollments.stream()
                 .collect(Collectors.toMap(
                         enrollment -> enrollment.getId().getCourseId(),
                         UserEnrollment::getProgress
