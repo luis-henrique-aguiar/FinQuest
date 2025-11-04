@@ -26,6 +26,7 @@ import HomePage from "./pages/HomePage";
 import { PublicOnlyRoute } from "./layout/PublicOnlyRoute";
 import AppLayout from "./components/layout/AppLayout";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import LearnHubPage from "./pages/LearnHubPage";
 
 const AppRoutes = () => {
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(() => {
@@ -62,6 +63,7 @@ const AppRoutes = () => {
       <Route element={<ProtectedRoute />}>
         <Route element={<AppLayout />}>
           <Route path="/home" element={<HomePage />} />
+          <Route path="/learn" element={<LearnHubPage />} />
         </Route>
       </Route>
 
