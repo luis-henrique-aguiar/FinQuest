@@ -24,6 +24,7 @@ import LoginPage from "./pages/LoginPage";
 import { ProtectedRoute } from "./layout/ProtectedRoute";
 import HomePage from "./pages/HomePage";
 import { PublicOnlyRoute } from "./layout/PublicOnlyRoute";
+import AppLayout from "./components/layout/AppLayout";
 
 const AppRoutes = () => {
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(() => {
@@ -49,15 +50,17 @@ const AppRoutes = () => {
   return (
     <Routes>
       <Route element={<AuthLayout />}>
-        <Route path="/" element={<LandingPage />} />
         <Route element={<PublicOnlyRoute />}>
+          <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
         </Route>
       </Route>
 
       <Route element={<ProtectedRoute />}>
-        <Route path="/home" element={<HomePage />} />
+        <Route element={<AppLayout />}>
+          <Route path="/home" element={<HomePage />} />
+        </Route>
       </Route>
 
       <Route path="*" element={<Navigate to="/" />} />

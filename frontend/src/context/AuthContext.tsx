@@ -16,12 +16,16 @@ import {
 import { auth } from "../firebase";
 import FullScreenLoader from "../components/common/FullScreenLoader";
 import api from "../services/api";
+import { calculateLevel } from "../utils/levelingSystem";
 
-interface User {
+export interface User {
   uid: string;
+  name: string;
   email: string | null;
-  name: string | null;
-  avatarUrl?: string | null;
+  avatarUrl: string | null;
+  totalFinPoints: number;
+  budget: number | null;
+  level: number;
 }
 
 export interface AuthContextType {
@@ -47,30 +51,49 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
-      console.log(
-        "onAuthStateChanged executado. fbUser:",
-        fbUser ? fbUser.uid : null
-      );
-
       setFirebaseUser(fbUser);
 
       if (fbUser) {
         console.log("onAuthStateChanged: Logado - UID:", fbUser.uid);
+        if (isLoading) setIsLoading(true);
 
-        if (import.meta.env.DEV) {
-          const token = await fbUser.getIdToken();
-          console.groupCollapsed('%c[DEBUG] Token de Autenticação (para Postman)', 'color: orange; font-weight: bold;');
-          console.log(token);
-          console.groupEnd();
+        try {
+          const response = await api.get(`/users/${fbUser.uid}`);
+          const backendUser = response.data;
+
+          const userLevel = calculateLevel(backendUser.totalFinPoints);
+
+          const appUser: User = {
+            uid: fbUser.uid,
+            name: backendUser.name,
+            email: backendUser.email,
+            avatarUrl: backendUser.avatarUrl || null,
+            totalFinPoints: backendUser.totalFinPoints || 0,
+            budget: backendUser.budget,
+            level: userLevel,
+          };
+
+          if (import.meta.env.DEV) {
+            const token = await fbUser.getIdToken();
+            console.groupCollapsed(
+              "%c[DEBUG] Token de Autenticação (para Postman)",
+              "color: orange; font-weight: bold;"
+            );
+            console.log(token);
+            console.groupEnd();
+          }
+
+          setUser(appUser);
+          console.log(
+            "AuthContext: Usuário completo do backend carregado.",
+            appUser
+          );
+        } catch (error) {
+          console.warn(
+            "AuthContext: Usuário não encontrado no backend. Iniciando auto-correção..."
+          );
+          throw error;
         }
-
-        const mappedUser: User = {
-          uid: fbUser.uid,
-          email: fbUser.email,
-          name: fbUser.displayName,
-          avatarUrl: fbUser.photoURL,
-        };
-        setUser(mappedUser);
       } else {
         console.log("onAuthStateChanged: Deslogado");
         setUser(null);
@@ -92,7 +115,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   ): Promise<void> => {
     console.log("AuthContext: 1. Registrando no Firebase...");
     let firebaseUser: FirebaseUser | null = null;
-    
+
     try {
       const userCredential = await createUserWithEmailAndPassword(
         auth,
@@ -116,7 +139,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     } catch (error: any) {
       console.error("Erro no fluxo de registro:", error);
       if (firebaseUser) {
-        console.warn("Sincronização com backend falhou. Tentando reverter criação no Firebase...");
+        console.warn(
+          "Sincronização com backend falhou. Tentando reverter criação no Firebase..."
+        );
         try {
           await deleteUser(firebaseUser);
           console.log("Rollback do Firebase concluído. Usuário deletado.");
