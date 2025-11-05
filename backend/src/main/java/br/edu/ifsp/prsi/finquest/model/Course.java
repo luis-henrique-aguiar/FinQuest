@@ -3,7 +3,6 @@ package br.edu.ifsp.prsi.finquest.model;
 import jakarta.persistence.*;
 
 import java.util.Objects;
-import java.util.UUID;
 
 @Entity
 @Table(name = "courses")
