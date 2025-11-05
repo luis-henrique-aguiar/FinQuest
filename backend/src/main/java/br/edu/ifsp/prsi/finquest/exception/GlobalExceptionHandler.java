@@ -65,7 +65,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(EntityNotFoundException.class)
     public ResponseEntity<ErrorResponseDTO> handleEntityNotFoundException(
-            jakarta.persistence.EntityNotFoundException ex,
+            EntityNotFoundException ex,
             HttpServletRequest request) {
 
         var errorResponse = ErrorResponseDTO.notFound(
