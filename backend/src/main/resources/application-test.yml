@@ -4,10 +4,17 @@ spring:
     driver-class-name: org.h2.Driver
     username: sa
     password:
+
   jpa:
     hibernate:
       ddl-auto: create-drop
-    show-sql: false
-  sql:
-    init:
-      mode: never
+    database-platform: org.hibernate.dialect.H2Dialect
+  
+  main:
+    banner-mode: off
+
+  logging:
+    level:
+      org:
+        springframework: WARN
+        hibernate: WARN
