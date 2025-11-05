@@ -5,32 +5,29 @@ import jakarta.persistence.*;
 import java.util.Objects;
 
 @Entity
-@Table(name = "courses")
-public class Course {
+@Table(name = "lessons")
+public class Lesson {
 
     @Id
     private String id;
 
-    @Column(name = "title", nullable = false)
+    @Column(nullable = false)
     private String title;
 
-    @Column(name = "description", nullable = false)
-    private String description;
-
-    @Column(name = "icon", nullable = false)
-    private String icon;
-
-    @Column(name = "rec_fin_points", nullable = false)
+    @Column(nullable = false)
     private Integer recFinPoints;
 
-    public Course() {}
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "course_id", nullable = false)
+    private Course course;
 
-    public Course(String id, String title, String description, String icon, Integer recFinPoints) {
+    public Lesson() {}
+
+    public Lesson(String id, String title, Integer recFinPoints, Course course) {
         this.id = id;
         this.title = title;
-        this.description = description;
-        this.icon = icon;
         this.recFinPoints = recFinPoints;
+        this.course = course;
     }
 
     public String getId() {
@@ -49,22 +46,6 @@ public class Course {
         this.title = title;
     }
 
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public String getIcon() {
-        return icon;
-    }
-
-    public void setIcon(String icon) {
-        this.icon = icon;
-    }
-
     public Integer getRecFinPoints() {
         return recFinPoints;
     }
@@ -73,11 +54,19 @@ public class Course {
         this.recFinPoints = recFinPoints;
     }
 
+    public Course getCourse() {
+        return course;
+    }
+
+    public void setCourse(Course course) {
+        this.course = course;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;
-        Course course = (Course) o;
-        return Objects.equals(id, course.id);
+        Lesson lesson = (Lesson) o;
+        return Objects.equals(id, lesson.id);
     }
 
     @Override
@@ -87,12 +76,11 @@ public class Course {
 
     @Override
     public String toString() {
-        return "Course{" +
-                "id=" + id +
+        return "Lesson{" +
+                "id='" + id + '\'' +
                 ", title='" + title + '\'' +
-                ", description='" + description + '\'' +
-                ", icon='" + icon + '\'' +
                 ", recFinPoints=" + recFinPoints +
+                ", course=" + course +
                 '}';
     }
 }
