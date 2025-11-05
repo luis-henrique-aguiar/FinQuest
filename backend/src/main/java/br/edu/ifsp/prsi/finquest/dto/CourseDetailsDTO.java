@@ -1,9 +1,10 @@
 package br.edu.ifsp.prsi.finquest.dto;
 
-public record CourseProgressDTO(
+import java.util.List;
+
+public record CourseDetailsDTO(
         String id,
         String title,
         String description,
-        String icon,
-        Integer progress
+        List<LessonProgressDTO> lessons
 ) {}

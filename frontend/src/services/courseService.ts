@@ -8,6 +8,19 @@ export interface CourseProgressDTO {
   progress: number | null;
 }
 
+export interface LessonProgressDTO {
+  id: string;
+  title: string;
+  isCompleted: boolean;
+}
+
+export interface CourseDetailsDTO {
+  id: string;
+  title: string;
+  description: string;
+  lessons: LessonProgressDTO[];
+}
+
 export const getCoursesForUser = async (): Promise<CourseProgressDTO[]> => {
   try {
     const response = await api.get('/courses'); 
@@ -23,6 +36,16 @@ export const enrollInCourse = async (courseId: string): Promise<void> => {
     await api.post(`/courses/${courseId}/enroll`);
   } catch (error) {
     console.error(`Erro ao matricular no curso ${courseId}:`, error);
+    throw error;
+  }
+};
+
+export const getCourseDetails = async (courseId: string): Promise<CourseDetailsDTO> => {
+  try {
+    const response = await api.get(`/courses/${courseId}/details`);
+    return response.data;
+  } catch (error) {
+    console.error(`Erro ao buscar detalhes do curso ${courseId}:`, error);
     throw error;
   }
 };
