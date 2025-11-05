@@ -1,5 +1,6 @@
 package br.edu.ifsp.prsi.finquest.controller;
 
+import br.edu.ifsp.prsi.finquest.dto.CourseDetailsDTO;
 import br.edu.ifsp.prsi.finquest.dto.CourseProgressDTO;
 import br.edu.ifsp.prsi.finquest.service.CourseService;
 import br.edu.ifsp.prsi.finquest.service.EnrollmentService;
@@ -37,5 +38,13 @@ public class CourseController {
         enrollmentService.enrollUserInCourse(userId, courseId);
 
         return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+    @GetMapping("/{courseId}/details")
+    public ResponseEntity<CourseDetailsDTO> getCourseDetails(@PathVariable String courseId,
+                                                             @AuthenticationPrincipal UserDetails userDetails) {
+        String userId = userDetails.getUsername();
+        CourseDetailsDTO courseDetails = courseService.getCourseDetailsForUser(courseId, userId);
+        return ResponseEntity.ok(courseDetails);
     }
 }
