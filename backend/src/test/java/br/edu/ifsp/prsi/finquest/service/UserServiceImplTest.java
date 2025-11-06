@@ -47,16 +47,16 @@ class UserServiceImplTest {
         );
 
         // When
-        User registeredUser = userService.registerUser(dto);
+        UserDTO registeredUser = userService.registerUser(dto);
 
         // Then
         assertThat(registeredUser).isNotNull();
-        assertThat(registeredUser.getId()).isEqualTo("user123");
-        assertThat(registeredUser.getName()).isEqualTo("João Silva");
-        assertThat(registeredUser.getEmail()).isEqualTo("joao@email.com");
-        assertThat(registeredUser.getTotalFinPoints()).isZero();
-        assertThat(registeredUser.getBudget()).isEqualByComparingTo(BigDecimal.ZERO);
-        assertThat(registeredUser.getAvatarUrl()).isNull();
+        assertThat(registeredUser.id()).isEqualTo("user123");
+        assertThat(registeredUser.name()).isEqualTo("João Silva");
+        assertThat(registeredUser.email()).isEqualTo("joao@email.com");
+        assertThat(registeredUser.totalFinPoints()).isZero();
+        assertThat(registeredUser.budget()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(registeredUser.avatarUrl()).isNull();
 
         // Verificar se foi persistido no banco
         User userFromDb = userRepository.findById("user123").orElse(null);
@@ -119,12 +119,12 @@ class UserServiceImplTest {
         RegisterUserDTO dto2 = new RegisterUserDTO("user2", "maria@email.com", "Maria");
 
         // When
-        User user1 = userService.registerUser(dto1);
-        User user2 = userService.registerUser(dto2);
+        UserDTO user1 = userService.registerUser(dto1);
+        UserDTO user2 = userService.registerUser(dto2);
 
         // Then
-        assertThat(user1.getId()).isEqualTo("user1");
-        assertThat(user2.getId()).isEqualTo("user2");
+        assertThat(user1.id()).isEqualTo("user1");
+        assertThat(user2.id()).isEqualTo("user2");
         assertThat(userRepository.count()).isEqualTo(2);
     }
 
@@ -171,11 +171,11 @@ class UserServiceImplTest {
         );
 
         // When
-        User registeredUser = userService.registerUser(dto);
+        UserDTO registeredUser = userService.registerUser(dto);
 
         // Then
-        assertThat(registeredUser.getTotalFinPoints()).isZero();
-        assertThat(registeredUser.getBudget()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(registeredUser.totalFinPoints()).isZero();
+        assertThat(registeredUser.budget()).isEqualByComparingTo(BigDecimal.ZERO);
     }
 
     @Test
@@ -189,10 +189,10 @@ class UserServiceImplTest {
         );
 
         // When
-        User registeredUser = userService.registerUser(dto);
+        UserDTO registeredUser = userService.registerUser(dto);
 
         // Then
-        assertThat(registeredUser.getAvatarUrl()).isNull();
+        assertThat(registeredUser.avatarUrl()).isNull();
     }
 
     @Test
