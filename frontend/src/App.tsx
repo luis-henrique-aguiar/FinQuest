@@ -6,13 +6,29 @@ import "@fontsource/nunito-sans/400.css";
 import "@fontsource/nunito-sans/600.css";
 import "@fontsource/nunito-sans/700.css";
 
-import { Navigate, Route, BrowserRouter as Router, Routes } from "react-router-dom";
+import {
+  Navigate,
+  Route,
+  BrowserRouter as Router,
+  Routes,
+} from "react-router-dom";
 import { useState } from "react";
 import { ThemeProvider } from "./context/ThemeContext";
 import OnboardingPage from "./pages/OnboardingPage";
 import { AuthLayout } from "./components/layout/AuthLayout";
 import LandingPage from "./pages/LandingPage";
 import LessonPage from "./pages/LessonPage";
+import RegisterPage from "./pages/RegisterPage";
+import { ToastProvider } from "./context/ToastContext";
+import { AuthProvider } from "./context/AuthContext";
+import LoginPage from "./pages/LoginPage";
+import { ProtectedRoute } from "./layout/ProtectedRoute";
+import HomePage from "./pages/HomePage";
+import { PublicOnlyRoute } from "./layout/PublicOnlyRoute";
+import AppLayout from "./components/layout/AppLayout";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import LearnHubPage from "./pages/LearnHubPage";
+import { CourseDetailsPage } from "./pages/CourseDetailsPage";
 
 const AppRoutes = () => {
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(() => {
@@ -37,11 +53,24 @@ const AppRoutes = () => {
 
   return (
     <Routes>
-        <Route element={<AuthLayout />}>
-          <Route path="/" element={<LandingPage />} />{" "}
-          <Route path="*" element={<Navigate to="/" />} />{" "}
-          <Route path="/test" element={<LessonPage />} />
+      <Route element={<AuthLayout />}>
+        <Route element={<PublicOnlyRoute />}>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         </Route>
+      </Route>
+
+      <Route element={<ProtectedRoute />}>
+        <Route element={<AppLayout />}>
+          <Route path="/home" element={<HomePage />} />
+          <Route path="/learn" element={<LearnHubPage />} />
+          <Route path="/learn/:courseId" element={<CourseDetailsPage />} />
+        </Route>
+      </Route>
+
+      <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   );
 };
@@ -49,9 +78,13 @@ const AppRoutes = () => {
 function App() {
   return (
     <ThemeProvider>
-      <Router>
-        <AppRoutes />
-      </Router>
+      <ToastProvider>
+        <AuthProvider>
+          <Router>
+            <AppRoutes />
+          </Router>
+        </AuthProvider>
+      </ToastProvider>
     </ThemeProvider>
   );
 }

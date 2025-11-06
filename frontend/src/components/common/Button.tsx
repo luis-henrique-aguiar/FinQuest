@@ -1,22 +1,21 @@
-import React from 'react'; // Importação do React é necessária para React.CSSProperties
+import React, { type ReactNode } from 'react'; // Importação do React é necessária para React.CSSProperties
 import styled, { css } from 'styled-components';
-import { motion } from 'framer-motion';
+import { motion, type HTMLMotionProps } from 'framer-motion';
 
 type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'text';
 type ButtonSize = 'small' | 'medium' | 'large';
 
-interface ButtonOwnProps {
+type BaseButtonProps = Omit<React.ButtonHTMLAttributes<HTMLButtonElement>,
+  'onAnimationStart' | 'onDragStart' | 'onDragEnd' | 'onDrag'
+> & Pick<HTMLMotionProps<'button'>, 'whileTap'>;
+
+interface ButtonOwnProps extends BaseButtonProps {
   variant?: ButtonVariant;
   size?: ButtonSize;
   fullWidth?: boolean;
-  icon?: React.ReactNode;
+  icon?: ReactNode;
   iconPosition?: 'left' | 'right';
-  children?: React.ReactNode;
-  onClick?: () => void;
-  className?: string;
-  disabled?: boolean;
-  type?: 'button' | 'submit' | 'reset';
-  style?: React.CSSProperties;
+  children?: ReactNode;
   'data-testid'?: string;
 }
 
@@ -157,12 +156,8 @@ export const Button: React.FC<ButtonProps> = ({
   fullWidth = false,
   icon,
   iconPosition = 'left',
-  onClick,
-  className,
-  disabled,
-  type = 'button',
-  style,
-  'data-testid': dataTestId,
+  whileTap,
+  ...rest 
 }) => {
   return (
     <ButtonContainer
@@ -171,13 +166,8 @@ export const Button: React.FC<ButtonProps> = ({
       $fullWidth={fullWidth}
       $hasIcon={!!icon}
       $iconPosition={iconPosition}
-      whileTap={!disabled ? { scale: 0.98 } : undefined}
-      onClick={onClick}
-      className={className}
-      disabled={disabled}
-      type={type}
-      style={style}
-      data-testid={dataTestId}
+      whileTap={!rest.disabled ? whileTap ?? { scale: 0.98 } : undefined}
+      {...rest}
     >
       {icon && icon}
       {children}

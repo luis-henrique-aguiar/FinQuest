@@ -31,3 +31,7 @@ build/
 
 ### VS Code ###
 .vscode/
+
+finquest-*.json
+application-dev.yml
+application-prod.yml
