@@ -23,7 +23,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public User registerUser(RegisterUserDTO registerUserDTO) {
+    public UserDTO registerUser(RegisterUserDTO registerUserDTO) {
         if (userRepository.findById(registerUserDTO.id()).isPresent()) {
             throw new BusinessException("Usuário com ID: " + registerUserDTO.id() + " já está cadastrado.");
         }
@@ -40,7 +40,8 @@ public class UserServiceImpl implements UserService {
         newUser.setEmail(registerUserDTO.email());
         newUser.setName(registerUserDTO.name());
 
-        return userRepository.save(newUser);
+        User savedUser = userRepository.save(newUser);
+        return UserDTO.convertToDTO(savedUser);
     }
 
     public UserDTO findUserById(String id){

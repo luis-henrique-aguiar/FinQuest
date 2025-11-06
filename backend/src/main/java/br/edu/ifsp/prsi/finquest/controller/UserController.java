@@ -21,7 +21,7 @@ public class UserController {
     }
 
     @PostMapping("/auth/register")
-    public ResponseEntity<Void> registerUser(
+    public ResponseEntity<UserDTO> registerUser(
             @RequestBody @Valid RegisterUserDTO registerUserDTO,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
@@ -31,8 +31,8 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
 
-        userService.registerUser(registerUserDTO);
-        return ResponseEntity.status(HttpStatus.CREATED).build();
+        var savedUser = userService.registerUser(registerUserDTO);
+        return ResponseEntity.status(HttpStatus.CREATED).body(savedUser);
     }
 
     @GetMapping("/{id}")
