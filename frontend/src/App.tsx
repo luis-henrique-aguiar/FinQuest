@@ -28,6 +28,7 @@ import AppLayout from "./components/layout/AppLayout";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import LearnHubPage from "./pages/LearnHubPage";
 import { CourseDetailsPage } from "./pages/CourseDetailsPage";
+import ProfilePage from "./pages/ProfilePage";
 
 const AppRoutes = () => {
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(() => {
@@ -66,6 +67,7 @@ const AppRoutes = () => {
           <Route path="/home" element={<HomePage />} />
           <Route path="/learn" element={<LearnHubPage />} />
           <Route path="/learn/:courseId" element={<CourseDetailsPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
         </Route>
       </Route>
 
