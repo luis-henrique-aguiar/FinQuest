@@ -9,6 +9,7 @@ interface GoalCardProps {
   name: string;
   target: number;
   saved: number;
+  status: "active" | "completed" | "archived";
   onAddFunds: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -17,31 +18,13 @@ interface GoalCardProps {
 const GoalContainer = styled(Card)`
   display: flex;
   flex-direction: column;
-  min-height: 320px;
   transition: all 0.2s ease;
   position: relative;
-  
-  &:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 25px ${({ theme }) => theme.colors.primary}22;
-  }
-`;
 
-const CompletedChip = styled.div`
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  background: linear-gradient(135deg, ${({ theme }) => theme.colors.secondary} 0%, ${({ theme }) => theme.colors.secondary}DD 100%);
-  color: white;
-  padding: 6px 12px;
-  border-radius: ${({ theme }) => theme.borderRadius.pill};
-  font-size: 0.75rem;
-  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
-  box-shadow: 0 2px 8px ${({ theme }) => theme.colors.secondary}44;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  gap: 4px;
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px ${({ theme }) => theme.colors.primary}18;
+  }
 `;
 
 const CardHeader = styled.div`
@@ -49,32 +32,46 @@ const CardHeader = styled.div`
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: ${({ theme }) => theme.spacing.lg};
-  padding-right: ${({ theme }) => theme.spacing.sm};
+  gap: ${({ theme }) => theme.spacing.md};
+`;
+
+const TitleSection = styled.div`
+  flex: 1;
+  min-width: 0;
 `;
 
 const GoalTitle = styled.h3`
-  margin: 0;
-  font-size: 1.4rem;
+  margin: 0 0 ${({ theme }) => theme.spacing.xs} 0;
+  font-size: 1.25rem;
   font-weight: ${({ theme }) => theme.typography.fontWeight.semiBold};
   color: ${({ theme }) => theme.colors.textDark};
   line-height: 1.3;
-  flex: 1;
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-  hyphens: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+`;
+
+const StatusBadge = styled.span<{ $isComplete: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: ${({ theme }) => theme.borderRadius.pill};
+  font-size: 0.75rem;
+  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  background: ${({ $isComplete, theme }) =>
+    $isComplete ? theme.colors.secondary : `${theme.colors.primary}15`};
+  color: ${({ $isComplete, theme }) =>
+    $isComplete ? theme.colors.white : theme.colors.primary};
 `;
 
 const ActionButtons = styled.div`
   display: flex;
-  gap: 6px;
-  opacity: 0.6;
-  transition: opacity 0.2s ease;
-  margin-left: ${({ theme }) => theme.spacing.sm};
-  
-  ${GoalContainer}:hover & {
-    opacity: 1;
-  }
-  
+  gap: 4px;
+  flex-shrink: 0;
+
   button {
     background: none;
     border: none;
@@ -86,103 +83,93 @@ const ActionButtons = styled.div`
     display: flex;
     align-items: center;
     justify-content: center;
-    
+
     &:hover {
       background-color: ${({ theme }) => theme.colors.background};
       color: ${({ theme }) => theme.colors.primary};
     }
-    
+
     &:last-child:hover {
-      color: #DC3545;
-      background-color: #DC354511;
+      color: #dc3545;
+      background-color: #dc354511;
     }
   }
 `;
 
 const ProgressSection = styled.div`
-  flex: 1;
-  display: flex;
-  flex-direction: column;
   margin-bottom: ${({ theme }) => theme.spacing.xl};
 `;
 
 const AmountDisplay = styled.div`
-  text-align: center;
-  margin-bottom: ${({ theme }) => theme.spacing.xl};
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: ${({ theme }) => theme.spacing.md};
+  gap: ${({ theme }) => theme.spacing.md};
 `;
 
 const SavedAmount = styled.div`
-  font-size: 2.5rem;
+  font-size: 1.75rem;
   font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
   color: ${({ theme }) => theme.colors.primary};
-  margin-bottom: ${({ theme }) => theme.spacing.xs};
   line-height: 1;
-  word-wrap: break-word;
 `;
 
-const TargetAmount = styled.div`
-  font-size: 1rem;
+const TargetLabel = styled.div`
+  font-size: 0.9rem;
   color: ${({ theme }) => theme.colors.textMedium};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  text-align: right;
+
+  span {
+    display: block;
+    font-size: 0.75rem;
+    margin-bottom: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
 `;
 
-const ProgressContainer = styled.div`
-  margin-bottom: ${({ theme }) => theme.spacing.lg};
-`;
-
-const ProgressLabel = styled.div`
+const ProgressInfo = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: ${({ theme }) => theme.spacing.sm};
-  flex-wrap: wrap;
-  gap: ${({ theme }) => theme.spacing.xs};
 `;
 
-const ProgressPercentage = styled.span<{ $isComplete: boolean }>`
-  font-size: 1rem;
+const ProgressLabel = styled.div`
+  font-size: 0.85rem;
   font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
-  color: ${({ $isComplete, theme }) => 
-    $isComplete ? theme.colors.secondary : theme.colors.primary};
+  color: ${({ theme }) => theme.colors.textDark};
 `;
 
-const RemainingAmount = styled.span`
-  font-size: 0.9rem;
+const RemainingLabel = styled.div`
+  font-size: 0.85rem;
   color: ${({ theme }) => theme.colors.textMedium};
-  text-align: right;
-  word-wrap: break-word;
-`;
-
-const ActionArea = styled.div`
-  margin-top: auto;
-  padding-top: ${({ theme }) => theme.spacing.md};
-`;
-
-const AddFundsButton = styled(Button)<{ $isComplete: boolean }>`
-  ${({ $isComplete }) => $isComplete && `
-    background: linear-gradient(135deg, #28A745 0%, #20C997 100%);
-    border-color: #28A745;
-    
-    &:hover {
-      background: linear-gradient(135deg, #218838 0%, #1DA88A 100%);
-      transform: none;
-    }
-  `}
 `;
 
 export const GoalCard: React.FC<GoalCardProps> = ({
   name,
   target,
   saved,
+  status,
   onAddFunds,
   onEdit,
   onDelete,
 }) => {
   const progress = Math.min((saved / target) * 100, 100);
-  const isComplete = progress >= 100;
+  const isComplete = status === "completed";
   const remaining = Math.max(target - saved, 0);
 
   const formatCurrency = (value: number) => {
+    return value.toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  };
+
+  const formatCurrencyCompact = (value: number) => {
     return value.toLocaleString("pt-BR", {
       style: "currency",
       currency: "BRL",
@@ -191,23 +178,15 @@ export const GoalCard: React.FC<GoalCardProps> = ({
     });
   };
 
-  const formatCurrencyDetailed = (value: number) => {
-    return value.toLocaleString("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    });
-  };
-
   return (
     <GoalContainer variant="elevated" padding="large">
-      {isComplete && (
-        <CompletedChip>
-          ✓ Concluída
-        </CompletedChip>
-      )}
-
       <CardHeader>
-        <GoalTitle>{name}</GoalTitle>
+        <TitleSection>
+          <GoalTitle>{name}</GoalTitle>
+          <StatusBadge $isComplete={isComplete}>
+            {isComplete ? "✓ Concluída" : "● Em andamento"}
+          </StatusBadge>
+        </TitleSection>
         <ActionButtons>
           <button onClick={onEdit} aria-label="Editar meta" title="Editar">
             <Edit size={16} />
@@ -220,40 +199,38 @@ export const GoalCard: React.FC<GoalCardProps> = ({
 
       <ProgressSection>
         <AmountDisplay>
-          <SavedAmount>{formatCurrency(saved)}</SavedAmount>
-          <TargetAmount>de {formatCurrency(target)}</TargetAmount>
+          <SavedAmount>{formatCurrencyCompact(saved)}</SavedAmount>
+          <TargetLabel>
+            <span>Meta</span>
+            {formatCurrencyCompact(target)}
+          </TargetLabel>
         </AmountDisplay>
 
-        <ProgressContainer>
-          <ProgressLabel>
-            <ProgressPercentage $isComplete={isComplete}>
-              {progress.toFixed(0)}% concluído
-            </ProgressPercentage>
-            {!isComplete && (
-              <RemainingAmount>
-                Faltam {formatCurrencyDetailed(remaining)}
-              </RemainingAmount>
-            )}
-          </ProgressLabel>
-          <ProgressBar 
-            progress={progress} 
-            variant={isComplete ? "streak" : "xp"} 
-            height={10} 
-          />
-        </ProgressContainer>
+        <ProgressInfo>
+          <ProgressLabel>{progress.toFixed(0)}%</ProgressLabel>
+          {!isComplete && remaining > 0 && (
+            <RemainingLabel>Faltam {formatCurrency(remaining)}</RemainingLabel>
+          )}
+        </ProgressInfo>
+
+        <ProgressBar
+          progress={progress}
+          variant={isComplete ? "streak" : "xp"}
+          height={10}
+        />
       </ProgressSection>
 
-      <ActionArea>
-        <AddFundsButton 
-          variant={isComplete ? "primary" : "outline"} 
-          fullWidth 
+      {!isComplete && (
+        <Button
+          variant="outline"
+          fullWidth
           onClick={onAddFunds}
-          $isComplete={isComplete}
-          icon={!isComplete ? <Plus size={16} /> : undefined}
+          icon={<Plus size={18} />}
+          size="medium"
         >
-          {isComplete ? "🎉 Meta Alcançada!" : "Adicionar Valor"}
-        </AddFundsButton>
-      </ActionArea>
+          Adicionar Dinheiro
+        </Button>
+      )}
     </GoalContainer>
   );
 };

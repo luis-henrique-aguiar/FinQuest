@@ -11,7 +11,7 @@ export const Header = styled.div`
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
-  
+
   @media (max-width: 768px) {
     flex-direction: column;
     align-items: stretch;
@@ -31,21 +31,21 @@ export const FilterTabs = styled.div`
   gap: ${({ theme }) => theme.spacing.sm};
   overflow-x: auto;
   padding-bottom: ${({ theme }) => theme.spacing.xs};
-  
+
   &::-webkit-scrollbar {
     height: 4px;
   }
-  
+
   &::-webkit-scrollbar-track {
     background: ${({ theme }) => theme.colors.background};
     border-radius: 2px;
   }
-  
+
   &::-webkit-scrollbar-thumb {
     background-color: ${({ theme }) => theme.colors.textMedium}33;
     border-radius: 20px;
   }
-  
+
   @media (max-width: 768px) {
     padding: 0 ${({ theme }) => theme.spacing.sm};
     margin-left: -${({ theme }) => theme.spacing.sm};
@@ -59,8 +59,8 @@ export const FilterTab = styled.button<{ $active: boolean }>`
     $active ? theme.colors.primary : theme.colors.white};
   color: ${({ $active, theme }) =>
     $active ? theme.colors.white : theme.colors.textDark};
-  border: 2px solid ${({ $active, theme }) =>
-    $active ? theme.colors.primary : '#e5e7eb'};
+  border: 2px solid
+    ${({ $active, theme }) => ($active ? theme.colors.primary : "#e5e7eb")};
   border-radius: ${({ theme }) => theme.borderRadius.pill};
   font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
   font-family: ${({ theme }) => theme.typography.fontFamily.body};
@@ -69,7 +69,7 @@ export const FilterTab = styled.button<{ $active: boolean }>`
   transition: all 0.3s ease;
   font-size: 0.9rem;
   min-width: fit-content;
-  
+
   &:hover {
     background-color: ${({ $active, theme }) =>
       $active ? theme.colors.primary : theme.colors.primary}11;
@@ -77,7 +77,7 @@ export const FilterTab = styled.button<{ $active: boolean }>`
     transform: translateY(-1px);
     box-shadow: 0 4px 12px ${({ theme }) => theme.colors.primary}22;
   }
-  
+
   &:active {
     transform: translateY(0);
   }
@@ -85,44 +85,36 @@ export const FilterTab = styled.button<{ $active: boolean }>`
 
 export const GoalsGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
-  gap: ${({ theme }) => theme.spacing.xl};
-  
-  @media (max-width: 768px) {
-    grid-template-columns: 1fr;
-    gap: ${({ theme }) => theme.spacing.lg};
-  }
-  
-  @media (min-width: 1400px) {
-    grid-template-columns: repeat(3, 1fr);
-  }
+  grid-template-columns: 1fr;
+  gap: ${({ theme }) => theme.spacing.lg};
 `;
 
 export const EmptyState = styled.div`
   text-align: center;
   padding: ${({ theme }) => theme.spacing.xxl};
   color: ${({ theme }) => theme.colors.textMedium};
-  background: linear-gradient(135deg, 
-    ${({ theme }) => theme.colors.white} 0%, 
+  background: linear-gradient(
+    135deg,
+    ${({ theme }) => theme.colors.white} 0%,
     ${({ theme }) => theme.colors.background} 100%
   );
   border-radius: ${({ theme }) => theme.borderRadius.large};
   border: 2px dashed ${({ theme }) => theme.colors.primary}33;
-  
+
   .emoji {
     font-size: 4rem;
     margin-bottom: ${({ theme }) => theme.spacing.lg};
     display: block;
     filter: grayscale(0.3);
   }
-  
+
   h3 {
     margin: 0 0 ${({ theme }) => theme.spacing.sm};
     color: ${({ theme }) => theme.colors.textDark};
     font-size: 1.5rem;
     font-weight: ${({ theme }) => theme.typography.fontWeight.semiBold};
   }
-  
+
   p {
     margin: 0;
     font-size: 1.1rem;
@@ -189,7 +181,7 @@ export const Input = styled.input`
 
   &[type="number"] {
     -moz-appearance: textfield;
-    
+
     &::-webkit-outer-spin-button,
     &::-webkit-inner-spin-button {
       -webkit-appearance: none;
@@ -203,7 +195,7 @@ export const ModalButtonContainer = styled.div`
   justify-content: flex-end;
   gap: ${({ theme }) => theme.spacing.md};
   margin-top: ${({ theme }) => theme.spacing.lg};
-  
+
   @media (max-width: 768px) {
     flex-direction: column-reverse;
     gap: ${({ theme }) => theme.spacing.sm};
@@ -217,14 +209,14 @@ export const CelebrationContainer = styled.div`
   text-align: center;
   gap: ${({ theme }) => theme.spacing.lg};
   padding: ${({ theme }) => theme.spacing.lg};
-  
+
   h2 {
     margin: 0;
     color: ${({ theme }) => theme.colors.secondary};
     font-size: 2rem;
     font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
   }
-  
+
   p {
     margin: 0;
     color: ${({ theme }) => theme.colors.textMedium};
@@ -241,13 +233,14 @@ export const LottieContainer = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, 
-    ${({ theme }) => theme.colors.secondary}11 0%, 
+  background: linear-gradient(
+    135deg,
+    ${({ theme }) => theme.colors.secondary}11 0%,
     ${({ theme }) => theme.colors.accent}11 100%
   );
   border-radius: 50%;
   font-size: 4rem;
-  
+
   @media (max-width: 768px) {
     width: 150px;
     height: 150px;
@@ -269,12 +262,12 @@ export const StatCard = styled.div`
   border: 1px solid ${({ theme }) => theme.colors.background};
   text-align: center;
   transition: all 0.2s ease;
-  
+
   &:hover {
     transform: translateY(-2px);
     box-shadow: ${({ theme }) => theme.shadows.medium};
   }
-  
+
   .stat-value {
     font-size: 1.75rem;
     font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
@@ -282,7 +275,7 @@ export const StatCard = styled.div`
     margin-bottom: ${({ theme }) => theme.spacing.xs};
     line-height: 1;
   }
-  
+
   .stat-label {
     font-size: 0.9rem;
     color: ${({ theme }) => theme.colors.textMedium};
@@ -297,7 +290,7 @@ export const FilterInfo = styled.div`
   padding: ${({ theme }) => theme.spacing.sm} 0;
   color: ${({ theme }) => theme.colors.textMedium};
   font-size: 0.9rem;
-  
+
   @media (max-width: 768px) {
     flex-direction: column;
     align-items: flex-start;
@@ -316,7 +309,7 @@ export const ClearFilters = styled.button`
   cursor: pointer;
   font-size: 0.9rem;
   text-decoration: underline;
-  
+
   &:hover {
     opacity: 0.8;
   }
