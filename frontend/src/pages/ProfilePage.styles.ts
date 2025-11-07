@@ -15,56 +15,63 @@ export const ProfileHeader = styled(Card)`
 `;
 
 export const AvatarContainer = styled.div`
+  position: relative;
   width: 100px;
   height: 100px;
-  border-radius: 50%;
-  background-color: ${({ theme }) => theme.colors.primary};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 48px;
   margin-bottom: ${({ theme }) => theme.spacing.md};
-  position: relative;
-  overflow: hidden;
 `;
 
 export const AvatarImage = styled.img`
   width: 100%;
   height: 100%;
+  border-radius: 50%;
   object-fit: cover;
+  border: 3px solid ${({ theme }) => theme.colors.primary}33;
 `;
 
 export const LevelBadge = styled.div`
   position: absolute;
-  bottom: 0;
-  right: 0;
-  background-color: ${({ theme }) => theme.colors.accent};
-  color: ${({ theme }) => theme.colors.textDark};
-  font-size: 14px;
+  bottom: 0px;
+  right: -10px;
+  background-color: ${({ theme }) => theme.colors.primary};
+  color: ${({ theme }) => theme.colors.white};
+  font-size: 0.75rem;
   font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
-  padding: 4px 8px;
+  padding: 2px 8px;
   border-radius: ${({ theme }) => theme.borderRadius.pill};
-  border: 2px solid white;
+  border: 2px solid ${({ theme }) => theme.colors.white};
+  box-shadow: ${({ theme }) => theme.shadows.small};
+  z-index: 1;
 `;
 
 export const UserName = styled.h2`
   margin: 0 0 ${({ theme }) => theme.spacing.xs};
+  font-size: 1.5rem;
+  font-weight: ${({ theme }) => theme.typography.fontWeight.semiBold};
 `;
 
 export const UserTitle = styled.p`
   color: ${({ theme }) => theme.colors.textMedium};
   margin: 0 0 ${({ theme }) => theme.spacing.md};
+  font-size: 1rem;
 `;
 
 export const StatsContainer = styled.div`
   display: flex;
-  justify-content: space-around;
+  justify-content: center;
   width: 100%;
+  margin-bottom: ${({ theme }) => theme.spacing.md};
+`;
+
+export const ProgressWrapper = styled.div`
+  width: 80%;
   margin-bottom: ${({ theme }) => theme.spacing.md};
 `;
 
 export const SectionTitle = styled.h2`
   margin-bottom: ${({ theme }) => theme.spacing.md};
+  font-size: 1.25rem;
+  font-weight: ${({ theme }) => theme.typography.fontWeight.semiBold};
 `;
 
 export const BadgesContainer = styled.div`
@@ -108,6 +115,7 @@ export const AchievementInfo = styled.div`
 export const AchievementTitle = styled.h3`
   margin: 0 0 ${({ theme }) => theme.spacing.xs};
   font-size: 16px;
+  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
 `;
 
 export const AchievementDescription = styled.p`
@@ -136,4 +144,14 @@ export const SettingItem = styled.div`
 
 export const SettingLabel = styled.span`
   font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+`;
+
+export const ButtonsContainer = styled.div`
+  display: flex;
+  gap: ${({ theme }) => theme.spacing.sm};
+  width: 100%;
+  
+  @media (max-width: 480px) {
+    flex-direction: column;
+  }
 `;
