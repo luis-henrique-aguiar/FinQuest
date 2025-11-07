@@ -6,28 +6,47 @@ import { Modal } from "../components/common/Modal";
 import { useToast } from "../hooks/useToast";
 import * as S from "./BudgetPage.styles";
 
-// Tipos
 export interface Transaction {
   id: string;
-  type: 'income' | 'expense';
+  type: "income" | "expense";
   amount: number;
   description: string;
   category: string;
   date: string;
 }
 
-// Modal de Transação com inputs melhorados
+const EXPENSE_CATEGORIES = [
+  "Alimentação",
+  "Moradia",
+  "Transporte",
+  "Saúde",
+  "Educação",
+  "Entretenimento",
+  "Roupas",
+  "Serviços",
+  "Outros Gastos",
+];
+
+const INCOME_CATEGORIES = [
+  "Salário",
+  "Freelance",
+  "Investimentos",
+  "Vendas",
+  "Presente",
+  "Outros Ganhos",
+];
+
 const TransactionModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (transaction: Transaction | Omit<Transaction, 'id'>) => void;
+  onSubmit: (transaction: Transaction | Omit<Transaction, "id">) => void;
   initialData?: Transaction | null;
 }> = ({ isOpen, onClose, onSubmit, initialData }) => {
   const [formData, setFormData] = useState({
-    type: initialData?.type || 'expense' as 'income' | 'expense',
+    type: initialData?.type || ("expense" as "income" | "expense"),
     amount: initialData?.amount || 0,
-    description: initialData?.description || '',
-    category: initialData?.category || '',
+    description: initialData?.description || "",
+    category: initialData?.category || "",
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -39,49 +58,59 @@ const TransactionModal: React.FC<{
     };
     onSubmit(transaction);
     onClose();
-    // Reset form
     setFormData({
-      type: 'expense',
+      type: "expense",
       amount: 0,
-      description: '',
-      category: '',
+      description: "",
+      category: "",
     });
   };
 
   const handleClose = () => {
     onClose();
-    // Reset form when closing
     setFormData({
-      type: initialData?.type || 'expense',
+      type: initialData?.type || "expense",
       amount: initialData?.amount || 0,
-      description: initialData?.description || '',
-      category: initialData?.category || '',
+      description: initialData?.description || "",
+      category: initialData?.category || "",
     });
   };
+
+  const handleTypeChange = (newType: "income" | "expense") => {
+    setFormData({
+      ...formData,
+      type: newType,
+      category: "",
+    });
+  };
+
+  const availableCategories =
+    formData.type === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
 
   if (!isOpen) return null;
 
   return (
-    <Modal 
-      isOpen={isOpen} 
-      onClose={handleClose} 
+    <Modal
+      isOpen={isOpen}
+      onClose={handleClose}
       title={initialData ? "Editar Transação" : "Nova Transação"}
     >
       <S.ModalContent>
         <S.ModalDescription>
-          {initialData 
-            ? "Edite as informações da transação abaixo." 
-            : "Preencha os dados da nova transação."
-          }
+          {initialData
+            ? "Edite as informações da transação abaixo."
+            : "Preencha os dados da nova transação."}
         </S.ModalDescription>
-        
+
         <S.FormContainer onSubmit={handleSubmit}>
           <S.InputGroup>
             <S.Label htmlFor="type">Tipo da Transação</S.Label>
-            <S.Select 
+            <S.Select
               id="type"
-              value={formData.type} 
-              onChange={(e) => setFormData({...formData, type: e.target.value as 'income' | 'expense'})}
+              value={formData.type}
+              onChange={(e) =>
+                handleTypeChange(e.target.value as "income" | "expense")
+              }
               required
             >
               <option value="expense">💸 Despesa</option>
@@ -91,11 +120,13 @@ const TransactionModal: React.FC<{
 
           <S.InputGroup>
             <S.Label htmlFor="amount">Valor (R$)</S.Label>
-            <S.Input 
+            <S.Input
               id="amount"
-              type="number" 
-              value={formData.amount || ''} 
-              onChange={(e) => setFormData({...formData, amount: Number(e.target.value)})}
+              type="number"
+              value={formData.amount || ""}
+              onChange={(e) =>
+                setFormData({ ...formData, amount: Number(e.target.value) })
+              }
               placeholder="0,00"
               min="0"
               step="0.01"
@@ -105,11 +136,13 @@ const TransactionModal: React.FC<{
 
           <S.InputGroup>
             <S.Label htmlFor="description">Descrição</S.Label>
-            <S.Input 
+            <S.Input
               id="description"
-              type="text" 
-              value={formData.description} 
-              onChange={(e) => setFormData({...formData, description: e.target.value})}
+              type="text"
+              value={formData.description}
+              onChange={(e) =>
+                setFormData({ ...formData, description: e.target.value })
+              }
               placeholder="Ex: Supermercado, Salário, Conta de luz..."
               required
             />
@@ -117,14 +150,21 @@ const TransactionModal: React.FC<{
 
           <S.InputGroup>
             <S.Label htmlFor="category">Categoria</S.Label>
-            <S.Input 
+            <S.Select
               id="category"
-              type="text" 
-              value={formData.category} 
-              onChange={(e) => setFormData({...formData, category: e.target.value})}
-              placeholder="Ex: Alimentação, Trabalho, Moradia..."
+              value={formData.category}
+              onChange={(e) =>
+                setFormData({ ...formData, category: e.target.value })
+              }
               required
-            />
+            >
+              <option value="">Selecione uma categoria</option>
+              {availableCategories.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </S.Select>
           </S.InputGroup>
 
           <S.ModalButtonContainer>
@@ -132,7 +172,7 @@ const TransactionModal: React.FC<{
               Cancelar
             </Button>
             <Button variant="primary" type="submit">
-              {initialData ? 'Atualizar Transação' : 'Adicionar Transação'}
+              {initialData ? "Atualizar Transação" : "Adicionar Transação"}
             </Button>
           </S.ModalButtonContainer>
         </S.FormContainer>
@@ -141,7 +181,6 @@ const TransactionModal: React.FC<{
   );
 };
 
-// Modal de Orçamento com inputs melhorados
 const SetBudgetModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
@@ -164,19 +203,24 @@ const SetBudgetModal: React.FC<{
   if (!isOpen) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Definir Orçamento Mensal">
+    <Modal
+      isOpen={isOpen}
+      onClose={handleClose}
+      title="Definir Orçamento Mensal"
+    >
       <S.ModalContent>
         <S.ModalDescription>
-          Defina um limite de gastos para o mês. Isso ajudará você a controlar suas despesas e manter suas finanças organizadas.
+          Defina um limite de gastos para o mês. Isso ajudará você a controlar
+          suas despesas e manter suas finanças organizadas.
         </S.ModalDescription>
-        
+
         <S.FormContainer onSubmit={handleSubmit}>
           <S.InputGroup>
             <S.Label htmlFor="budget">Orçamento para Despesas (R$)</S.Label>
-            <S.Input 
+            <S.Input
               id="budget"
-              type="number" 
-              value={budget || ''} 
+              type="number"
+              value={budget || ""}
               onChange={(e) => setBudget(Number(e.target.value))}
               placeholder="Ex: 2500,00"
               required
@@ -203,39 +247,55 @@ export const BudgetPage: React.FC = () => {
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
   const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[]>([
-    // Dados mockados para demonstração
     {
-      id: '1',
-      type: 'income',
+      id: "1",
+      type: "income",
       amount: 3000,
-      description: 'Salário',
-      category: 'Trabalho',
-      date: '2024-01-15',
+      description: "Salário",
+      category: "Salário",
+      date: "2024-01-15",
     },
     {
-      id: '2',
-      type: 'expense',
+      id: "2",
+      type: "expense",
       amount: 800,
-      description: 'Aluguel',
-      category: 'Moradia',
-      date: '2024-01-10',
+      description: "Aluguel",
+      category: "Moradia",
+      date: "2024-01-10",
     },
     {
-      id: '3',
-      type: 'expense',
+      id: "3",
+      type: "expense",
       amount: 200,
-      description: 'Supermercado',
-      category: 'Alimentação',
-      date: '2024-01-12',
+      description: "Supermercado",
+      category: "Alimentação",
+      date: "2024-01-12",
+    },
+    {
+      id: "4",
+      type: "expense",
+      amount: 150,
+      description: "Uber",
+      category: "Transporte",
+      date: "2024-01-14",
+    },
+    {
+      id: "5",
+      type: "income",
+      amount: 500,
+      description: "Freelance",
+      category: "Freelance",
+      date: "2024-01-16",
     },
   ]);
   const [totalBudget, setTotalBudget] = useState<number | null>(2500);
   const { addToast } = useToast();
 
-  // Estados para modais
   const [modalMode, setModalMode] = useState<"add" | "edit">("add");
-  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
-  const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null);
+  const [editingTransaction, setEditingTransaction] =
+    useState<Transaction | null>(null);
+  const [transactionToDelete, setTransactionToDelete] =
+    useState<Transaction | null>(null);
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
 
   const { totalIncome, totalExpense, remainingBalance } = useMemo(() => {
@@ -248,11 +308,14 @@ export const BudgetPage: React.FC = () => {
     return {
       totalIncome: income,
       totalExpense: expense,
-      remainingBalance: totalBudget !== null ? totalBudget + income - expense : null,
+      remainingBalance:
+        totalBudget !== null ? totalBudget + income - expense : null,
     };
   }, [transactions, totalBudget]);
 
-  const handleUpdateTransaction = (transactionData: Transaction | Omit<Transaction, "id">) => {
+  const handleUpdateTransaction = (
+    transactionData: Transaction | Omit<Transaction, "id">
+  ) => {
     if (!editingTransaction) return;
     setTransactions((prev) =>
       prev.map((t) =>
@@ -288,16 +351,19 @@ export const BudgetPage: React.FC = () => {
     setIsConfirmDeleteOpen(true);
   };
 
-  const handleAddTransaction = (transaction: Transaction | Omit<Transaction, 'id'>) => {
+  const handleAddTransaction = (
+    transaction: Transaction | Omit<Transaction, "id">
+  ) => {
     const newTransaction = {
       ...transaction,
-      id: 'id' in transaction ? transaction.id : Date.now().toString(),
+      id: "id" in transaction ? transaction.id : Date.now().toString(),
     } as Transaction;
-    
+
     setTransactions((prev) => [newTransaction, ...prev]);
-    const message = newTransaction.type === "income"
-      ? "Receita adicionada com sucesso!"
-      : "Despesa adicionada com sucesso!";
+    const message =
+      newTransaction.type === "income"
+        ? "Receita adicionada com sucesso!"
+        : "Despesa adicionada com sucesso!";
     addToast(message, "success");
   };
 
@@ -319,7 +385,9 @@ export const BudgetPage: React.FC = () => {
       <TransactionModal
         isOpen={isTransactionModalOpen}
         onClose={() => setIsTransactionModalOpen(false)}
-        onSubmit={modalMode === "add" ? handleAddTransaction : handleUpdateTransaction}
+        onSubmit={
+          modalMode === "add" ? handleAddTransaction : handleUpdateTransaction
+        }
         initialData={editingTransaction}
       />
 
@@ -330,7 +398,8 @@ export const BudgetPage: React.FC = () => {
       >
         <S.ModalContent>
           <p>
-            Você tem certeza que deseja excluir a transação "<strong>{transactionToDelete?.description}</strong>"?
+            Você tem certeza que deseja excluir a transação "
+            <strong>{transactionToDelete?.description}</strong>"?
           </p>
           <S.ModalDescription>
             Esta ação não pode ser desfeita.
@@ -420,7 +489,7 @@ export const BudgetPage: React.FC = () => {
                 <S.TransactionItem key={transaction.id}>
                   <S.TransactionInfo>
                     <h4>{transaction.description}</h4>
-                    <span>{transaction.category}</span>
+                    <S.CategoryTag>{transaction.category}</S.CategoryTag>
                   </S.TransactionInfo>
                   <S.TransactionActions>
                     <S.TransactionAmount $type={transaction.type}>

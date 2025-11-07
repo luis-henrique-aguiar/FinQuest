@@ -12,7 +12,7 @@ export const Header = styled.div`
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
-  
+
   @media (max-width: 768px) {
     flex-direction: column;
     align-items: stretch;
@@ -24,15 +24,15 @@ export const SummaryGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: ${({ theme }) => theme.spacing.lg};
-  
+
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
     gap: ${({ theme }) => theme.spacing.md};
   }
 `;
 
-export const SummaryCard = styled(Card)<{ 
-  highlight?: boolean; 
+export const SummaryCard = styled(Card)<{
+  highlight?: boolean;
   $textColor?: string;
 }>`
   text-align: center;
@@ -41,18 +41,21 @@ export const SummaryCard = styled(Card)<{
   position: relative;
   overflow: hidden;
   transition: all 0.3s ease;
-  
-  ${({ highlight, theme }) => highlight && css`
-    border-color: ${theme.colors.accent};
-    background: linear-gradient(135deg, 
-      ${theme.colors.accent}11 0%, 
-      ${theme.colors.accent}22 100%
-    );
-    box-shadow: 0 4px 20px ${theme.colors.accent}33;
-  `}
-  
+
+  ${({ highlight, theme }) =>
+    highlight &&
+    css`
+      border-color: ${theme.colors.accent};
+      background: linear-gradient(
+        135deg,
+        ${theme.colors.accent}11 0%,
+        ${theme.colors.accent}22 100%
+      );
+      box-shadow: 0 4px 20px ${theme.colors.accent}33;
+    `}
+
   &::before {
-    content: '';
+    content: "";
     position: absolute;
     top: 0;
     left: -100%;
@@ -66,7 +69,7 @@ export const SummaryCard = styled(Card)<{
     );
     transition: left 0.5s;
   }
-  
+
   &:hover::before {
     left: 100%;
   }
@@ -83,7 +86,7 @@ export const SummaryCard = styled(Card)<{
     font-size: 1.75rem;
     font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
     color: ${({ $textColor, theme }) => $textColor || theme.colors.textDark};
-    
+
     @media (max-width: 768px) {
       font-size: 1.5rem;
     }
@@ -97,19 +100,20 @@ export const BudgetSetupCard = styled(Card)`
   align-items: center;
   gap: ${({ theme }) => theme.spacing.lg};
   text-align: center;
-  background: linear-gradient(135deg, 
-    ${({ theme }) => theme.colors.white} 0%, 
+  background: linear-gradient(
+    135deg,
+    ${({ theme }) => theme.colors.white} 0%,
     ${({ theme }) => theme.colors.background} 100%
   );
   border: 2px dashed ${({ theme }) => theme.colors.primary}33;
-  
+
   h4 {
     margin: 0;
     font-size: 1.25rem;
     color: ${({ theme }) => theme.colors.textDark};
     font-weight: ${({ theme }) => theme.typography.fontWeight.semiBold};
   }
-  
+
   p {
     margin: 0;
     color: ${({ theme }) => theme.colors.textMedium};
@@ -131,13 +135,13 @@ export const TransactionItem = styled(Card)`
   padding: ${({ theme }) => theme.spacing.lg};
   transition: all 0.2s ease;
   border-left: 4px solid transparent;
-  
+
   &:hover {
     background-color: ${({ theme }) => theme.colors.background};
     border-left-color: ${({ theme }) => theme.colors.primary};
     transform: translateX(4px);
   }
-  
+
   @media (max-width: 768px) {
     flex-direction: column;
     align-items: stretch;
@@ -147,38 +151,44 @@ export const TransactionItem = styled(Card)`
 
 export const TransactionInfo = styled.div`
   flex-grow: 1;
-  
+
   h4 {
     margin: 0 0 ${({ theme }) => theme.spacing.xs};
     font-weight: ${({ theme }) => theme.typography.fontWeight.semiBold};
     color: ${({ theme }) => theme.colors.textDark};
   }
-  
-  span {
-    font-size: 0.9rem;
-    color: ${({ theme }) => theme.colors.textMedium};
-    background-color: ${({ theme }) => theme.colors.background};
-    padding: 2px 8px;
-    border-radius: ${({ theme }) => theme.borderRadius.small};
-  }
+`;
+
+export const CategoryTag = styled.span`
+  font-size: 0.85rem;
+  color: ${({ theme }) => theme.colors.textDark};
+  background: linear-gradient(
+    135deg,
+    ${({ theme }) => theme.colors.primary}22 0%,
+    ${({ theme }) => theme.colors.primary}11 100%
+  );
+  border: 1px solid ${({ theme }) => theme.colors.primary}33;
+  padding: 4px 12px;
+  border-radius: ${({ theme }) => theme.borderRadius.pill};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
 `;
 
 export const TransactionActions = styled.div`
   display: flex;
   align-items: center;
   gap: 1.5rem;
-  
+
   @media (max-width: 768px) {
     justify-content: space-between;
   }
 `;
 
-export const TransactionAmount = styled.p<{ $type: 'income' | 'expense' }>`
+export const TransactionAmount = styled.p<{ $type: "income" | "expense" }>`
   margin: 0;
   font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
   font-size: 1.1rem;
-  color: ${({ $type }) => $type === 'income' ? '#28A745' : '#DC3545'};
-  
+  color: ${({ $type }) => ($type === "income" ? "#28A745" : "#DC3545")};
+
   @media (max-width: 768px) {
     font-size: 1rem;
   }
@@ -187,7 +197,7 @@ export const TransactionAmount = styled.p<{ $type: 'income' | 'expense' }>`
 export const ActionButtons = styled.div`
   display: flex;
   gap: ${({ theme }) => theme.spacing.xs};
-  
+
   button {
     background: none;
     border: none;
@@ -199,15 +209,15 @@ export const ActionButtons = styled.div`
     display: flex;
     align-items: center;
     justify-content: center;
-    
+
     &:hover {
       color: ${({ theme }) => theme.colors.primary};
       background-color: ${({ theme }) => theme.colors.primary}11;
     }
-    
+
     &:last-child:hover {
-      color: #DC3545;
-      background-color: #DC354511;
+      color: #dc3545;
+      background-color: #dc354511;
     }
   }
 `;
@@ -217,7 +227,7 @@ export const ModalButtonContainer = styled.div`
   justify-content: flex-end;
   gap: ${({ theme }) => theme.spacing.md};
   margin-top: ${({ theme }) => theme.spacing.lg};
-  
+
   @media (max-width: 768px) {
     flex-direction: column-reverse;
     gap: ${({ theme }) => theme.spacing.sm};
@@ -228,7 +238,7 @@ export const EmptyState = styled.div`
   text-align: center;
   padding: ${({ theme }) => theme.spacing.xl};
   color: ${({ theme }) => theme.colors.textMedium};
-  
+
   p {
     margin: 0;
     font-size: 1.1rem;
@@ -241,7 +251,6 @@ export const SectionContainer = styled.div`
   gap: ${({ theme }) => theme.spacing.lg};
 `;
 
-// Novos estilos para os inputs dos modais
 export const FormContainer = styled.form`
   display: flex;
   flex-direction: column;
@@ -256,19 +265,21 @@ export const InputGroup = styled.div`
 
 export const Label = styled.label`
   font-size: 0.9rem;
-  font-weight: 600;
-  color: #333333;
+  font-weight: ${({ theme }) => theme.typography.fontWeight.semiBold};
+  color: ${({ theme }) => theme.colors.textDark};
+  font-family: ${({ theme }) => theme.typography.fontFamily.body};
 `;
 
 export const Input = styled.input`
   width: 100%;
   padding: 0.75rem 1rem;
   border-radius: 12px;
-  border: 2px solid #e5e7eb;
+  border: 2px solid ${({ theme }) => theme.colors.textMedium}33;
   font-size: 1rem;
-  font-family: "Nunito Sans", sans-serif;
+  font-family: ${({ theme }) => theme.typography.fontFamily.body};
   transition: all 0.3s ease;
-  background: #ffffff;
+  background-color: ${({ theme }) => theme.colors.white};
+  color: ${({ theme }) => theme.colors.textDark};
 
   &:focus {
     outline: none;
@@ -277,12 +288,12 @@ export const Input = styled.input`
   }
 
   &::placeholder {
-    color: #9ca3af;
+    color: ${({ theme }) => theme.colors.textMedium};
   }
 
   &[type="number"] {
     -moz-appearance: textfield;
-    
+
     &::-webkit-outer-spin-button,
     &::-webkit-inner-spin-button {
       -webkit-appearance: none;
@@ -295,11 +306,12 @@ export const Select = styled.select`
   width: 100%;
   padding: 0.75rem 1rem;
   border-radius: 12px;
-  border: 2px solid #e5e7eb;
+  border: 2px solid ${({ theme }) => theme.colors.textMedium}33;
   font-size: 1rem;
-  font-family: "Nunito Sans", sans-serif;
+  font-family: ${({ theme }) => theme.typography.fontFamily.body};
   transition: all 0.3s ease;
-  background: #ffffff;
+  background-color: ${({ theme }) => theme.colors.white};
+  color: ${({ theme }) => theme.colors.textDark};
   cursor: pointer;
 
   &:focus {
@@ -310,6 +322,8 @@ export const Select = styled.select`
 
   option {
     padding: 0.5rem;
+    background-color: ${({ theme }) => theme.colors.white};
+    color: ${({ theme }) => theme.colors.textDark};
   }
 `;
 
@@ -323,4 +337,5 @@ export const ModalDescription = styled.p`
   margin: 0;
   color: ${({ theme }) => theme.colors.textMedium};
   line-height: 1.5;
+  font-size: 0.95rem;
 `;
