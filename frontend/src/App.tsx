@@ -31,6 +31,7 @@ import { CourseDetailsPage } from "./pages/CourseDetailsPage";
 import ProfilePage from "./pages/ProfilePage";
 import MissionsPage from "./pages/MissionsPage";
 import BudgetPage from "./pages/BudgetPage";
+import GoalsPage from "./pages/GoalsPage";
 
 const AppRoutes = () => {
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(() => {
@@ -72,6 +73,7 @@ const AppRoutes = () => {
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/missions" element={<MissionsPage />} />
           <Route path="/budget" element={<BudgetPage />} />
+          <Route path="/goals" element={<GoalsPage />} />
         </Route>
       </Route>
 
