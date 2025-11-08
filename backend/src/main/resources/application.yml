@@ -2,9 +2,9 @@ spring:
   application:
     name: FinQuest-API
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/finquest_db}
-    username: ${MYSQL_USERNAME:finquest_user}
-    password: ${MYSQL_PASSWORD:finquest_pwd}
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${MYSQL_USERNAME}
+    password: ${MYSQL_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:

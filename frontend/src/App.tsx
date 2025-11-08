@@ -61,8 +61,8 @@ const AppRoutes = () => {
       <Route element={<AuthLayout />}>
         <Route element={<PublicOnlyRoute />}>
           <Route path="/" element={<LandingPage />} />
-          <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/login" element={<LoginPage />} /> 
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         </Route>
       </Route>

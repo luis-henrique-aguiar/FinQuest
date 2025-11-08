@@ -6,13 +6,13 @@ import {
   ArrowRight,
   Check,
   AlertCircle,
+  EyeOff,
+  Eye,
 } from "react-feather";
 import { useNavigate } from "react-router-dom";
-import Lottie from "lottie-react";
 import * as S from "./RegisterPage.styles";
 import { BenefitItem } from "../components/auth/BenefitItem";
 import { InputGroup } from "../components/auth/InputGroup";
-import mascotWaveAnimation from "../assets/animations/fox_greetings.json";
 import { useAuth } from "../hooks/useAuth";
 import { useToast } from "../hooks/useToast";
 
@@ -20,6 +20,7 @@ interface FormErrors {
   name?: string;
   email?: string;
   password?: string;
+  confirmPassword?: string;
   general?: string;
 }
 
@@ -32,6 +33,8 @@ const RegisterPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordStrength, setPasswordStrength] = useState(0);
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
   const [isLoading, setIsLoading] = useState(false);
 
@@ -48,6 +51,7 @@ const RegisterPage = () => {
       newErrors.name = "Nome é obrigatório.";
       isValid = false;
     }
+
     if (!email) {
       newErrors.email = "Email é obrigatório.";
       isValid = false;
@@ -55,16 +59,24 @@ const RegisterPage = () => {
       newErrors.email = "Formato de email inválido.";
       isValid = false;
     }
+
     if (!password) {
       newErrors.password = "Senha é obrigatória.";
       isValid = false;
     } else if (password.length < 6) {
       newErrors.password = "Senha deve ter no mínimo 6 caracteres.";
       isValid = false;
-    }
-    else if (passwordStrength < 2 && password.length >= 6) {
+    } else if (passwordStrength < 2 && password.length >= 6) {
       newErrors.password =
         "Senha muito fraca. Tente combinar letras maiúsculas, minúsculas, números ou símbolos.";
+      isValid = false;
+    }
+
+    if (!confirmPassword) {
+      newErrors.confirmPassword = "Confirmação de senha é obrigatória.";
+      isValid = false;
+    } else if (password !== confirmPassword) {
+      newErrors.confirmPassword = "As senhas não conferem.";
       isValid = false;
     }
 
@@ -129,10 +141,7 @@ const RegisterPage = () => {
     try {
       await register(name, email, password);
 
-      addToast(
-        `🎉 Bem-vindo(a) ao FinQuest, ${name}!`,
-        "success"
-      );
+      addToast(`🎉 Bem-vindo(a) ao FinQuest, ${name}!`, "success");
       navigate("/home");
     } catch (error: any) {
       console.error("Erro no registro:", error);
@@ -220,20 +229,6 @@ const RegisterPage = () => {
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
         >
-          <S.MascotAnimationContainer
-            animate={{
-              y: [0, -10, 0],
-              rotate: [0, -3, 3, 0],
-            }}
-            transition={{
-              duration: 5,
-              repeat: Infinity,
-              ease: "easeInOut",
-              repeatType: "loop",
-            }}
-          >
-            <Lottie animationData={mascotWaveAnimation} loop={true} />
-          </S.MascotAnimationContainer>
           <h1>Junte-se ao FinQuest!</h1>
           <p>
             Transforme sua relação com o dinheiro de forma divertida e
@@ -310,15 +305,19 @@ const RegisterPage = () => {
                 <Lock size={20} />
                 <S.Input
                   id="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   placeholder="Mínimo 6 caracteres"
-                  value={password}
                   onChange={handlePasswordChange}
                   required
                   minLength={6}
                   aria-invalid={!!errors.password}
                   aria-describedby="password-hint password-error"
                 />
+                <S.PasswordToggleIcon
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </S.PasswordToggleIcon>
               </S.InputWrapper>
               {/* Indicador de Força */}
               {password.length > 0 && (
@@ -341,6 +340,41 @@ const RegisterPage = () => {
             {errors.password && (
               <S.ErrorMessage id="password-error">
                 <AlertCircle size={14} /> {errors.password}
+              </S.ErrorMessage>
+            )}
+
+            <S.InputGroupStyled>
+              <S.Label htmlFor="confirmPassword">Confirmar Senha</S.Label>
+              <S.InputWrapper>
+                <Lock size={20} />
+                <S.Input
+                  id="confirmPassword"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Repita sua senha"
+                  value={confirmPassword}
+                  onChange={(e) => {
+                    setConfirmPassword(e.target.value);
+                    if (errors.confirmPassword)
+                      setErrors((prev) => ({
+                        ...prev,
+                        confirmPassword: undefined,
+                      }));
+                  }}
+                  required
+                  aria-invalid={!!errors.confirmPassword}
+                  aria-describedby="confirmPassword-error"
+                />
+                {/* Ícone de "olho" para mostrar/ocultar */}
+                <S.PasswordToggleIcon
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </S.PasswordToggleIcon>
+              </S.InputWrapper>
+            </S.InputGroupStyled>
+            {errors.confirmPassword && (
+              <S.ErrorMessage id="confirmPassword-error">
+                <AlertCircle size={14} /> {errors.confirmPassword}
               </S.ErrorMessage>
             )}
 

@@ -225,7 +225,7 @@ export const InputWrapper = styled.div`
   display: flex;
   align-items: center;
 
-  svg {
+  > svg { 
     position: absolute;
     left: 1rem;
     color: #6c757d;
@@ -233,9 +233,26 @@ export const InputWrapper = styled.div`
   }
 `;
 
+export const PasswordToggleIcon = styled.div`
+  position: absolute;
+  right: 1rem;
+  cursor: pointer;
+  color: #6c757d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem;
+  border-radius: 50%;
+
+  &:hover {
+    color: ${({ theme }) => theme.colors.primary};
+    background-color: ${({ theme }) => theme.colors.background};
+  }
+`;
+
 export const Input = styled.input`
   width: 100%;
-  padding: 1rem 1rem 1rem 3rem;
+  padding: 1rem 3.5rem 1rem 3rem;
   border-radius: 12px;
   border: 2px solid #e5e7eb;
   font-size: 1rem;
@@ -408,7 +425,11 @@ export const Spinner = styled.div`
   animation: spin 1s linear infinite;
 
   @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
   }
 `;
