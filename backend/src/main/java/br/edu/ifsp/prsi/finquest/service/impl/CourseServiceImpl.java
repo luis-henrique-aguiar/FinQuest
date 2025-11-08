@@ -63,7 +63,7 @@ public class CourseServiceImpl implements CourseService {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new EntityNotFoundException("Curso não encontrado: " + courseId));
 
-        List<Lesson> lessons = lessonRepository.findAllByCourseId(courseId);
+        List<Lesson> lessons = lessonRepository.findAllByCourseIdOrderByLessonOrderAsc(courseId);
 
         Set<String> completedLessonIds = completionRepository.findUserCompletionsByCourse(userId, courseId)
                 .stream()
@@ -76,7 +76,7 @@ public class CourseServiceImpl implements CourseService {
                         lesson.getTitle(),
                         completedLessonIds.contains(lesson.getId())
                 ))
-                .collect(Collectors.toList());
+                .toList();
 
         return new CourseDetailsDTO(
                 course.getId(),

@@ -1,11 +1,7 @@
-// src/pages/LessonPage.tsx
-import React, { useState, useEffect } from 'react';
-import ReactMarkdown from 'react-markdown';
-import { useParams } from 'react-router-dom';
-import remarkGfm from 'remark-gfm'; // Para pegar o ID da lição/curso
-// Exemplo de importação de conteúdo Markdown
-
-// Importe seus componentes estilizados
+import { useState, useEffect } from "react";
+import ReactMarkdown from "react-markdown";
+import { useParams, useNavigate } from "react-router-dom";
+import remarkGfm from "remark-gfm";
 import {
   LessonTitle,
   LessonParagraph,
@@ -13,98 +9,207 @@ import {
   LessonListItem,
   LessonStrong,
   HighlightBox,
-  TableContainer, // Nosso novo wrapper
+  TableContainer,
   StyledTable,
   StyledTh,
-  StyledTd
-} from '../pages/Typography.styles'; // Ajuste o caminho
-import { Title } from './OnboardingPage.style';
+  StyledTd,
+} from "../pages/Typography.styles";
+import { Title } from "./OnboardingPage.style";
+import { useToast } from "../hooks/useToast";
+import styled from "styled-components";
+import { ArrowLeft } from "react-feather";
+import {
+  getLessonDetails,
+  type LessonDetailsDTO,
+} from "../services/lessonService";
+import Button from "../components/common/Button";
 
-// Simulação de conteúdo Markdown que viria da sua API/Banco de Dados
+const PageContainer = styled.div`
+  max-width: 800px;
+  margin: 2rem auto;
+  padding: 1rem;
+`;
 
+const Header = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.md};
+  margin-bottom: ${({ theme }) => theme.spacing.lg};
+`;
 
-const lessonsModules = import.meta.glob('../lessons/*.md', { as: 'raw', eager: true });
+const BackButton = styled.button`
+  background: ${({ theme }) => theme.colors.white};
+  border: 1px solid ${({ theme }) => theme.colors.white};
+  color: ${({ theme }) => theme.colors.textDark};
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.background};
+    transform: scale(1.1);
+  }
+`;
+
+const FooterNavigation = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid ${({ theme }) => theme.colors.white};
+`;
+
 const LessonPage = () => {
-  //const { courseId, lessonId } = useParams(); // Pega IDs da URL, se necessário
+  const { courseId, lessonId } = useParams<{
+    courseId: string;
+    lessonId: string;
+  }>();
+
+  // Estados para os dois fetches
+  const [lessonDetails, setLessonDetails] = useState<LessonDetailsDTO | null>(
+    null
+  );
   const [lessonContent, setLessonContent] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  
-  const courseId = 1;
-  const lessonId = 5;
 
-  // Simula a busca do conteúdo da lição
+  const { addToast } = useToast();
+  const navigate = useNavigate();
+
+  // 2. useEffect atualizado para buscar ambos
   useEffect(() => {
-    
-    const filePath = `../lessons/${courseId}-${lessonId}.md`;
-
-    const content = lessonsModules[filePath];
-
-    if (content) {
-        setLessonContent(content);
-    }else{
-        console.error("Lição não encontrada.");
-        setLessonContent("Lição não encontrada.");
+    if (!courseId || !lessonId) {
+      addToast("Erro: ID do curso ou lição não encontrado.", "error");
+      navigate("/learn");
+      return;
     }
 
-    setIsLoading(false);
-    console.log(`Buscando conteúdo para curso ${courseId}, lição ${lessonId}...`);
+    const fetchAllData = async () => {
+      setIsLoading(true);
+      try {
+        // Promessa 1: Buscar os detalhes (próxima/anterior) da API
+        const detailsPromise = getLessonDetails(lessonId);
 
-    // --- Em um app real, faria a chamada fetch para sua API aqui ---
-    // fetch(`/api/courses/${courseId}/lessons/${lessonId}`)
-    //   .then(res => res.json())
-    //   .then(data => {
-    //      setLessonContent(data.markdownContent); // Supondo que a API retorna um campo 'markdownContent'
-    //      setIsLoading(false);
-    //   })
-    //   .catch(error => {
-    //      console.error("Erro ao buscar lição:", error);
-    //      setLessonContent("Erro ao carregar o conteúdo da lição.");
-    //      setIsLoading(false);
-    //   });
+        // Promessa 2: Buscar o conteúdo Markdown da pasta /public
+        const filePath = `/lessons/${lessonId}.md`;
+        const contentPromise = fetch(filePath).then((res) => {
+          if (!res.ok) throw new Error(`Lição não encontrada em ${filePath}`);
+          return res.text();
+        });
 
-     // Limpa o timeout se o componente desmontar
-  }, []); // Re-busca se o ID da lição/curso mudar
+        // 3. Espera as duas promessas terminarem
+        const [detailsData, contentData] = await Promise.all([
+          detailsPromise,
+          contentPromise,
+        ]);
+
+        setLessonDetails(detailsData);
+        setLessonContent(contentData);
+      } catch (error) {
+        console.error("Erro ao carregar conteúdo da lição:", error);
+        setLessonContent(
+          "# ❌ Lição Não Encontrada\n\nNão foi possível carregar o conteúdo desta lição."
+        );
+        addToast("Erro ao carregar a lição.", "error");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchAllData();
+  }, [courseId, lessonId, addToast, navigate]);
 
   if (isLoading) {
-    return <div>Carregando conteúdo da lição...</div>; // Ou um componente Spinner
+    return <div>Carregando conteúdo da lição...</div>;
   }
 
+  // 4. Lógica de Navegação dos Botões
+  const handleNextLesson = () => {
+    if (lessonDetails?.nextLessonId) {
+      // Navega para a próxima lição
+      navigate(`/learn/${courseId}/${lessonDetails.nextLessonId}`);
+    } else {
+      // É a última lição, navega de volta para a página do curso
+      addToast("Parabéns, você concluiu o curso!", "success");
+      navigate(`/learn/${courseId}`);
+    }
+  };
+
+  const handlePreviousLesson = () => {
+    if (lessonDetails?.previousLessonId) {
+      // Navega para a lição anterior
+      navigate(`/learn/${courseId}/${lessonDetails.previousLessonId}`);
+    } else {
+      // É a primeira lição, navega de volta para a página do curso
+      navigate(`/learn/${courseId}`);
+    }
+  };
+
   return (
-    <div style={{ maxWidth: '800px', margin: '2rem auto', padding: '1rem' }}>
-      {/* Container principal da página */}
+    <PageContainer>
+      <Header>
+        {/* 5. Botão "Voltar" (para a página do curso) */}
+        <BackButton
+          onClick={() => navigate(`/learn/${courseId}`)}
+          aria-label="Voltar para o curso"
+        >
+          <ArrowLeft size={20} />
+        </BackButton>
+        {/* Usamos o LessonTitle para o título principal da lição */}
+        <LessonTitle style={{ margin: 0 }}>
+          {lessonDetails?.title || "Carregando..."}
+        </LessonTitle>
+      </Header>
+      <div style={{ maxWidth: "800px", margin: "2rem auto", padding: "1rem" }}>
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm]}
+          components={{
+            h1: ({ node, ...props }) => <Title {...props} />,
+            h2: ({ node, ...props }) => <LessonTitle {...props} />,
+            h3: ({ node, ...props }) => (
+              <h3
+                style={{ marginTop: "1.5rem", marginBottom: "0.5rem" }}
+                {...props}
+              />
+            ),
+            p: ({ node, ...props }) => <LessonParagraph {...props} />,
+            blockquote: ({ node, ...props }) => <LessonHighlight {...props} />,
+            li: ({ node, ...props }) => <LessonListItem {...props} />,
+            strong: ({ node, ...props }) => <LessonStrong {...props} />,
+            div: ({ node, ...props }) => <HighlightBox {...props} />,
+            table: ({ node, ...props }) => (
+              <TableContainer>
+                <StyledTable {...props} />
+              </TableContainer>
+            ),
+            th: ({ node, ...props }) => <StyledTh {...props} />,
+            td: ({ node, ...props }) => <StyledTd {...props} />,
+          }}
+        >
+          {lessonContent!}
+        </ReactMarkdown>
+      </div>
+      <FooterNavigation>
+        <Button
+          variant="outline"
+          onClick={handlePreviousLesson}
+          icon={<ArrowLeft size={16} />}
+        >
+          {lessonDetails?.previousLessonId
+            ? "Lição Anterior"
+            : "Voltar ao Curso"}
+        </Button>
 
-      {/* Renderiza o conteúdo Markdown usando ReactMarkdown */}
-      <ReactMarkdown
-        // A prop 'components' faz a mágica do mapeamento
-        remarkPlugins={[remarkGfm]}
-        components={{
-          // Tag Markdown -> Seu Componente React Estilizado
-          h1: ({node, ...props}) => <Title {...props} />,
-          h2: ({node, ...props}) => <LessonTitle {...props} />,
-          h3: ({node, ...props}) => <h3 style={{marginTop: '1.5rem', marginBottom:'0.5rem'}} {...props} />, // Exemplo: Estilo inline ou criar componente H3
-          p: ({node, ...props}) => <LessonParagraph {...props} />,
-          blockquote: ({node, ...props}) => <LessonHighlight {...props} />,
-          li: ({node, ...props}) => <LessonListItem {...props} />,
-          strong: ({node, ...props}) => <LessonStrong {...props} />,
-          div: ({node, ...props}) => <HighlightBox {...props} />,
-          // Adicione mapeamentos para outras tags conforme necessário (ul, ol, a, etc.)
-          table: ({node, ...props}) => (
-          <TableContainer> 
-            <StyledTable {...props} /> 
-          </TableContainer>
-        ),
-        th: ({node, ...props}) => <StyledTh {...props} />,
-        td: ({node, ...props}) => <StyledTd {...props} />,
-        }}
-      >
-        {lessonContent}
-      </ReactMarkdown>
-
-      {/* Aqui você adicionaria o componente do Quiz no final */}
-      {/* <Quiz lessonId={lessonId} /> */}
-      <hr style={{margin: '2rem 0'}}/>
-      <button>Próxima Lição / Concluir Curso</button>
-    </div>
+        <Button variant="primary" onClick={handleNextLesson}>
+          {lessonDetails?.nextLessonId ? "Próxima Lição" : "Concluir Curso"}
+        </Button>
+      </FooterNavigation>
+    </PageContainer>
   );
 };
 
