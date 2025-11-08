@@ -245,12 +245,6 @@ export const EmptyState = styled.div`
   }
 `;
 
-export const SectionContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.lg};
-`;
-
 export const FormContainer = styled.form`
   display: flex;
   flex-direction: column;
@@ -338,4 +332,85 @@ export const ModalDescription = styled.p`
   color: ${({ theme }) => theme.colors.textMedium};
   line-height: 1.5;
   font-size: 0.95rem;
+`;
+
+export const SectionContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${({ theme }) => theme.spacing.lg};
+`;
+
+export const SectionHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.md};
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+`;
+
+export const MonthSelector = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: ${({ theme }) => theme.spacing.lg};
+  padding: ${({ theme }) => theme.spacing.md};
+  background: ${({ theme }) => theme.colors.white};
+  border-radius: ${({ theme }) => theme.borderRadius.large};
+  box-shadow: ${({ theme }) => theme.shadows.small};
+  margin-bottom: ${({ theme }) => theme.spacing.md};
+`;
+
+export const MonthButton = styled.button`
+  background: none;
+  border: none;
+  padding: ${({ theme }) => theme.spacing.sm};
+  cursor: pointer;
+  color: ${({ theme }) => theme.colors.primary};
+  border-radius: ${({ theme }) => theme.borderRadius.medium};
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    background-color: ${({ theme }) => theme.colors.primary}11;
+    transform: scale(1.1);
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+`;
+
+export const MonthDisplay = styled.div`
+  font-size: 1.25rem;
+  font-weight: ${({ theme }) => theme.typography.fontWeight.semiBold};
+  color: ${({ theme }) => theme.colors.textDark};
+  text-transform: capitalize;
+  min-width: 250px;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: ${({ theme }) => theme.spacing.sm};
+
+  @media (max-width: 768px) {
+    font-size: 1.1rem;
+    min-width: 200px;
+  }
+`;
+
+export const CurrentBadge = styled.span`
+  font-size: 0.7rem;
+  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  background: ${({ theme }) => theme.colors.accent};
+  color: #333333;
+  padding: 4px 8px;
+  border-radius: ${({ theme }) => theme.borderRadius.pill};
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 `;

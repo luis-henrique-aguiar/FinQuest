@@ -1,5 +1,11 @@
 import React, { useState, useMemo } from "react";
-import { Edit, PlusCircle, Trash2 } from "react-feather";
+import {
+  Edit,
+  PlusCircle,
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+} from "react-feather";
 import Button from "../components/common/Button";
 import SectionTitle from "../components/common/SectionTitle";
 import { Modal } from "../components/common/Modal";
@@ -13,6 +19,11 @@ export interface Transaction {
   description: string;
   category: string;
   date: string;
+}
+
+interface MonthlyBudget {
+  month: string; // formato: "2024-01"
+  budget: number;
 }
 
 const EXPENSE_CATEGORIES = [
@@ -54,7 +65,7 @@ const TransactionModal: React.FC<{
     const transaction = {
       ...formData,
       id: initialData?.id || Date.now().toString(),
-      date: new Date().toISOString(),
+      date: initialData?.date || new Date().toISOString(),
     };
     onSubmit(transaction);
     onClose();
@@ -185,8 +196,9 @@ const SetBudgetModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
   onSave: (budget: number) => void;
-}> = ({ isOpen, onClose, onSave }) => {
-  const [budget, setBudget] = useState(0);
+  currentBudget?: number;
+}> = ({ isOpen, onClose, onSave, currentBudget }) => {
+  const [budget, setBudget] = useState(currentBudget || 0);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -197,7 +209,7 @@ const SetBudgetModal: React.FC<{
 
   const handleClose = () => {
     onClose();
-    setBudget(0);
+    setBudget(currentBudget || 0);
   };
 
   if (!isOpen) return null;
@@ -244,8 +256,18 @@ const SetBudgetModal: React.FC<{
 };
 
 export const BudgetPage: React.FC = () => {
+  const getCurrentMonthKey = () => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(
+      2,
+      "0"
+    )}`;
+  };
+
+  const [selectedMonth, setSelectedMonth] = useState(getCurrentMonthKey());
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
   const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
+
   const [transactions, setTransactions] = useState<Transaction[]>([
     {
       id: "1",
@@ -253,7 +275,7 @@ export const BudgetPage: React.FC = () => {
       amount: 3000,
       description: "Salário",
       category: "Salário",
-      date: "2024-01-15",
+      date: "2024-01-15T10:00:00.000Z",
     },
     {
       id: "2",
@@ -261,7 +283,7 @@ export const BudgetPage: React.FC = () => {
       amount: 800,
       description: "Aluguel",
       category: "Moradia",
-      date: "2024-01-10",
+      date: "2024-01-10T10:00:00.000Z",
     },
     {
       id: "3",
@@ -269,7 +291,7 @@ export const BudgetPage: React.FC = () => {
       amount: 200,
       description: "Supermercado",
       category: "Alimentação",
-      date: "2024-01-12",
+      date: "2024-01-12T10:00:00.000Z",
     },
     {
       id: "4",
@@ -277,7 +299,7 @@ export const BudgetPage: React.FC = () => {
       amount: 150,
       description: "Uber",
       category: "Transporte",
-      date: "2024-01-14",
+      date: "2024-12-14T10:00:00.000Z",
     },
     {
       id: "5",
@@ -285,10 +307,24 @@ export const BudgetPage: React.FC = () => {
       amount: 500,
       description: "Freelance",
       category: "Freelance",
-      date: "2024-01-16",
+      date: "2024-12-16T10:00:00.000Z",
+    },
+    {
+      id: "6",
+      type: "expense",
+      amount: 300,
+      description: "Conta de luz",
+      category: "Moradia",
+      date: "2024-11-05T10:00:00.000Z",
     },
   ]);
-  const [totalBudget, setTotalBudget] = useState<number | null>(2500);
+
+  const [monthlyBudgets, setMonthlyBudgets] = useState<MonthlyBudget[]>([
+    { month: "2024-01", budget: 2500 },
+    { month: "2024-11", budget: 3000 },
+    { month: "2024-12", budget: 2500 },
+  ]);
+
   const { addToast } = useToast();
 
   const [modalMode, setModalMode] = useState<"add" | "edit">("add");
@@ -298,20 +334,40 @@ export const BudgetPage: React.FC = () => {
     useState<Transaction | null>(null);
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
 
+  // Função para obter o orçamento do mês selecionado
+  const getCurrentMonthBudget = () => {
+    const budgetData = monthlyBudgets.find((b) => b.month === selectedMonth);
+    return budgetData?.budget || null;
+  };
+
+  // Filtrar transações do mês selecionado
+  const filteredTransactions = useMemo(() => {
+    return transactions.filter((t) => {
+      const transactionDate = new Date(t.date);
+      const transactionMonth = `${transactionDate.getFullYear()}-${String(
+        transactionDate.getMonth() + 1
+      ).padStart(2, "0")}`;
+      return transactionMonth === selectedMonth;
+    });
+  }, [transactions, selectedMonth]);
+
   const { totalIncome, totalExpense, remainingBalance } = useMemo(() => {
-    const income = transactions
+    const income = filteredTransactions
       .filter((t) => t.type === "income")
       .reduce((sum, t) => sum + t.amount, 0);
-    const expense = transactions
+    const expense = filteredTransactions
       .filter((t) => t.type === "expense")
       .reduce((sum, t) => sum + t.amount, 0);
+
+    const monthBudget = getCurrentMonthBudget();
+
     return {
       totalIncome: income,
       totalExpense: expense,
       remainingBalance:
-        totalBudget !== null ? totalBudget + income - expense : null,
+        monthBudget !== null ? monthBudget + income - expense : null,
     };
-  }, [transactions, totalBudget]);
+  }, [filteredTransactions, selectedMonth, monthlyBudgets]);
 
   const handleUpdateTransaction = (
     transactionData: Transaction | Omit<Transaction, "id">
@@ -357,6 +413,7 @@ export const BudgetPage: React.FC = () => {
     const newTransaction = {
       ...transaction,
       id: "id" in transaction ? transaction.id : Date.now().toString(),
+      date: new Date().toISOString(),
     } as Transaction;
 
     setTransactions((prev) => [newTransaction, ...prev]);
@@ -368,7 +425,15 @@ export const BudgetPage: React.FC = () => {
   };
 
   const handleSaveBudget = (budget: number) => {
-    setTotalBudget(budget);
+    setMonthlyBudgets((prev) => {
+      const existing = prev.find((b) => b.month === selectedMonth);
+      if (existing) {
+        return prev.map((b) =>
+          b.month === selectedMonth ? { ...b, budget } : b
+        );
+      }
+      return [...prev, { month: selectedMonth, budget }];
+    });
     addToast("Orçamento definido com sucesso!", "success");
   };
 
@@ -379,6 +444,31 @@ export const BudgetPage: React.FC = () => {
       currency: "BRL",
     });
   };
+
+  const formatMonthYear = (monthKey: string) => {
+    const [year, month] = monthKey.split("-");
+    const date = new Date(parseInt(year), parseInt(month) - 1);
+    return date.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+  };
+
+  const navigateMonth = (direction: "prev" | "next") => {
+    const [year, month] = selectedMonth.split("-").map(Number);
+    const date = new Date(year, month - 1);
+
+    if (direction === "prev") {
+      date.setMonth(date.getMonth() - 1);
+    } else {
+      date.setMonth(date.getMonth() + 1);
+    }
+
+    const newMonth = `${date.getFullYear()}-${String(
+      date.getMonth() + 1
+    ).padStart(2, "0")}`;
+    setSelectedMonth(newMonth);
+  };
+
+  const isCurrentMonth = selectedMonth === getCurrentMonthKey();
+  const currentMonthBudget = getCurrentMonthBudget();
 
   return (
     <S.PageContainer>
@@ -426,11 +516,12 @@ export const BudgetPage: React.FC = () => {
         isOpen={isBudgetModalOpen}
         onClose={() => setIsBudgetModalOpen(false)}
         onSave={handleSaveBudget}
+        currentBudget={currentMonthBudget || undefined}
       />
 
       <S.Header>
         <SectionTitle>Meu Orçamento</SectionTitle>
-        {totalBudget !== null && (
+        {currentMonthBudget !== null && isCurrentMonth && (
           <Button
             variant="primary"
             onClick={openAddModal}
@@ -441,12 +532,24 @@ export const BudgetPage: React.FC = () => {
         )}
       </S.Header>
 
-      {totalBudget === null ? (
+      <S.MonthSelector>
+        <S.MonthButton onClick={() => navigateMonth("prev")}>
+          <ChevronLeft size={20} />
+        </S.MonthButton>
+        <S.MonthDisplay>
+          {formatMonthYear(selectedMonth)}
+          {isCurrentMonth && <S.CurrentBadge>Atual</S.CurrentBadge>}
+        </S.MonthDisplay>
+        <S.MonthButton onClick={() => navigateMonth("next")}>
+          <ChevronRight size={20} />
+        </S.MonthButton>
+      </S.MonthSelector>
+
+      {currentMonthBudget === null ? (
         <S.BudgetSetupCard>
-          <h4>Você ainda não definiu um orçamento para despesas.</h4>
+          <h4>Você ainda não definiu um orçamento para este mês.</h4>
           <p>
-            Defina um limite de gastos para o mês e comece a registrar suas
-            transações!
+            Defina um limite de gastos e comece a registrar suas transações!
           </p>
           <Button variant="outline" onClick={() => setIsBudgetModalOpen(true)}>
             Definir Orçamento Mensal
@@ -456,7 +559,7 @@ export const BudgetPage: React.FC = () => {
         <S.SummaryGrid>
           <S.SummaryCard>
             <h3>Orçamento para Gastos</h3>
-            <p>{formatCurrency(totalBudget)}</p>
+            <p>{formatCurrency(currentMonthBudget)}</p>
           </S.SummaryCard>
           <S.SummaryCard $textColor="#28A745">
             <h3>Total de Receitas</h3>
@@ -480,12 +583,23 @@ export const BudgetPage: React.FC = () => {
         </S.SummaryGrid>
       )}
 
-      {totalBudget !== null && (
+      {currentMonthBudget !== null && (
         <S.SectionContainer>
-          <SectionTitle>Transações Recentes</SectionTitle>
-          {transactions.length > 0 ? (
+          <S.SectionHeader>
+            <SectionTitle>Transações do Período</SectionTitle>
+            {isCurrentMonth && (
+              <Button
+                variant="text"
+                onClick={() => setIsBudgetModalOpen(true)}
+                size="small"
+              >
+                Editar Orçamento
+              </Button>
+            )}
+          </S.SectionHeader>
+          {filteredTransactions.length > 0 ? (
             <S.TransactionsList>
-              {transactions.map((transaction) => (
+              {filteredTransactions.map((transaction) => (
                 <S.TransactionItem key={transaction.id}>
                   <S.TransactionInfo>
                     <h4>{transaction.description}</h4>
@@ -496,21 +610,23 @@ export const BudgetPage: React.FC = () => {
                       {transaction.type === "income" ? "+" : "-"}{" "}
                       {formatCurrency(transaction.amount)}
                     </S.TransactionAmount>
-                    <S.ActionButtons>
-                      <button onClick={() => openEditModal(transaction)}>
-                        <Edit size={16} />
-                      </button>
-                      <button onClick={() => openDeleteModal(transaction)}>
-                        <Trash2 size={16} />
-                      </button>
-                    </S.ActionButtons>
+                    {isCurrentMonth && (
+                      <S.ActionButtons>
+                        <button onClick={() => openEditModal(transaction)}>
+                          <Edit size={16} />
+                        </button>
+                        <button onClick={() => openDeleteModal(transaction)}>
+                          <Trash2 size={16} />
+                        </button>
+                      </S.ActionButtons>
+                    )}
                   </S.TransactionActions>
                 </S.TransactionItem>
               ))}
             </S.TransactionsList>
           ) : (
             <S.EmptyState>
-              <p>Nenhuma transação registrada ainda.</p>
+              <p>Nenhuma transação registrada neste período.</p>
             </S.EmptyState>
           )}
         </S.SectionContainer>
