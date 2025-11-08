@@ -17,6 +17,7 @@ import { ThemeProvider } from "./context/ThemeContext";
 import OnboardingPage from "./pages/OnboardingPage";
 import { AuthLayout } from "./components/layout/AuthLayout";
 import LandingPage from "./pages/LandingPage";
+import LessonPage from "./pages/LessonPage";
 import RegisterPage from "./pages/RegisterPage";
 import { ToastProvider } from "./context/ToastContext";
 import { AuthProvider } from "./context/AuthContext";
