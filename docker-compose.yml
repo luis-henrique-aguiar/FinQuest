@@ -12,7 +12,7 @@ services:
     volumes:
       - db_data_mysql:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost", "-u", "${MYSQL_USER}", "-p${MYSQL_PASSWORD}"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "${MYSQL_USER}", "-p${MYSQL_PASSWORD}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -20,7 +20,6 @@ services:
   backend:
     build:
       context: ./backend
-      target: dev
     container_name: finquest_backend
     depends_on:
       db:
@@ -28,28 +27,17 @@ services:
     ports:
       - "8080:8080"
     environment:
-      SPRING_PROFILES_ACTIVE: dev
-      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/${MYSQL_DATABASE}
+      SPRING_PROFILES_ACTIVE: docker
       MYSQL_DATABASE: ${MYSQL_DATABASE}
       MYSQL_USERNAME: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-      SPRING_JPA_HIBERNATE_DDL_AUTO: update
-      SPRING_DEVTOOLS_RESTART_ENABLED: "true"
-      SPRING_DEVTOOLS_LIVERELOAD_ENABLED: "true"
-    volumes:
-      - ./backend/src:/app/src 
-      - ./backend/pom.xml:/app/pom.xml
-      - maven_cache:/root/.m2
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
     container_name: finquest_frontend
     ports:
       - "5173:5173"
-    volumes:
-      - ./frontend:/app 
-      - /app/node_modules
-      
+
 volumes:
   db_data_mysql:
-  maven_cache:
