@@ -2,13 +2,10 @@ import React, { useState, useEffect } from "react";
 import styled, { useTheme } from "styled-components";
 import { motion } from "framer-motion";
 import {
-  BarChart,
-  Bar,
   XAxis,
   YAxis,
   Tooltip,
   ResponsiveContainer,
-  Cell,
   LineChart,
   Line,
   CartesianGrid,
@@ -82,8 +79,6 @@ const Input = styled.input`
   }
 
   &[type="number"] {
-    -moz-appearance: textfield;
-
     &::-webkit-outer-spin-button,
     &::-webkit-inner-spin-button {
       -webkit-appearance: none;

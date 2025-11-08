@@ -286,8 +286,6 @@ export const Input = styled.input`
   }
 
   &[type="number"] {
-    -moz-appearance: textfield;
-
     &::-webkit-outer-spin-button,
     &::-webkit-inner-spin-button {
       -webkit-appearance: none;

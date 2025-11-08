@@ -33,6 +33,7 @@ import MissionsPage from "./pages/MissionsPage";
 import BudgetPage from "./pages/BudgetPage";
 import GoalsPage from "./pages/GoalsPage";
 import InvestmentSimulatorPage from "./pages/InvestmentSimulatorPage";
+import ReportsPage from "./pages/ReportsPage";
 
 const AppRoutes = () => {
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(() => {
@@ -76,6 +77,7 @@ const AppRoutes = () => {
           <Route path="/budget" element={<BudgetPage />} />
           <Route path="/goals" element={<GoalsPage />} />
           <Route path="/simulator" element={<InvestmentSimulatorPage />} />
+          <Route path="/reports" element={<ReportsPage />} />
         </Route>
       </Route>
 
