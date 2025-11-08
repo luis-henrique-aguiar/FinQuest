@@ -3,6 +3,7 @@ import React, {
   useState,
   type ReactNode,
   useEffect,
+  useRef,
 } from "react";
 import {
   type User as FirebaseUser,
@@ -49,13 +50,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const isRegistering = useRef(false);
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
       setFirebaseUser(fbUser);
 
       if (fbUser) {
         console.log("onAuthStateChanged: Logado - UID:", fbUser.uid);
-        if (isLoading) setIsLoading(true);
+
+        if (isRegistering.current) {
+          console.log(
+            "AuthContext: Registro em andamento, aguardando conclusão..."
+          );
+          setIsLoading(false);
+          return;
+        }
 
         try {
           const response = await api.get(`/users/${fbUser.uid}`);
@@ -90,9 +100,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           );
         } catch (error) {
           console.warn(
-            "AuthContext: Usuário não encontrado no backend. Iniciando auto-correção..."
+            "AuthContext: Usuário não encontrado no backend.",
+            error
           );
-          throw error;
+          setUser(null);
         }
       } else {
         console.log("onAuthStateChanged: Deslogado");
@@ -113,10 +124,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     email: string,
     password: string
   ): Promise<void> => {
-    console.log("AuthContext: 1. Registrando no Firebase...");
     let firebaseUser: FirebaseUser | null = null;
 
     try {
+      isRegistering.current = true;
+
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         email,
@@ -125,7 +137,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       firebaseUser = userCredential.user;
 
       await updateProfile(firebaseUser, { displayName: name });
-      console.log("AuthContext: 2. Perfil Firebase atualizado com nome.");
 
       const registerBackendDTO = {
         id: firebaseUser.uid,
@@ -133,9 +144,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         name: name,
       };
 
-      console.log("AuthContext: 3. Sincronizando com o backend Spring...");
       await api.post("/users/auth/register", registerBackendDTO);
-      console.log("AuthContext: 4. Usuário sincronizado com o backend.");
+      const response = await api.get(`/users/${firebaseUser.uid}`);
+      const backendUser = response.data;
+
+      const userLevel = calculateLevel(backendUser.totalFinPoints);
+
+      const appUser: User = {
+        uid: firebaseUser.uid,
+        name: backendUser.name,
+        email: backendUser.email,
+        avatarUrl: backendUser.avatarUrl || null,
+        totalFinPoints: backendUser.totalFinPoints || 0,
+        budget: backendUser.budget,
+        level: userLevel,
+      };
+
+      setUser(appUser);
     } catch (error: any) {
       console.error("Erro no fluxo de registro:", error);
       if (firebaseUser) {
@@ -146,10 +171,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           await deleteUser(firebaseUser);
           console.log("Rollback do Firebase concluído. Usuário deletado.");
         } catch (deleteError) {
-          throw deleteError;
+          console.error("Erro no rollback:", deleteError);
         }
       }
       throw error;
+    } finally {
+      isRegistering.current = false;
     }
   };
 
