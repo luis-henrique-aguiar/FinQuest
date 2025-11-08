@@ -29,6 +29,12 @@ import AppLayout from "./components/layout/AppLayout";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import LearnHubPage from "./pages/LearnHubPage";
 import { CourseDetailsPage } from "./pages/CourseDetailsPage";
+import ProfilePage from "./pages/ProfilePage";
+import MissionsPage from "./pages/MissionsPage";
+import BudgetPage from "./pages/BudgetPage";
+import GoalsPage from "./pages/GoalsPage";
+import InvestmentSimulatorPage from "./pages/InvestmentSimulatorPage";
+import ReportsPage from "./pages/ReportsPage";
 
 const AppRoutes = () => {
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(() => {
@@ -56,8 +62,8 @@ const AppRoutes = () => {
       <Route element={<AuthLayout />}>
         <Route element={<PublicOnlyRoute />}>
           <Route path="/" element={<LandingPage />} />
-          <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/login" element={<LoginPage />} /> 
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         </Route>
       </Route>
@@ -67,6 +73,12 @@ const AppRoutes = () => {
           <Route path="/home" element={<HomePage />} />
           <Route path="/learn" element={<LearnHubPage />} />
           <Route path="/learn/:courseId" element={<CourseDetailsPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/missions" element={<MissionsPage />} />
+          <Route path="/budget" element={<BudgetPage />} />
+          <Route path="/goals" element={<GoalsPage />} />
+          <Route path="/simulator" element={<InvestmentSimulatorPage />} />
+          <Route path="/reports" element={<ReportsPage />} />
         </Route>
       </Route>
 
