@@ -6,6 +6,7 @@ import br.edu.ifsp.prsi.finquest.exception.BusinessException;
 import br.edu.ifsp.prsi.finquest.model.User;
 import br.edu.ifsp.prsi.finquest.repository.UserRepository;
 import br.edu.ifsp.prsi.finquest.service.UserService;
+import br.edu.ifsp.prsi.finquest.utils.LevelingUtil;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,5 +48,20 @@ public class UserServiceImpl implements UserService {
     public UserDTO findUserById(String id){
         User user = userRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado para o ID: " + id));
         return UserDTO.convertToDTO(user);
+    }
+
+    public boolean addFinPoints(String userId, int pointsToAdd) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado: " + userId));
+
+        int currentLevel = user.getLevel();
+        int newFinPoints = user.getTotalFinPoints() + pointsToAdd;
+        int newLevel = LevelingUtil.calculateLevel(newFinPoints);
+
+        user.setTotalFinPoints(newFinPoints);
+        user.setLevel(newLevel);
+        userRepository.save(user);
+
+        return newLevel > currentLevel;
     }
 }
