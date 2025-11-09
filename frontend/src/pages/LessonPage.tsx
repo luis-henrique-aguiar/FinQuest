@@ -10,6 +10,41 @@ import {
 } from "../services/lessonService";
 import Button from "../components/common/Button";
 import * as S from "./LessonPage.styles";
+import { LessonQuiz, type QuizQuestion } from '../components/gamification/LessonQuiz';
+
+const MOCK_QUIZ_DATA: QuizQuestion[] = [
+  {
+    question: "O que são Juros Compostos?",
+    options: [
+      { letter: "A", text: "Juros pagos apenas sobre o valor principal investido." },
+      { letter: "B", text: "Juros ganhos sobre o valor principal e também sobre os juros já acumulados." },
+      { letter: "C", text: "Um imposto que o governo cobra sobre investimentos." },
+    ],
+    correctAnswer: "B",
+    explanation: "Correto! Juros compostos são 'juros sobre juros', o que permite um crescimento exponencial do seu dinheiro ao longo do tempo."
+  },
+  {
+    question: "Qual o fator mais importante para o poder dos juros compostos?",
+    options: [
+      { letter: "A", text: "O valor inicial investido." },
+      { letter: "B", text: "A taxa de juros diária." },
+      { letter: "C", text: "O Tempo." },
+    ],
+    correctAnswer: "C",
+    explanation: "O Tempo é o ingrediente mais poderoso! Quanto mais tempo seu dinheiro fica investido, mais os 'juros sobre juros' podem trabalhar a seu favor."
+  },
+  {
+    question: "Na regra 50/30/20, o que os 20% representam?",
+    options: [
+      { letter: "A", text: "Gastos essenciais (moradia, contas)." },
+      { letter: "B", text: "Desejos pessoais (lazer, compras)." },
+      { letter: "C", text: "Poupança e pagamento de dívidas." },
+    ],
+    correctAnswer: "C",
+    explanation: "Exato! A regra sugere 50% para necessidades, 30% para desejos, e 20% para seus objetivos financeiros (poupar, investir ou pagar dívidas)."
+  }
+];
+
 
 const LessonPage = () => {
   const { courseId, lessonId } = useParams<{
@@ -88,6 +123,11 @@ const LessonPage = () => {
     }
   };
 
+  const handleQuizComplete = (score: number) => {
+    console.log(`Quiz finalizado! Pontuação: ${score}`);
+    addToast(`Você acertou ${score} de ${MOCK_QUIZ_DATA.length} questões!`, "success");
+  };
+
   if (isLoading) {
     return (
       <S.PageContainer>
@@ -140,6 +180,13 @@ const LessonPage = () => {
           </S.StyledMarkdown>
         </S.ContentCard>
       </S.ContentWrapper>
+
+      <S.QuizContainer>
+        <LessonQuiz 
+          questions={MOCK_QUIZ_DATA} 
+          onComplete={handleQuizComplete} 
+        />
+      </S.QuizContainer>
 
       <S.FooterNavigation>
         <Button
