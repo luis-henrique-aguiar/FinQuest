@@ -6,45 +6,15 @@ import { ArrowLeft, ArrowRight, BookOpen, Clock } from "react-feather";
 import { useToast } from "../hooks/useToast";
 import {
   getLessonDetails,
+  getLessonQuiz,
   type LessonDetailsDTO,
 } from "../services/lessonService";
 import Button from "../components/common/Button";
 import * as S from "./LessonPage.styles";
-import { LessonQuiz, type QuizQuestion } from '../components/gamification/LessonQuiz';
-
-const MOCK_QUIZ_DATA: QuizQuestion[] = [
-  {
-    question: "O que são Juros Compostos?",
-    options: [
-      { letter: "A", text: "Juros pagos apenas sobre o valor principal investido." },
-      { letter: "B", text: "Juros ganhos sobre o valor principal e também sobre os juros já acumulados." },
-      { letter: "C", text: "Um imposto que o governo cobra sobre investimentos." },
-    ],
-    correctAnswer: "B",
-    explanation: "Correto! Juros compostos são 'juros sobre juros', o que permite um crescimento exponencial do seu dinheiro ao longo do tempo."
-  },
-  {
-    question: "Qual o fator mais importante para o poder dos juros compostos?",
-    options: [
-      { letter: "A", text: "O valor inicial investido." },
-      { letter: "B", text: "A taxa de juros diária." },
-      { letter: "C", text: "O Tempo." },
-    ],
-    correctAnswer: "C",
-    explanation: "O Tempo é o ingrediente mais poderoso! Quanto mais tempo seu dinheiro fica investido, mais os 'juros sobre juros' podem trabalhar a seu favor."
-  },
-  {
-    question: "Na regra 50/30/20, o que os 20% representam?",
-    options: [
-      { letter: "A", text: "Gastos essenciais (moradia, contas)." },
-      { letter: "B", text: "Desejos pessoais (lazer, compras)." },
-      { letter: "C", text: "Poupança e pagamento de dívidas." },
-    ],
-    correctAnswer: "C",
-    explanation: "Exato! A regra sugere 50% para necessidades, 30% para desejos, e 20% para seus objetivos financeiros (poupar, investir ou pagar dívidas)."
-  }
-];
-
+import {
+  LessonQuiz,
+  type QuizQuestion,
+} from "../components/gamification/LessonQuiz";
 
 const LessonPage = () => {
   const { courseId, lessonId } = useParams<{
@@ -58,11 +28,14 @@ const LessonPage = () => {
   const [lessonContent, setLessonContent] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [readingTime, setReadingTime] = useState(0);
+  const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
 
   const { addToast } = useToast();
   const navigate = useNavigate();
 
   useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+
     if (!courseId || !lessonId) {
       addToast("Erro: ID do curso ou lição não encontrado.", "error");
       navigate("/learn");
@@ -73,29 +46,44 @@ const LessonPage = () => {
       setIsLoading(true);
       try {
         const detailsPromise = getLessonDetails(lessonId);
+
         const filePath = `/lessons/${lessonId}.md`;
         const contentPromise = fetch(filePath).then((res) => {
           if (!res.ok) throw new Error(`Lição não encontrada em ${filePath}`);
           return res.text();
         });
 
-        const [detailsData, contentData] = await Promise.all([
+        const quizPromise = getLessonQuiz(lessonId);
+
+        const [detailsData, contentData, quizData] = await Promise.all([
           detailsPromise,
           contentPromise,
+          quizPromise,
         ]);
 
         setLessonDetails(detailsData);
         setLessonContent(contentData);
+        setQuizQuestions(quizData);
 
         const wordCount = contentData.split(/\s+/).length;
         const minutes = Math.ceil(wordCount / 200);
         setReadingTime(minutes);
-      } catch (error) {
+      } catch (error: any) {
         console.error("Erro ao carregar conteúdo da lição:", error);
-        setLessonContent(
-          "# ❌ Lição Não Encontrada\n\nNão foi possível carregar o conteúdo desta lição."
-        );
-        addToast("Erro ao carregar a lição.", "error");
+        if (error.config?.url?.includes("/quiz")) {
+          console.log(
+            "Nenhum quiz encontrado para esta lição. Carregando sem quiz."
+          );
+          setLessonContent(
+            "# ❌ Erro ao Carregar\n\nNão foi possível carregar o conteúdo ou o quiz desta lição."
+          );
+          addToast("Erro ao carregar a lição.", "error");
+        } else {
+          setLessonContent(
+            "# ❌ Lição Não Encontrada\n\nNão foi possível carregar o conteúdo desta lição."
+          );
+          addToast("Erro ao carregar a lição.", "error");
+        }
       } finally {
         setIsLoading(false);
       }
@@ -125,7 +113,10 @@ const LessonPage = () => {
 
   const handleQuizComplete = (score: number) => {
     console.log(`Quiz finalizado! Pontuação: ${score}`);
-    addToast(`Você acertou ${score} de ${MOCK_QUIZ_DATA.length} questões!`, "success");
+    addToast(
+      `Você acertou ${score} de ${quizQuestions.length} questões!`,
+      "success"
+    );
   };
 
   if (isLoading) {
@@ -181,12 +172,14 @@ const LessonPage = () => {
         </S.ContentCard>
       </S.ContentWrapper>
 
-      <S.QuizContainer>
-        <LessonQuiz 
-          questions={MOCK_QUIZ_DATA} 
-          onComplete={handleQuizComplete} 
-        />
-      </S.QuizContainer>
+      {!isLoading && quizQuestions && quizQuestions.length > 0 && (
+        <S.QuizContainer>
+          <LessonQuiz
+            questions={quizQuestions}
+            onComplete={handleQuizComplete}
+          />
+        </S.QuizContainer>
+      )}
 
       <S.FooterNavigation>
         <Button
