@@ -2,68 +2,14 @@ import { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import { useParams, useNavigate } from "react-router-dom";
 import remarkGfm from "remark-gfm";
-import {
-  LessonTitle,
-  LessonParagraph,
-  LessonHighlight,
-  LessonListItem,
-  LessonStrong,
-  HighlightBox,
-  TableContainer,
-  StyledTable,
-  StyledTh,
-  StyledTd,
-} from "../pages/Typography.styles";
-import { Title } from "./OnboardingPage.style";
+import { ArrowLeft, ArrowRight, BookOpen, Clock } from "react-feather";
 import { useToast } from "../hooks/useToast";
-import styled from "styled-components";
-import { ArrowLeft } from "react-feather";
 import {
   getLessonDetails,
   type LessonDetailsDTO,
 } from "../services/lessonService";
 import Button from "../components/common/Button";
-
-const PageContainer = styled.div`
-  max-width: 800px;
-  margin: 2rem auto;
-  padding: 1rem;
-`;
-
-const Header = styled.div`
-  display: flex;
-  align-items: center;
-  gap: ${({ theme }) => theme.spacing.md};
-  margin-bottom: ${({ theme }) => theme.spacing.lg};
-`;
-
-const BackButton = styled.button`
-  background: ${({ theme }) => theme.colors.white};
-  border: 1px solid ${({ theme }) => theme.colors.white};
-  color: ${({ theme }) => theme.colors.textDark};
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-
-  &:hover {
-    background: ${({ theme }) => theme.colors.background};
-    transform: scale(1.1);
-  }
-`;
-
-const FooterNavigation = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 2rem;
-  padding-top: 2rem;
-  border-top: 1px solid ${({ theme }) => theme.colors.white};
-`;
+import * as S from "./LessonPage.styles";
 
 const LessonPage = () => {
   const { courseId, lessonId } = useParams<{
@@ -71,17 +17,16 @@ const LessonPage = () => {
     lessonId: string;
   }>();
 
-  // Estados para os dois fetches
   const [lessonDetails, setLessonDetails] = useState<LessonDetailsDTO | null>(
     null
   );
   const [lessonContent, setLessonContent] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [readingTime, setReadingTime] = useState(0);
 
   const { addToast } = useToast();
   const navigate = useNavigate();
 
-  // 2. useEffect atualizado para buscar ambos
   useEffect(() => {
     if (!courseId || !lessonId) {
       addToast("Erro: ID do curso ou lição não encontrado.", "error");
@@ -92,17 +37,13 @@ const LessonPage = () => {
     const fetchAllData = async () => {
       setIsLoading(true);
       try {
-        // Promessa 1: Buscar os detalhes (próxima/anterior) da API
         const detailsPromise = getLessonDetails(lessonId);
-
-        // Promessa 2: Buscar o conteúdo Markdown da pasta /public
         const filePath = `/lessons/${lessonId}.md`;
         const contentPromise = fetch(filePath).then((res) => {
           if (!res.ok) throw new Error(`Lição não encontrada em ${filePath}`);
           return res.text();
         });
 
-        // 3. Espera as duas promessas terminarem
         const [detailsData, contentData] = await Promise.all([
           detailsPromise,
           contentPromise,
@@ -110,6 +51,10 @@ const LessonPage = () => {
 
         setLessonDetails(detailsData);
         setLessonContent(contentData);
+
+        const wordCount = contentData.split(/\s+/).length;
+        const minutes = Math.ceil(wordCount / 200);
+        setReadingTime(minutes);
       } catch (error) {
         console.error("Erro ao carregar conteúdo da lição:", error);
         setLessonContent(
@@ -124,17 +69,11 @@ const LessonPage = () => {
     fetchAllData();
   }, [courseId, lessonId, addToast, navigate]);
 
-  if (isLoading) {
-    return <div>Carregando conteúdo da lição...</div>;
-  }
-
-  // 4. Lógica de Navegação dos Botões
   const handleNextLesson = () => {
     if (lessonDetails?.nextLessonId) {
-      // Navega para a próxima lição
       navigate(`/learn/${courseId}/${lessonDetails.nextLessonId}`);
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } else {
-      // É a última lição, navega de volta para a página do curso
       addToast("Parabéns, você concluiu o curso!", "success");
       navigate(`/learn/${courseId}`);
     }
@@ -142,59 +81,67 @@ const LessonPage = () => {
 
   const handlePreviousLesson = () => {
     if (lessonDetails?.previousLessonId) {
-      // Navega para a lição anterior
       navigate(`/learn/${courseId}/${lessonDetails.previousLessonId}`);
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } else {
-      // É a primeira lição, navega de volta para a página do curso
       navigate(`/learn/${courseId}`);
     }
   };
 
+  if (isLoading) {
+    return (
+      <S.PageContainer>
+        <S.LoadingContainer>
+          <div className="spinner" />
+          <p>Carregando conteúdo da lição...</p>
+        </S.LoadingContainer>
+      </S.PageContainer>
+    );
+  }
+
   return (
-    <PageContainer>
-      <Header>
-        {/* 5. Botão "Voltar" (para a página do curso) */}
-        <BackButton
-          onClick={() => navigate(`/learn/${courseId}`)}
-          aria-label="Voltar para o curso"
-        >
-          <ArrowLeft size={20} />
-        </BackButton>
-        {/* Usamos o LessonTitle para o título principal da lição */}
-        <LessonTitle style={{ margin: 0 }}>
-          {lessonDetails?.title || "Carregando..."}
-        </LessonTitle>
-      </Header>
-      <div style={{ maxWidth: "800px", margin: "2rem auto", padding: "1rem" }}>
-        <ReactMarkdown
-          remarkPlugins={[remarkGfm]}
-          components={{
-            h1: ({ node, ...props }) => <Title {...props} />,
-            h2: ({ node, ...props }) => <LessonTitle {...props} />,
-            h3: ({ node, ...props }) => (
-              <h3
-                style={{ marginTop: "1.5rem", marginBottom: "0.5rem" }}
-                {...props}
-              />
-            ),
-            p: ({ node, ...props }) => <LessonParagraph {...props} />,
-            blockquote: ({ node, ...props }) => <LessonHighlight {...props} />,
-            li: ({ node, ...props }) => <LessonListItem {...props} />,
-            strong: ({ node, ...props }) => <LessonStrong {...props} />,
-            div: ({ node, ...props }) => <HighlightBox {...props} />,
-            table: ({ node, ...props }) => (
-              <TableContainer>
-                <StyledTable {...props} />
-              </TableContainer>
-            ),
-            th: ({ node, ...props }) => <StyledTh {...props} />,
-            td: ({ node, ...props }) => <StyledTd {...props} />,
-          }}
-        >
-          {lessonContent!}
-        </ReactMarkdown>
-      </div>
-      <FooterNavigation>
+    <S.PageContainer>
+      <S.Header>
+        <S.HeaderContent>
+          <S.BackButton
+            onClick={() => navigate(`/learn/${courseId}`)}
+            aria-label="Voltar para o curso"
+          >
+            <ArrowLeft size={20} />
+          </S.BackButton>
+          <S.HeaderTitle>
+            {lessonDetails?.title || "Carregando..."}
+          </S.HeaderTitle>
+        </S.HeaderContent>
+      </S.Header>
+
+      <S.ContentWrapper>
+        <S.LessonMeta>
+          <div className="meta-item">
+            <BookOpen size={16} />
+            <span>Educação Financeira</span>
+          </div>
+          <div className="meta-item">
+            <Clock size={16} />
+            <span>{readingTime} min de leitura</span>
+          </div>
+        </S.LessonMeta>
+
+        <S.ContentCard>
+          <S.StyledMarkdown>
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                div: ({ node, ...props }) => <S.HighlightBox {...props} />,
+              }}
+            >
+              {lessonContent!}
+            </ReactMarkdown>
+          </S.StyledMarkdown>
+        </S.ContentCard>
+      </S.ContentWrapper>
+
+      <S.FooterNavigation>
         <Button
           variant="outline"
           onClick={handlePreviousLesson}
@@ -205,11 +152,16 @@ const LessonPage = () => {
             : "Voltar ao Curso"}
         </Button>
 
-        <Button variant="primary" onClick={handleNextLesson}>
+        <Button
+          variant="primary"
+          onClick={handleNextLesson}
+          icon={<ArrowRight size={16} />}
+          iconPosition="right"
+        >
           {lessonDetails?.nextLessonId ? "Próxima Lição" : "Concluir Curso"}
         </Button>
-      </FooterNavigation>
-    </PageContainer>
+      </S.FooterNavigation>
+    </S.PageContainer>
   );
 };
 
