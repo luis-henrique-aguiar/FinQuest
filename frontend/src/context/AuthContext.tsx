@@ -37,6 +37,7 @@ export interface AuthContextType {
   register: (name: string, email: string, password: string) => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  updateUserContext: (updatedData: Partial<User>) => void;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(
@@ -71,8 +72,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           const response = await api.get(`/users/${fbUser.uid}`);
           const backendUser = response.data;
 
-          const userLevel = calculateLevel(backendUser.totalFinPoints);
-
           const appUser: User = {
             uid: fbUser.uid,
             name: backendUser.name,
@@ -80,7 +79,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
             avatarUrl: backendUser.avatarUrl || null,
             totalFinPoints: backendUser.totalFinPoints || 0,
             budget: backendUser.budget,
-            level: userLevel,
+            level: backendUser.level || 1,
           };
 
           if (import.meta.env.DEV) {
@@ -202,6 +201,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     }
   };
 
+  const updateUserContext = (updatedData: Partial<User>) => {
+    setUser(prevUser => {
+      if (!prevUser) return null;
+
+      const newUser = { ...prevUser, ...updatedData };
+      
+      try {
+        localStorage.setItem('finquest_user', JSON.stringify(newUser));
+      } catch (e) {
+        console.warn("Falha ao atualizar usuário no localStorage", e);
+      }
+
+      console.log("AuthContext: updateUserContext foi chamado.", newUser);
+      return newUser;
+    });
+  };
+
   const value: AuthContextType = {
     user,
     firebaseUser,
@@ -210,6 +226,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     register,
     login,
     logout,
+    updateUserContext
   };
 
   if (isLoading) {

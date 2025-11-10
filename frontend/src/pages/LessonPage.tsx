@@ -5,6 +5,7 @@ import remarkGfm from "remark-gfm";
 import { ArrowLeft, ArrowRight, BookOpen, Clock } from "react-feather";
 import { useToast } from "../hooks/useToast";
 import {
+  completeLesson,
   getLessonDetails,
   getLessonQuiz,
   type LessonDetailsDTO,
@@ -15,13 +16,14 @@ import {
   LessonQuiz,
   type QuizQuestion,
 } from "../components/gamification/LessonQuiz";
+import { useAuth } from "../hooks/useAuth";
+import { useGamification } from "../context/GamificationContext";
 
 const LessonPage = () => {
   const { courseId, lessonId } = useParams<{
     courseId: string;
     lessonId: string;
   }>();
-
   const [lessonDetails, setLessonDetails] = useState<LessonDetailsDTO | null>(
     null
   );
@@ -29,9 +31,12 @@ const LessonPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [readingTime, setReadingTime] = useState(0);
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
-
+  const [isLoadingQuiz, setIsLoadingQuiz] = useState(false);
+  const [isQuizCompleted, setIsQuizCompleted] = useState(false);
   const { addToast } = useToast();
   const navigate = useNavigate();
+  const { updateUserContext } = useAuth();
+  const { showLevelUp } = useGamification();
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -111,12 +116,43 @@ const LessonPage = () => {
     }
   };
 
-  const handleQuizComplete = (score: number) => {
-    console.log(`Quiz finalizado! Pontuação: ${score}`);
-    addToast(
-      `Você acertou ${score} de ${quizQuestions.length} questões!`,
-      "success"
-    );
+  const handleQuizComplete = async (score: number) => {
+    const totalQuestions = quizQuestions.length;
+    const passed = score / totalQuestions >= 0.7;
+
+    if (!passed) {
+      addToast("Quase lá! Revise a lição e tente o quiz novamente.", "info");
+      return;
+    }
+
+    setIsLoadingQuiz(true);
+    try {
+      addToast(
+        "Parabéns, você passou no quiz! Salvando seu progresso...",
+        "success"
+      );
+      const rewardData = await completeLesson(lessonId!);
+
+      updateUserContext({
+        totalFinPoints: rewardData.totalFinPoints,
+        level: rewardData.level,
+      });
+
+      if (rewardData.didLevelUp) {
+        showLevelUp(rewardData.level);
+      }
+
+      setIsQuizCompleted(true);
+    } catch (error: any) {
+      if (error.response?.data?.error === "CONFLICT") {
+        addToast("Você já completou esta lição!", "info");
+        setIsQuizCompleted(true);
+      } else {
+        addToast("Erro ao salvar seu progresso. Tente novamente.", "error");
+      }
+    } finally {
+      setIsLoadingQuiz(false);
+    }
   };
 
   if (isLoading) {
@@ -149,12 +185,12 @@ const LessonPage = () => {
       <S.ContentWrapper>
         <S.LessonMeta>
           <div className="meta-item">
-            <BookOpen size={16} />
-            <span>Educação Financeira</span>
+            {" "}
+            <BookOpen size={16} /> <span>Educação Financeira</span>{" "}
           </div>
           <div className="meta-item">
-            <Clock size={16} />
-            <span>{readingTime} min de leitura</span>
+            {" "}
+            <Clock size={16} /> <span>{readingTime} min de leitura</span>{" "}
           </div>
         </S.LessonMeta>
 
@@ -163,7 +199,7 @@ const LessonPage = () => {
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               components={{
-                div: ({ node, ...props }) => <S.HighlightBox {...props} />,
+                div: ({ ...props }) => <S.HighlightBox {...props} />,
               }}
             >
               {lessonContent!}
@@ -172,7 +208,8 @@ const LessonPage = () => {
         </S.ContentCard>
       </S.ContentWrapper>
 
-      {!isLoading && quizQuestions && quizQuestions.length > 0 && (
+      {/* Renderiza o Quiz se ele existir */}
+      {quizQuestions.length > 0 && (
         <S.QuizContainer>
           <LessonQuiz
             questions={quizQuestions}
@@ -186,6 +223,7 @@ const LessonPage = () => {
           variant="outline"
           onClick={handlePreviousLesson}
           icon={<ArrowLeft size={16} />}
+          disabled={isLoadingQuiz}
         >
           {lessonDetails?.previousLessonId
             ? "Lição Anterior"
@@ -197,6 +235,9 @@ const LessonPage = () => {
           onClick={handleNextLesson}
           icon={<ArrowRight size={16} />}
           iconPosition="right"
+          disabled={
+            isLoadingQuiz || (quizQuestions.length > 0 && !isQuizCompleted)
+          }
         >
           {lessonDetails?.nextLessonId ? "Próxima Lição" : "Concluir Curso"}
         </Button>

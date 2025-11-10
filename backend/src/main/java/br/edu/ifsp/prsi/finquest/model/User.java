@@ -31,15 +31,10 @@ public class User {
 
     public User() {}
 
-    public User(String id, String name, String email, Integer totalFinPoints,
-                BigDecimal budget, String avatarUrl, Integer level) {
+    public User(String id, String name, String email) {
         this.id = id;
         this.name = name;
         this.email = email;
-        this.totalFinPoints = totalFinPoints;
-        this.budget = budget;
-        this.avatarUrl = avatarUrl;
-        this.level = level;
     }
 
     public String getId() { return id; }

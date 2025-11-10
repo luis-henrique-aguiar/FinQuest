@@ -22,6 +22,14 @@ export interface QuizQuestion {
   explanation: string;
 }
 
+export interface LessonCompletionDTO {
+  awardedFinPoints: number;
+  totalFinPoints: number;
+  level: number;
+  didLevelUp: boolean;
+  courseProgress: number;
+}
+
 export const getLessonDetails = async (
   lessonId: string
 ): Promise<LessonDetailsDTO> => {
@@ -40,6 +48,16 @@ export const getLessonQuiz = async (lessonId: string): Promise<QuizQuestion[]> =
     return response.data;
   } catch (error) {
     console.error(`Erro ao buscar quiz da lição ${lessonId}:`, error);
+    throw error;
+  }
+};
+
+export const completeLesson = async (lessonId: string): Promise<LessonCompletionDTO> => {
+  try {
+    const response = await api.post(`/lessons/${lessonId}/complete`);
+    return response.data;
+  } catch (error) {
+    console.error(`Erro ao completar lição ${lessonId}:`, error);
     throw error;
   }
 };

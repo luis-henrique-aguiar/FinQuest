@@ -11,7 +11,8 @@ public record UserDTO(
         String email,
         Integer totalFinPoints,
         BigDecimal budget,
-        String avatarUrl
+        String avatarUrl,
+        Integer level
 ) {
 
     private static final String DEFAULT_AVATAR_URL = "default.png";
@@ -29,6 +30,7 @@ public record UserDTO(
         user.setTotalFinPoints(Optional.ofNullable(userDTO.totalFinPoints()).orElse(0));
         user.setBudget(userDTO.budget() != null ? userDTO.budget() : BigDecimal.ZERO);
         user.setAvatarUrl(userDTO.avatarUrl() != null ? userDTO.avatarUrl() : DEFAULT_AVATAR_URL);
+        user.setLevel(userDTO.level());
 
         return user;
     }
@@ -44,7 +46,8 @@ public record UserDTO(
                 user.getEmail(),
                 user.getTotalFinPoints(),
                 user.getBudget(),
-                user.getAvatarUrl()
+                user.getAvatarUrl(),
+                user.getLevel()
         );
     }
 }

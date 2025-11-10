@@ -40,6 +40,7 @@ public class UserServiceImpl implements UserService {
         newUser.setTotalFinPoints(0);
         newUser.setEmail(registerUserDTO.email());
         newUser.setName(registerUserDTO.name());
+        newUser.setLevel(1);
 
         User savedUser = userRepository.save(newUser);
         return UserDTO.convertToDTO(savedUser);

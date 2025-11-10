@@ -5,7 +5,7 @@ import jakarta.persistence.*;
 import java.util.Objects;
 
 @Entity
-@Table(name = "alternative")
+@Table(name = "alternatives")
 public class Alternative {
 
     @Id
