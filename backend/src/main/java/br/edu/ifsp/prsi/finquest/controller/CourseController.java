@@ -36,7 +36,6 @@ public class CourseController {
                                                @AuthenticationPrincipal UserDetails userDetails) {
         String userId = userDetails.getUsername();
         enrollmentService.enrollUserInCourse(userId, courseId);
-
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 

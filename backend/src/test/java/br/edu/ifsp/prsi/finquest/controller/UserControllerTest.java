@@ -1,6 +1,9 @@
 package br.edu.ifsp.prsi.finquest.controller;
 
 import br.edu.ifsp.prsi.finquest.config.TestSecurityConfig;
+import br.edu.ifsp.prsi.finquest.dto.ErrorResponseDTO;
+import br.edu.ifsp.prsi.finquest.dto.RegisterUserDTO;
+import br.edu.ifsp.prsi.finquest.dto.UserDTO;
 import br.edu.ifsp.prsi.finquest.model.User;
 import br.edu.ifsp.prsi.finquest.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -41,6 +44,15 @@ class UserControllerTest {
         userRepository.deleteAll();
     }
 
+    // Método auxiliar para criar usuários com todos os campos obrigatórios
+    private User createTestUser(String id, String name, String email) {
+        User user = new User(id, name, email);
+        user.setLevel(1);
+        user.setTotalFinPoints(0);
+        user.setBudget(BigDecimal.ZERO);
+        return user;
+    }
+
     @Test
     @DisplayName("POST /users/auth/register - Deve registrar usuário com sucesso quando autenticado")
     @WithMockUser(username = "user123")
@@ -58,7 +70,14 @@ class UserControllerTest {
         mockMvc.perform(post("/users/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
-                .andExpect(status().isCreated());
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value("user123"))
+                .andExpect(jsonPath("$.name").value("João Silva"))
+                .andExpect(jsonPath("$.email").value("joao@email.com"))
+                .andExpect(jsonPath("$.totalFinPoints").value(0))
+                .andExpect(jsonPath("$.budget").value(0))
+                .andExpect(jsonPath("$.avatarUrl").isEmpty())
+                .andExpect(jsonPath("$.level").value(1));
 
         // Verificar se foi persistido
         User savedUser = userRepository.findById("user123").orElse(null);
@@ -67,6 +86,7 @@ class UserControllerTest {
         assertThat(savedUser.getEmail()).isEqualTo("joao@email.com");
         assertThat(savedUser.getTotalFinPoints()).isZero();
         assertThat(savedUser.getBudget()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(savedUser.getLevel()).isEqualTo(1);
     }
 
     @Test
@@ -98,6 +118,7 @@ class UserControllerTest {
     void shouldReturn409ConflictWhenEmailAlreadyExists() throws Exception {
         // Given
         User existingUser = new User("user1", "Maria", "joao@email.com");
+        existingUser.setLevel(1); // Inicializar level
         userRepository.save(existingUser);
 
         String requestBody = """
@@ -127,6 +148,7 @@ class UserControllerTest {
     void shouldReturn409ConflictWhenIdAlreadyExists() throws Exception {
         // Given
         User existingUser = new User("user123", "Maria", "maria@email.com");
+        existingUser.setLevel(1); // Inicializar level
         userRepository.save(existingUser);
 
         String requestBody = """
@@ -152,6 +174,7 @@ class UserControllerTest {
         User user = new User("user123", "João Silva", "joao@email.com");
         user.setBudget(BigDecimal.valueOf(1000.00));
         user.setTotalFinPoints(100);
+        user.setLevel(2);
         user.setAvatarUrl("http://avatar.com/joao.png");
         userRepository.save(user);
 
@@ -163,7 +186,8 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.email").value("joao@email.com"))
                 .andExpect(jsonPath("$.totalFinPoints").value(100))
                 .andExpect(jsonPath("$.budget").value(1000.00))
-                .andExpect(jsonPath("$.avatarUrl").value("http://avatar.com/joao.png"));
+                .andExpect(jsonPath("$.avatarUrl").value("http://avatar.com/joao.png"))
+                .andExpect(jsonPath("$.level").value(2));
     }
 
     @Test
@@ -250,7 +274,7 @@ class UserControllerTest {
     @DisplayName("GET /users/{id} - Deve retornar usuário com valores iniciais padrão")
     void shouldReturnUserWithDefaultInitialValues() throws Exception {
         // Given
-        User user = new User("user123", "João Silva", "joao@email.com");
+        User user = createTestUser("user123", "João Silva", "joao@email.com");
         userRepository.save(user);
 
         // When & Then
@@ -258,7 +282,8 @@ class UserControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value("user123"))
                 .andExpect(jsonPath("$.totalFinPoints").value(0))
-                .andExpect(jsonPath("$.budget").value(0));
+                .andExpect(jsonPath("$.budget").value(0))
+                .andExpect(jsonPath("$.level").value(1));
     }
 
     @Test
@@ -285,12 +310,13 @@ class UserControllerTest {
     }
 
     @Test
-    @DisplayName("GET /users/{id} - Deve retornar todos os campos do usuário corretamente")
-    void shouldReturnAllUserFieldsCorrectly() throws Exception {
+    @DisplayName("GET /users/{id} - Deve retornar todos os campos do usuário corretamente incluindo level")
+    void shouldReturnAllUserFieldsCorrectlyIncludingLevel() throws Exception {
         // Given
         User user = new User("user123", "João Silva", "joao@email.com");
         user.setBudget(BigDecimal.valueOf(2500.50));
         user.setTotalFinPoints(250);
+        user.setLevel(3);
         user.setAvatarUrl("http://avatar.com/joao.png");
         userRepository.save(user);
 
@@ -302,13 +328,14 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.email").value("joao@email.com"))
                 .andExpect(jsonPath("$.totalFinPoints").value(250))
                 .andExpect(jsonPath("$.budget").value(2500.50))
-                .andExpect(jsonPath("$.avatarUrl").value("http://avatar.com/joao.png"));
+                .andExpect(jsonPath("$.avatarUrl").value("http://avatar.com/joao.png"))
+                .andExpect(jsonPath("$.level").value(3));
     }
 
     @Test
-    @DisplayName("POST /users/auth/register - Deve inicializar usuário com valores padrão corretos")
+    @DisplayName("POST /users/auth/register - Deve inicializar usuário com valores padrão corretos incluindo level 1")
     @WithMockUser(username = "user123")
-    void shouldInitializeUserWithCorrectDefaultValues() throws Exception {
+    void shouldInitializeUserWithCorrectDefaultValuesIncludingLevel1() throws Exception {
         // Given
         String requestBody = """
             {
@@ -322,12 +349,40 @@ class UserControllerTest {
         mockMvc.perform(post("/users/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
-                .andExpect(status().isCreated());
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.level").value(1));
 
         // Then
         User savedUser = userRepository.findById("user123").orElseThrow();
         assertThat(savedUser.getTotalFinPoints()).isZero();
         assertThat(savedUser.getBudget()).isEqualByComparingTo(BigDecimal.ZERO);
         assertThat(savedUser.getAvatarUrl()).isNull();
+        assertThat(savedUser.getLevel()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("POST /users/auth/register - Deve retornar UserDTO completo no corpo da resposta")
+    @WithMockUser(username = "user123")
+    void shouldReturnCompleteUserDtoInResponseBody() throws Exception {
+        // Given
+        String requestBody = """
+            {
+                "id": "user123",
+                "email": "joao@email.com",
+                "name": "João Silva"
+            }
+            """;
+
+        // When & Then
+        mockMvc.perform(post("/users/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").exists())
+                .andExpect(jsonPath("$.name").exists())
+                .andExpect(jsonPath("$.email").exists())
+                .andExpect(jsonPath("$.totalFinPoints").exists())
+                .andExpect(jsonPath("$.budget").exists())
+                .andExpect(jsonPath("$.level").exists());
     }
 }

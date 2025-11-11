@@ -7,7 +7,10 @@ import { Sun, Moon } from "react-feather";
 import { useThemeToggle } from "../../context/ThemeContext";
 import ProgressBar from "../gamification/ProgressBar";
 import { useAuth } from "../../hooks/useAuth";
-import { calculateLevelProgress, getFinPointsForLevel } from "../../utils/levelingSystem";
+import {
+  calculateLevelProgress,
+  getFinPointsForLevel,
+} from "../../utils/levelingSystem";
 
 const ProgressWrapper = styled.div`
   width: 80%;
@@ -54,9 +57,7 @@ const SidebarContainer = styled(motion.div)<{ $isOpen: boolean }>`
   transition: transform 0.3s ease-in-out;
 
   @media (max-width: 768px) {
-    transform: translateX(
-      ${({ $isOpen }) => ($isOpen ? "0" : "-100%")}
-    );
+    transform: translateX(${({ $isOpen }) => ($isOpen ? "0" : "-100%")});
     box-shadow: ${({ theme }) => theme.shadows.large};
   }
 `;

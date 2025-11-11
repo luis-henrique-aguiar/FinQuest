@@ -29,7 +29,7 @@ const MainContentWrapper = styled.div`
 const MainContent = styled(motion.main)`
   flex: 1;
   padding: ${({ theme }) => theme.spacing.lg};
-  max-width: 900px;
+  max-width: 1000px;
   margin: 0 auto;
   width: 100%;
 `;
