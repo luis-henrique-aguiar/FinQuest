@@ -9,8 +9,10 @@ import java.util.List;
 public interface GoalService {
     GoalDTO createGoal(String userId, RegisterGoalDTO request);
     GoalDTO updateGoal(String userId, String goalId, RegisterGoalDTO request);
-    GoalDTO findById(String goalId);
-    GoalDTO depositAmount(String goalId, BigDecimal amount);
-    List<GoalDTO> getUserGoals(String userId);
+    GoalDTO findById(String userId, String goalId);
+    GoalDTO depositAmount(String userId, String goalId, BigDecimal amount);
     GoalDTO deleteGoal(String userId, String goalId);
+    List<GoalDTO> getAllUserGoals(String userId);
+    List<GoalDTO> getCompletedGoals(String userId);
+    List<GoalDTO> getInProgressGoals(String userId);
 }

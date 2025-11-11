@@ -8,11 +8,13 @@ import br.edu.ifsp.prsi.finquest.repository.GoalRepository;
 import br.edu.ifsp.prsi.finquest.service.GoalService;
 import br.edu.ifsp.prsi.finquest.utils.GoalStatus;
 import jakarta.persistence.EntityNotFoundException;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class GoalServiceImpl implements GoalService {
@@ -34,14 +36,15 @@ public class GoalServiceImpl implements GoalService {
     }
 
     @Override
+    @Transactional
     public GoalDTO createGoal(String userId, RegisterGoalDTO request) {
         Goal newGoal = new Goal();
 
         newGoal.setId(UUID.randomUUID().toString());
 
         newGoal.setUserId(userId);
-        newGoal.setName(request.getName());
-        newGoal.setTargetAmount(request.getTargetAmount());
+        newGoal.setName(request.name());
+        newGoal.setTargetAmount(request.targetAmount());
 
         newGoal.setCurrentAmount(BigDecimal.ZERO);
         newGoal.setStatus(GoalStatus.IN_PROGRESS);
@@ -52,11 +55,12 @@ public class GoalServiceImpl implements GoalService {
     }
 
     @Override
+    @Transactional
     public GoalDTO updateGoal(String userId, String goalId, RegisterGoalDTO request) {
         Goal goal = findGoalAndValidateUser(userId, goalId);
 
-        goal.setName(request.getName());
-        goal.setTargetAmount(request.getTargetAmount());
+        goal.setName(request.name());
+        goal.setTargetAmount(request.targetAmount());
 
         if (goal.getTargetAmount().compareTo(goal.getCurrentAmount()) > 0) {
             if (goal.getStatus().equals(GoalStatus.COMPLETED)) {
@@ -73,23 +77,70 @@ public class GoalServiceImpl implements GoalService {
     }
 
     @Override
-    public GoalDTO findById(String goalId) {
-        Goal goalEntity = goalRepository.findById(goalId).orElseThrow(() -> new EntityNotFoundException("Meta não encontrada com ID: " + goalId));
+    public GoalDTO findById(String userId, String goalId) {
+        Goal goalEntity = findGoalAndValidateUser(userId, goalId);
         return GoalDTO.fromEntity(goalEntity);
     }
 
     @Override
-    public GoalDTO depositAmount(String goalId, BigDecimal amount) {
-        return null;
+    @Transactional
+    public GoalDTO depositAmount(String userId, String goalId, BigDecimal amount) {
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessException("O valor do depósito deve ser maior que zero.");
+        }
+
+        Goal goal = findGoalAndValidateUser(userId, goalId);
+        goal.setCurrentAmount(goal.getCurrentAmount().add(amount));
+
+        if (goal.getCurrentAmount().compareTo(goal.getTargetAmount()) >= 0) {
+
+            // Alterar depois de implementação de missões, para verificar se alguma nova missao foi concluída.
+            if (!goal.isXpGenerated()) {
+                goal.setXpGenerated(true);
+            }
+
+            goal.setStatus(GoalStatus.COMPLETED);
+        } else {
+            goal.setStatus(GoalStatus.IN_PROGRESS);
+        }
+
+        Goal savedGoal = goalRepository.save(goal);
+        return GoalDTO.fromEntity(savedGoal);
     }
 
     @Override
-    public List<GoalDTO> getUserGoals(String userId) {
-        return List.of();
-    }
-
-    @Override
+    @Transactional
     public GoalDTO deleteGoal(String userId, String goalId) {
+        Goal goal = findGoalAndValidateUser(userId, goalId);
+        if (goal.isXpGenerated()) {
+            throw new BusinessException("Meta já utilizada para contagem de recompensas (XP) e não pode ser excluída.");
+        }
+        goalRepository.delete(goal);
+
         return null;
+    }
+
+    @Override
+    public List<GoalDTO> getAllUserGoals(String userId) {
+        List<Goal> goals = goalRepository.findByUserId(userId);
+        return convertToDtoList(goals);
+    }
+
+    @Override
+    public List<GoalDTO> getCompletedGoals(String userId) {
+        List<Goal> goals = goalRepository.findByUserIdAndStatus(userId, GoalStatus.COMPLETED);
+        return convertToDtoList(goals);
+    }
+
+    @Override
+    public List<GoalDTO> getInProgressGoals(String userId) {
+        List<Goal> goals = goalRepository.findByUserIdAndStatus(userId, GoalStatus.IN_PROGRESS);
+        return convertToDtoList(goals);
+    }
+
+    private List<GoalDTO> convertToDtoList(List<Goal> goals) {
+        return goals.stream()
+                .map(GoalDTO::fromEntity)
+                .collect(Collectors.toList());
     }
 }
