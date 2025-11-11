@@ -24,7 +24,7 @@ public class LevelingUtil {
         if (totalFinPoints < BASE_XP) {
             return 1;
         }
-        
+
         double level = Math.pow(totalFinPoints / BASE_XP, 1.0 / EXPONENT) + 1;
         return (int) Math.floor(level);
     }
