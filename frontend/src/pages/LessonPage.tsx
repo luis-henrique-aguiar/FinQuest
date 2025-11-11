@@ -185,12 +185,10 @@ const LessonPage = () => {
       <S.ContentWrapper>
         <S.LessonMeta>
           <div className="meta-item">
-            {" "}
-            <BookOpen size={16} /> <span>Educação Financeira</span>{" "}
+            <BookOpen size={16} /> <span>Educação Financeira</span>
           </div>
           <div className="meta-item">
-            {" "}
-            <Clock size={16} /> <span>{readingTime} min de leitura</span>{" "}
+            <Clock size={16} /> <span>{readingTime} min de leitura</span>
           </div>
         </S.LessonMeta>
 
@@ -199,7 +197,13 @@ const LessonPage = () => {
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               components={{
-                div: ({ ...props }) => <S.HighlightBox {...props} />,
+                blockquote: ({ node, children, ...props }) => {
+                  const content = children?.toString() || '';
+                  if (content.includes('💡')) {
+                    return <S.HighlightBox>{children}</S.HighlightBox>;
+                  }
+                  return <blockquote {...props}>{children}</blockquote>;
+                },
               }}
             >
               {lessonContent!}
@@ -208,7 +212,7 @@ const LessonPage = () => {
         </S.ContentCard>
       </S.ContentWrapper>
 
-      {/* Renderiza o Quiz se ele existir */}
+      {/* Quiz e navegação continuam iguais */}
       {quizQuestions.length > 0 && (
         <S.QuizContainer>
           <LessonQuiz
