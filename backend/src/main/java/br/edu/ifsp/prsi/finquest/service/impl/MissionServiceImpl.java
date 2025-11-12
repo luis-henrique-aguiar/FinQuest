@@ -81,7 +81,12 @@ public class MissionServiceImpl implements MissionService {
         UserMissionProgressId progressId = new UserMissionProgressId(userId, mission.getId());
 
         UserMissionProgress progress = progressRepository.findById(progressId)
-                .orElse(new UserMissionProgress(progressId));
+                .orElseGet(() -> {
+                    UserMissionProgress newProgress = new UserMissionProgress(progressId);
+                    newProgress.setUser(userRepository.getReferenceById(userId));
+                    newProgress.setMission(mission);
+                    return newProgress;
+                });
 
         if ("COMPLETED".equals(progress.getStatus())) {
             return;

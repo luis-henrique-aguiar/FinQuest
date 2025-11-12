@@ -31,4 +31,68 @@ public class MissionProgressDTO {
             this.status = "NOT_STARTED";
         }
     }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public int getRewardFinPoints() {
+        return rewardFinPoints;
+    }
+
+    public void setRewardFinPoints(int rewardFinPoints) {
+        this.rewardFinPoints = rewardFinPoints;
+    }
+
+    public MissionCategory getCategory() {
+        return category;
+    }
+
+    public void setCategory(MissionCategory category) {
+        this.category = category;
+    }
+
+    public int getTargetCount() {
+        return targetCount;
+    }
+
+    public void setTargetCount(int targetCount) {
+        this.targetCount = targetCount;
+    }
+
+    public int getCurrentCount() {
+        return currentCount;
+    }
+
+    public void setCurrentCount(int currentCount) {
+        this.currentCount = currentCount;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
 }
