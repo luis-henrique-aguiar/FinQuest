@@ -4,12 +4,14 @@ import br.edu.ifsp.prsi.finquest.dto.LessonCompletionDTO;
 import br.edu.ifsp.prsi.finquest.dto.LessonDetailsDTO;
 import br.edu.ifsp.prsi.finquest.dto.QuizOptionDTO;
 import br.edu.ifsp.prsi.finquest.dto.QuizQuestionDTO;
+import br.edu.ifsp.prsi.finquest.events.LessonCompletedEvent;
 import br.edu.ifsp.prsi.finquest.exception.BusinessException;
 import br.edu.ifsp.prsi.finquest.model.*;
 import br.edu.ifsp.prsi.finquest.repository.*;
 import br.edu.ifsp.prsi.finquest.service.LessonService;
 import br.edu.ifsp.prsi.finquest.service.UserService;
 import jakarta.persistence.EntityNotFoundException;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,16 +29,19 @@ public class LessonServiceImpl implements LessonService {
     private final UserLessonCompletionRepository completionRepository;
     private final UserRepository userRepository;
     private final UserEnrollmentRepository enrollmentRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     public LessonServiceImpl(LessonRepository lessonRepository, QuestionRepository questionRepository,
                              UserService userService, UserLessonCompletionRepository completionRepository,
-                             UserRepository userRepository, UserEnrollmentRepository enrollmentRepository) {
+                             UserRepository userRepository, UserEnrollmentRepository enrollmentRepository,
+                             ApplicationEventPublisher eventPublisher) {
         this.lessonRepository = lessonRepository;
         this.questionRepository = questionRepository;
         this.userService = userService;
         this.completionRepository = completionRepository;
         this.userRepository = userRepository;
         this.enrollmentRepository = enrollmentRepository;
+        this.eventPublisher = eventPublisher;
     }
 
     public List<QuizQuestionDTO> getLessonQuiz(String lessonId) {
@@ -112,6 +117,14 @@ public class LessonServiceImpl implements LessonService {
         completion.setUser(userRepository.getReferenceById(userId));
         completion.setLesson(lesson);
         completionRepository.save(completion);
+
+        try {
+            LessonCompletedEvent event = new LessonCompletedEvent(this, userId, lessonId);
+            eventPublisher.publishEvent(event);
+            System.out.println("LessonService: Evento LessonCompletedEvent disparado.");
+        } catch (Exception e) {
+            System.err.println("Erro ao disparar LessonCompletedEvent: " + e.getMessage());
+        }
 
         int pointsAwarded = lesson.getRecFinPoints();
         boolean didLevelUp = userService.addFinPoints(userId, pointsAwarded);
