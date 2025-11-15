@@ -21,30 +21,30 @@ const CardContainer = styled(motion.div)<{ status: MissionStatus }>`
     ${({ status, theme }) =>
       status === MissionStatus.COMPLETED
         ? theme.colors.success
-        : "transparent"};
+        : theme.colors.border};
   position: relative;
   overflow: hidden;
   transition: all 0.3s ease;
+  cursor: pointer;
 
-  &:hover {
-    transform: translateY(-4px);
-    box-shadow: ${({ theme }) => theme.shadows.large};
-  }
-
-  ${({ status }) =>
+  ${({ status, theme }) =>
     status === MissionStatus.COMPLETED &&
     `
-    &::after {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(135deg, rgba(40, 167, 69, 0.05) 0%, rgba(40, 167, 69, 0.1) 100%);
-      pointer-events: none;
-    }
+    background: linear-gradient(135deg, ${theme.colors.success}05 0%, ${theme.colors.success}08 100%);
   `}
+
+  &:hover {
+    transform: scale(1.03);
+    box-shadow: ${({ theme }) => theme.shadows.large};
+    border-color: ${({ status, theme }) =>
+      status === MissionStatus.COMPLETED
+        ? theme.colors.success
+        : theme.colors.primary};
+  }
+
+  &:active {
+    transform: scale(1.01);
+  }
 `;
 
 const Header = styled.div`
@@ -54,7 +54,10 @@ const Header = styled.div`
   margin-bottom: ${({ theme }) => theme.spacing.md};
 `;
 
-const IconContainer = styled.div<{ category: MissionCategory }>`
+const IconContainer = styled.div<{
+  category: MissionCategory;
+  status: MissionStatus;
+}>`
   width: 56px;
   height: 56px;
   border-radius: ${({ theme }) => theme.borderRadius.medium};
@@ -62,7 +65,11 @@ const IconContainer = styled.div<{ category: MissionCategory }>`
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  background: ${({ category, theme }) => {
+  background: ${({ category, status, theme }) => {
+    if (status === MissionStatus.COMPLETED) {
+      return `linear-gradient(135deg, ${theme.colors.success}22 0%, ${theme.colors.success}33 100%)`;
+    }
+
     switch (category) {
       case MissionCategory.LEARNING:
         return `linear-gradient(135deg, ${theme.colors.primary}22 0%, ${theme.colors.primary}33 100%)`;
@@ -80,7 +87,9 @@ const IconContainer = styled.div<{ category: MissionCategory }>`
   svg {
     width: 28px;
     height: 28px;
-    color: ${({ category, theme }) => {
+    color: ${({ category, status, theme }) => {
+      if (status === MissionStatus.COMPLETED) return theme.colors.success;
+
       switch (category) {
         case MissionCategory.LEARNING:
           return theme.colors.primary;
@@ -99,6 +108,7 @@ const IconContainer = styled.div<{ category: MissionCategory }>`
 
 const Content = styled.div`
   flex: 1;
+  min-width: 0;
 `;
 
 const Title = styled.h3`
@@ -132,6 +142,12 @@ const ProgressText = styled.span`
   color: ${({ theme }) => theme.colors.textMedium};
 `;
 
+const ProgressPercentage = styled.span`
+  font-size: 0.875rem;
+  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  color: ${({ theme }) => theme.colors.primary};
+`;
+
 const ProgressBar = styled.div`
   width: 100%;
   height: 8px;
@@ -143,8 +159,12 @@ const ProgressBar = styled.div`
 const ProgressFill = styled(motion.div)<{ status: MissionStatus }>`
   height: 100%;
   background: ${({ status, theme }) => {
-    if (status === MissionStatus.COMPLETED) return theme.colors.success;
-    if (status === MissionStatus.IN_PROGRESS) return theme.colors.primary;
+    if (status === MissionStatus.COMPLETED) {
+      return `linear-gradient(90deg, ${theme.colors.success} 0%, ${theme.colors.success}dd 100%)`;
+    }
+    if (status === MissionStatus.IN_PROGRESS) {
+      return `linear-gradient(90deg, ${theme.colors.primary} 0%, ${theme.colors.accent} 100%)`;
+    }
     return theme.colors.textLight;
   }};
   border-radius: ${({ theme }) => theme.borderRadius.pill};
@@ -207,6 +227,22 @@ const StatusBadge = styled.div<{ status: MissionStatus }>`
   }}
 `;
 
+const CompletedCheckmark = styled(motion.div)`
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  background: ${({ theme }) => theme.colors.success};
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 18px;
+  box-shadow: 0 4px 12px ${({ theme }) => theme.colors.success}44;
+`;
+
 const getCategoryIcon = (category: MissionCategory) => {
   switch (category) {
     case MissionCategory.LEARNING:
@@ -218,7 +254,7 @@ const getCategoryIcon = (category: MissionCategory) => {
     case MissionCategory.SOCIAL:
       return <Users />;
     default:
-      return <Users />;
+      return <Book />;
   }
 };
 
@@ -241,8 +277,18 @@ export const MissionCard: React.FC<MissionCardProps> = ({ mission }) => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
+      {mission.status === MissionStatus.COMPLETED && (
+        <CompletedCheckmark
+          initial={{ scale: 0, rotate: -180 }}
+          animate={{ scale: 1, rotate: 0 }}
+          transition={{ type: "spring", stiffness: 500, damping: 20 }}
+        >
+          ✓
+        </CompletedCheckmark>
+      )}
+
       <Header>
-        <IconContainer category={mission.category}>
+        <IconContainer category={mission.category} status={mission.status}>
           {getCategoryIcon(mission.category)}
         </IconContainer>
         <Content>
@@ -256,7 +302,7 @@ export const MissionCard: React.FC<MissionCardProps> = ({ mission }) => {
           <ProgressText>
             {mission.currentCount} / {mission.targetCount}
           </ProgressText>
-          <ProgressText>{mission.progressPercentage}%</ProgressText>
+          <ProgressPercentage>{mission.progressPercentage}%</ProgressPercentage>
         </ProgressHeader>
         <ProgressBar>
           <ProgressFill
@@ -280,5 +326,3 @@ export const MissionCard: React.FC<MissionCardProps> = ({ mission }) => {
     </CardContainer>
   );
 };
-
-export default MissionCard;

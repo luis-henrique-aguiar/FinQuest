@@ -1,124 +1,135 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import styled from 'styled-components';
-import { ArrowLeft } from 'react-feather';
-import SectionTitle from '../components/common/SectionTitle';
-import { LessonCard } from '../components/gamification/LessonCard';
-import { getCourseDetails, type CourseDetailsDTO } from '../services/courseService';
-import { useToast } from '../hooks/useToast'; 
-
-const PageContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.lg};
-`;
-
-const Header = styled.div`
-  display: flex;
-  align-items: center;
-  gap: ${({ theme }) => theme.spacing.md};
-`;
-
-const BackButton = styled.button`
-  background: ${({ theme }) => theme.colors.white};
-  border: 1px solid ${({ theme }) => theme.colors.white};
-  color: ${({ theme }) => theme.colors.textDark};
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-
-  &:hover {
-    background: ${({ theme }) => theme.colors.background};
-    transform: scale(1.1);
-  }
-`;
-
-const CourseDescription = styled.p`
-  font-size: 1.1rem;
-  color: ${({ theme }) => theme.colors.textMedium};
-  max-width: 600px;
-  margin-top: ${({ theme }) => theme.spacing.sm};
-`;
-
-const LessonsGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: ${({ theme }) => theme.spacing.lg};
-`;
+import React, { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { ArrowLeft, BookOpen } from "react-feather";
+import {
+  getCourseDetails,
+  type CourseDetailsDTO,
+} from "../services/courseService";
+import { LessonListItem } from "../components/course/LessonListItem";
+import { useToast } from "../hooks/useToast"; 
+import Button from "../components/common/Button";
+import * as S from "./CourseDetailsPage.styles";
 
 export const CourseDetailsPage: React.FC = () => {
   const { courseId } = useParams<{ courseId: string }>();
   const navigate = useNavigate();
   const { addToast } = useToast();
 
-  const [course, setCourse] = useState<CourseDetailsDTO | null>(null);
+  const [courseDetails, setCourseDetails] = useState<CourseDetailsDTO | null>(
+    null
+  );
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (!courseId) {
-      addToast("ID do curso não encontrado.", "error");
-      navigate('/learn');
-      return;
+    if (courseId) {
+      loadCourseDetails(courseId);
     }
+  }, [courseId]);
 
-    const fetchCourseDetails = async () => {
-      try {
-        setIsLoading(true);
-        const data = await getCourseDetails(courseId);
-        setCourse(data);
-      } catch (error) {
-        console.error("Erro ao buscar detalhes do curso:", error);
-        addToast("Não foi possível carregar o curso.", "error");
-        navigate('/learn');
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const loadCourseDetails = async (id: string) => {
+    try {
+      setIsLoading(true);
+      const data = await getCourseDetails(id);
+      setCourseDetails(data);
+    } catch (error) {
+      console.error("Erro ao carregar detalhes do curso:", error);
+      addToast("Erro ao carregar curso. Tente novamente.", "error");
+      navigate("/learn");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    fetchCourseDetails();
-  }, [courseId, navigate, addToast]);
+  const handleLessonClick = (lessonId: string) => {
+    navigate(`/learn/${courseId}/${lessonId}`);
+  };
 
-  if (isLoading || !course) {
+  if (isLoading) {
     return (
-      <PageContainer>
-        <Header>
-          <BackButton onClick={() => navigate('/learn')}>
-            <ArrowLeft size={20} />
-          </BackButton>
-          <SectionTitle>Carregando curso...</SectionTitle>
-        </Header>
-      </PageContainer>
+      <S.PageContainer>
+        <S.LoadingContainer>
+          <div className="spinner" />
+          <p>Carregando curso...</p>
+        </S.LoadingContainer>
+      </S.PageContainer>
     );
   }
 
-  return (
-    <PageContainer>
-      <div>
-        <Header>
-          <BackButton onClick={() => navigate('/learn')} aria-label="Voltar para cursos">
-            <ArrowLeft size={20} />
-          </BackButton>
-          <SectionTitle>{course.title}</SectionTitle>
-        </Header>
-        <CourseDescription>{course.description}</CourseDescription>
-      </div>
+  if (!courseDetails) {
+    return (
+      <S.PageContainer>
+        <S.EmptyState>
+          <BookOpen size={64} />
+          <h3>Curso não encontrado</h3>
+          <p>O curso que você procura não existe ou foi removido.</p>
+          <Button onClick={() => navigate("/learn")}>Voltar para Cursos</Button>
+        </S.EmptyState>
+      </S.PageContainer>
+    );
+  }
 
-      <LessonsGrid>
-        {course.lessons.map((lesson) => (
-          <LessonCard
-            key={lesson.id}
-            courseId={course.id}
-            lessonId={lesson.id}
-            title={lesson.title}
-            isCompleted={lesson.isCompleted}
+  const completedCount = courseDetails.lessons.filter(
+    (l) => l.isCompleted
+  ).length;
+  const totalCount = courseDetails.lessons.length;
+  const progressPercentage =
+    totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+
+  return (
+    <S.PageContainer>
+      <S.Header>
+        <S.BackButton
+          onClick={() => navigate("/learn")}
+          aria-label="Voltar para cursos"
+        >
+          <ArrowLeft size={20} />
+        </S.BackButton>
+        <S.HeaderContent>
+          <S.CourseIcon>📚</S.CourseIcon>
+          <div>
+            <S.CourseTitle>{courseDetails.title}</S.CourseTitle>
+            <S.CourseDescription>
+              {courseDetails.description}
+            </S.CourseDescription>
+          </div>
+        </S.HeaderContent>
+      </S.Header>
+
+      <S.ProgressCard>
+        <S.ProgressHeader>
+          <S.ProgressTitle>Seu Progresso</S.ProgressTitle>
+          <S.ProgressStats>
+            {completedCount} de {totalCount} lições concluídas
+          </S.ProgressStats>
+        </S.ProgressHeader>
+        <S.ProgressBarContainer>
+          <S.ProgressBarFill
+            $progress={progressPercentage}
+            initial={{ width: 0 }}
+            animate={{ width: `${progressPercentage}%` }}
+            transition={{ duration: 1, ease: "easeOut" }}
           />
-        ))}
-      </LessonsGrid>
-    </PageContainer>
+        </S.ProgressBarContainer>
+        <S.ProgressPercentage>{progressPercentage}%</S.ProgressPercentage>
+      </S.ProgressCard>
+
+      <S.LessonsSection>
+        <S.SectionTitle>
+          <BookOpen size={24} />
+          <span>Lições do Curso</span>
+        </S.SectionTitle>
+
+        <S.LessonsList>
+          {courseDetails.lessons.map((lesson) => (
+            <LessonListItem
+              key={lesson.id}
+              lesson={lesson}
+              isLocked={false}
+              onClick={() => handleLessonClick(lesson.id)}
+            />
+          ))}
+        </S.LessonsList>
+      </S.LessonsSection>
+    </S.PageContainer>
   );
 };
