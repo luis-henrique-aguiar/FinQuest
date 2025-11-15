@@ -1,5 +1,6 @@
 package br.edu.ifsp.prsi.finquest.model;
 
+import br.edu.ifsp.prsi.finquest.model.enums.MissionStatus;
 import jakarta.persistence.*;
 
 import java.util.Objects;
@@ -14,8 +15,9 @@ public class UserMissionProgress {
     @Column(nullable = false)
     private int currentCount = 0;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private String status = "IN_PROGRESS";
+    private MissionStatus status = MissionStatus.NOT_STARTED;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @MapsId("userId")
@@ -32,10 +34,10 @@ public class UserMissionProgress {
     public UserMissionProgress(UserMissionProgressId id) {
         this.id = id;
         this.currentCount = 0;
-        this.status = "IN_PROGRESS";
     }
 
-    public UserMissionProgress(UserMissionProgressId id, int currentCount, String status, User user, Mission mission) {
+    public UserMissionProgress(UserMissionProgressId id, int currentCount, MissionStatus status,
+                               User user, Mission mission) {
         this.id = id;
         this.currentCount = currentCount;
         this.status = status;
@@ -59,11 +61,11 @@ public class UserMissionProgress {
         this.currentCount = currentCount;
     }
 
-    public String getStatus() {
+    public MissionStatus getStatus() {
         return status;
     }
 
-    public void setStatus(String status) {
+    public void setStatus(MissionStatus status) {
         this.status = status;
     }
 
@@ -83,8 +85,30 @@ public class UserMissionProgress {
         this.mission = mission;
     }
 
+    public void incrementProgress() {
+        if (this.status != MissionStatus.COMPLETED) {
+            this.currentCount++;
+            if (this.status == MissionStatus.NOT_STARTED) {
+                this.status = MissionStatus.IN_PROGRESS;
+            }
+        }
+    }
+
+    public void complete() {
+        this.status = MissionStatus.COMPLETED;
+    }
+
+    public boolean isCompleted() {
+        return this.status == MissionStatus.COMPLETED;
+    }
+
+    public boolean hasReachedTarget(int targetCount) {
+        return this.currentCount >= targetCount;
+    }
+
     @Override
     public boolean equals(Object o) {
+        if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         UserMissionProgress that = (UserMissionProgress) o;
         return Objects.equals(id, that.id);
@@ -100,9 +124,7 @@ public class UserMissionProgress {
         return "UserMissionProgress{" +
                 "id=" + id +
                 ", currentCount=" + currentCount +
-                ", status='" + status + '\'' +
-                ", user=" + user +
-                ", mission=" + mission +
+                ", status=" + status +
                 '}';
     }
 }
