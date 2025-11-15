@@ -3,7 +3,6 @@ package br.edu.ifsp.prsi.finquest.service.impl;
 import br.edu.ifsp.prsi.finquest.dto.MissionProgressDTO;
 import br.edu.ifsp.prsi.finquest.events.LessonCompletedEvent;
 import br.edu.ifsp.prsi.finquest.model.Mission;
-import br.edu.ifsp.prsi.finquest.model.User;
 import br.edu.ifsp.prsi.finquest.model.UserMissionProgress;
 import br.edu.ifsp.prsi.finquest.model.UserMissionProgressId;
 import br.edu.ifsp.prsi.finquest.model.enums.MissionStatus;
@@ -35,10 +34,12 @@ public class MissionServiceImpl implements MissionService {
     private final UserService userService;
     private final UserRepository userRepository;
 
-    public MissionServiceImpl(MissionRepository missionRepository,
-                              UserMissionProgressRepository progressRepository,
-                              UserService userService,
-                              UserRepository userRepository) {
+    public MissionServiceImpl(
+            MissionRepository missionRepository,
+            UserMissionProgressRepository progressRepository,
+            UserService userService,
+            UserRepository userRepository
+    ) {
         this.missionRepository = missionRepository;
         this.progressRepository = progressRepository;
         this.userService = userService;
@@ -106,7 +107,6 @@ public class MissionServiceImpl implements MissionService {
      */
     @Transactional
     private void updateMissionProgress(String userId, Mission mission) {
-        // Validação de business rule
         if (mission.getTargetCount() <= 0) {
             logger.warn("Missão {} possui targetCount inválido: {}. Operação ignorada.",
                     mission.getId(), mission.getTargetCount());
@@ -153,6 +153,7 @@ public class MissionServiceImpl implements MissionService {
 
     /**
      * Marca a missão como completada e concede a recompensa de FinPoints.
+     * O UserService automaticamente concede badges se o usuário subir de nível.
      */
     private void completeMission(UserMissionProgress progress, String userId, Mission mission) {
         progress.complete();
@@ -160,7 +161,6 @@ public class MissionServiceImpl implements MissionService {
         logger.info("Usuário {} completou a missão '{}' (ID: {})",
                 userId, mission.getTitle(), mission.getId());
 
-        // Concede os FinPoints de recompensa
         boolean leveledUp = userService.addFinPoints(userId, mission.getRewardFinPoints());
 
         logger.info("Recompensa concedida: {} FinPoints. Level up: {}",

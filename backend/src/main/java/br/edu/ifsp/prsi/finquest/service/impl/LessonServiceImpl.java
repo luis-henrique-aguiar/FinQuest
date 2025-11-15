@@ -1,9 +1,6 @@
 package br.edu.ifsp.prsi.finquest.service.impl;
 
-import br.edu.ifsp.prsi.finquest.dto.LessonCompletionDTO;
-import br.edu.ifsp.prsi.finquest.dto.LessonDetailsDTO;
-import br.edu.ifsp.prsi.finquest.dto.QuizOptionDTO;
-import br.edu.ifsp.prsi.finquest.dto.QuizQuestionDTO;
+import br.edu.ifsp.prsi.finquest.dto.*;
 import br.edu.ifsp.prsi.finquest.events.LessonCompletedEvent;
 import br.edu.ifsp.prsi.finquest.exception.BusinessException;
 import br.edu.ifsp.prsi.finquest.model.*;
@@ -11,6 +8,8 @@ import br.edu.ifsp.prsi.finquest.repository.*;
 import br.edu.ifsp.prsi.finquest.service.LessonService;
 import br.edu.ifsp.prsi.finquest.service.UserService;
 import jakarta.persistence.EntityNotFoundException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,9 +18,12 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class LessonServiceImpl implements LessonService {
+
+    private static final Logger logger = LoggerFactory.getLogger(LessonServiceImpl.class);
 
     private final LessonRepository lessonRepository;
     private final QuestionRepository questionRepository;
@@ -30,11 +32,18 @@ public class LessonServiceImpl implements LessonService {
     private final UserRepository userRepository;
     private final UserEnrollmentRepository enrollmentRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final AchievementRepository achievementRepository;
 
-    public LessonServiceImpl(LessonRepository lessonRepository, QuestionRepository questionRepository,
-                             UserService userService, UserLessonCompletionRepository completionRepository,
-                             UserRepository userRepository, UserEnrollmentRepository enrollmentRepository,
-                             ApplicationEventPublisher eventPublisher) {
+    public LessonServiceImpl(
+            LessonRepository lessonRepository,
+            QuestionRepository questionRepository,
+            UserService userService,
+            UserLessonCompletionRepository completionRepository,
+            UserRepository userRepository,
+            UserEnrollmentRepository enrollmentRepository,
+            ApplicationEventPublisher eventPublisher,
+            AchievementRepository achievementRepository
+    ) {
         this.lessonRepository = lessonRepository;
         this.questionRepository = questionRepository;
         this.userService = userService;
@@ -42,6 +51,7 @@ public class LessonServiceImpl implements LessonService {
         this.userRepository = userRepository;
         this.enrollmentRepository = enrollmentRepository;
         this.eventPublisher = eventPublisher;
+        this.achievementRepository = achievementRepository;
     }
 
     public List<QuizQuestionDTO> getLessonQuiz(String lessonId) {
@@ -121,15 +131,27 @@ public class LessonServiceImpl implements LessonService {
         try {
             LessonCompletedEvent event = new LessonCompletedEvent(this, userId, lessonId);
             eventPublisher.publishEvent(event);
-            System.out.println("LessonService: Evento LessonCompletedEvent disparado.");
+            logger.info("Evento LessonCompletedEvent disparado para userId={}, lessonId={}", userId, lessonId);
         } catch (Exception e) {
-            System.err.println("Erro ao disparar LessonCompletedEvent: " + e.getMessage());
+            logger.error("Erro ao disparar LessonCompletedEvent: {}", e.getMessage(), e);
         }
 
         int pointsAwarded = lesson.getRecFinPoints();
+
         boolean didLevelUp = userService.addFinPoints(userId, pointsAwarded);
 
-        User updatedUser = userRepository.findById(userId).get();
+        User updatedUser = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado: " + userId));
+
+        AchievementDTO unlockedBadge = null;
+        if (didLevelUp) {
+            Optional<Achievement> badgeOpt = achievementRepository.findByRequiredLevel(updatedUser.getLevel());
+            unlockedBadge = badgeOpt.map(AchievementDTO::new).orElse(null);
+
+            if (unlockedBadge != null) {
+                logger.info("Badge '{}' será exibido ao usuário {}", unlockedBadge.title(), userId);
+            }
+        }
 
         int newCourseProgress = updateCourseProgress(userId, courseId);
 
@@ -138,25 +160,32 @@ public class LessonServiceImpl implements LessonService {
                 updatedUser.getTotalFinPoints(),
                 updatedUser.getLevel(),
                 didLevelUp,
-                newCourseProgress
+                newCourseProgress,
+                unlockedBadge
         );
     }
 
     private int updateCourseProgress(String userId, String courseId) {
         long totalLessons = lessonRepository.countByCourseId(courseId);
-        if (totalLessons == 0) return 0;
+        if (totalLessons == 0) {
+            logger.warn("Curso {} não possui lições cadastradas", courseId);
+            return 0;
+        }
 
         long completedLessons = completionRepository.countCompletedLessonsByCourse(userId, courseId);
 
         int progressPercent = (int) (((double) completedLessons / totalLessons) * 100);
 
         UserEnrollment enrollment = enrollmentRepository.findById(new UserEnrollmentId(userId, courseId))
-                .orElseThrow(() -> new EntityNotFoundException("Matrícula não encontrada."));
+                .orElseThrow(() -> new EntityNotFoundException("Matrícula não encontrada para userId=" + userId + ", courseId=" + courseId));
 
         enrollment.setProgress(progressPercent);
-        if (progressPercent == 100) {
+
+        if (progressPercent == 100 && enrollment.getCompletionDate() == null) {
             enrollment.setCompletionDate(LocalDate.now());
+            logger.info("Usuário {} concluiu o curso {}", userId, courseId);
         }
+
         enrollmentRepository.save(enrollment);
 
         return progressPercent;
