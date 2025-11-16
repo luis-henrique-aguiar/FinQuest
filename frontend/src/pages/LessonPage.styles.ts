@@ -103,42 +103,40 @@ export const ContentCard = styled.div`
 `;
 
 export const StyledMarkdown = styled.div`
-  /* Títulos Principais */
   h1 {
-    font-size: 2rem;
+    font-size: 2.25rem;
     font-family: ${({ theme }) => theme.typography.fontFamily.heading};
     font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
     color: ${({ theme }) => theme.colors.primary};
     margin: 0 0 ${({ theme }) => theme.spacing.xl} 0;
-    line-height: 1.3;
+    line-height: 1.2;
     padding-bottom: ${({ theme }) => theme.spacing.md};
     border-bottom: 3px solid ${({ theme }) => theme.colors.primary};
-    display: flex;
-    align-items: center;
-    gap: ${({ theme }) => theme.spacing.sm};
+    letter-spacing: -0.5px;
 
     @media (max-width: 768px) {
-      font-size: 1.5rem;
+      font-size: 1.75rem;
     }
   }
 
   h2 {
-    font-size: 1.5rem;
+    font-size: 1.75rem;
     font-family: ${({ theme }) => theme.typography.fontFamily.heading};
     font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
     color: ${({ theme }) => theme.colors.textDark};
     margin: ${({ theme }) => theme.spacing.xxl} 0 ${({ theme }) => theme.spacing.lg} 0;
     padding-left: ${({ theme }) => theme.spacing.md};
-    border-left: 4px solid ${({ theme }) => theme.colors.secondary};
-    line-height: 1.4;
+    border-left: 5px solid ${({ theme }) => theme.colors.secondary};
+    line-height: 1.3;
+    letter-spacing: -0.3px;
 
     @media (max-width: 768px) {
-      font-size: 1.25rem;
+      font-size: 1.4rem;
     }
   }
 
   h3 {
-    font-size: 1.25rem;
+    font-size: 1.4rem;
     font-family: ${({ theme }) => theme.typography.fontFamily.heading};
     font-weight: ${({ theme }) => theme.typography.fontWeight.semiBold};
     color: ${({ theme }) => theme.colors.textDark};
@@ -146,94 +144,65 @@ export const StyledMarkdown = styled.div`
     line-height: 1.4;
 
     @media (max-width: 768px) {
-      font-size: 1.1rem;
+      font-size: 1.2rem;
     }
   }
 
   h4 {
-    font-size: 1.1rem;
+    font-size: 1.15rem;
     font-family: ${({ theme }) => theme.typography.fontFamily.heading};
     font-weight: ${({ theme }) => theme.typography.fontWeight.semiBold};
     color: ${({ theme }) => theme.colors.primary};
     margin: ${({ theme }) => theme.spacing.lg} 0 ${({ theme }) => theme.spacing.sm} 0;
   }
 
-  /* Parágrafos */
   p {
-    font-size: ${({ theme }) => theme.typography.fontSize.body};
+    font-size: 1.05rem;
     font-family: ${({ theme }) => theme.typography.fontFamily.body};
     line-height: 1.8;
     color: ${({ theme }) => theme.colors.textDark};
     margin: ${({ theme }) => theme.spacing.md} 0;
-  }
+    text-align: justify;
+    hyphens: auto;
 
-  /* Citações com melhor contraste */
-  blockquote {
-    position: relative;
-    background: ${({ theme }) => theme.colors.highlightBlue};
-    border-left: 4px solid ${({ theme }) => theme.colors.highlightBlueBorder};
-    padding: ${({ theme }) => theme.spacing.lg} ${({ theme }) => theme.spacing.lg} 
-             ${({ theme }) => theme.spacing.lg} ${({ theme }) => theme.spacing.xl};
-    margin: ${({ theme }) => theme.spacing.xl} 0;
-    border-radius: ${({ theme }) => theme.borderRadius.medium};
-    font-style: italic;
-    box-shadow: ${({ theme }) => theme.shadows.small};
-
-    &::before {
-      content: '"';
-      position: absolute;
-      left: ${({ theme }) => theme.spacing.md};
-      top: ${({ theme }) => theme.spacing.sm};
-      font-size: 3rem;
-      font-family: ${({ theme }) => theme.typography.fontFamily.heading};
-      color: ${({ theme }) => theme.colors.primary};
-      opacity: 0.3;
-      line-height: 1;
+    @media (max-width: 768px) {
+      font-size: 1rem;
+      text-align: left;
     }
-
-    p {
-      margin: 0;
-      color: ${({ theme }) => theme.colors.textDark};
-      font-size: ${({ theme }) => theme.typography.fontSize.quote};
-      font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-    }
-  }
-
-  /* Listas */
-  ul, ol {
-    margin: ${({ theme }) => theme.spacing.lg} 0;
-    padding-left: ${({ theme }) => theme.spacing.xl};
-    font-family: ${({ theme }) => theme.typography.fontFamily.body};
   }
 
   ul {
     list-style: none;
+    margin: ${({ theme }) => theme.spacing.lg} 0;
+    padding-left: 0;
     
     li {
       position: relative;
-      padding-left: ${({ theme }) => theme.spacing.lg};
-      margin: ${({ theme }) => theme.spacing.sm} 0;
+      padding-left: ${({ theme }) => theme.spacing.xl};
+      margin: ${({ theme }) => theme.spacing.md} 0;
       line-height: 1.8;
       color: ${({ theme }) => theme.colors.textDark};
 
       &::before {
         content: '▸';
         position: absolute;
-        left: 0;
+        left: ${({ theme }) => theme.spacing.sm};
         color: ${({ theme }) => theme.colors.secondary};
         font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
-        font-size: 1.2rem;
+        font-size: 1.3rem;
       }
     }
   }
 
   ol {
     counter-reset: item;
+    margin: ${({ theme }) => theme.spacing.lg} 0;
+    padding-left: 0;
     
     li {
       position: relative;
-      padding-left: ${({ theme }) => theme.spacing.lg};
-      margin: ${({ theme }) => theme.spacing.sm} 0;
+      padding-left: ${({ theme }) => theme.spacing.xl};
+      margin: ${({ theme }) => theme.spacing.md} 0;
       line-height: 1.8;
       color: ${({ theme }) => theme.colors.textDark};
       list-style: none;
@@ -242,14 +211,15 @@ export const StyledMarkdown = styled.div`
         content: counter(item) ".";
         counter-increment: item;
         position: absolute;
-        left: 0;
+        left: ${({ theme }) => theme.spacing.sm};
         color: ${({ theme }) => theme.colors.primary};
         font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+        font-size: 1.1rem;
+        min-width: 24px;
       }
     }
   }
 
-  /* Ênfase */
   strong {
     font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
     color: ${({ theme }) => theme.colors.primary};
@@ -260,39 +230,27 @@ export const StyledMarkdown = styled.div`
     color: ${({ theme }) => theme.colors.textDark};
   }
 
-  /* Código inline */
-  code {
-    background: ${({ theme }) => theme.colors.backgroundAlt};
-    padding: 3px 8px;
-    border-radius: ${({ theme }) => theme.borderRadius.small};
-    font-family: 'Courier New', monospace;
-    font-size: 0.9em;
-    color: ${({ theme }) => theme.colors.error};
-    border: 1px solid ${({ theme }) => theme.colors.border};
-  }
-
-  /* Blocos de código */
   pre {
-    background: #2D3748;
+    background: #1E2738;
     color: #E2E8F0;
     padding: ${({ theme }) => theme.spacing.lg};
     border-radius: ${({ theme }) => theme.borderRadius.medium};
     overflow-x: auto;
     margin: ${({ theme }) => theme.spacing.xl} 0;
-    border: 1px solid ${({ theme }) => theme.colors.border};
-    box-shadow: ${({ theme }) => theme.shadows.small};
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 
     code {
       background: none;
       color: inherit;
       padding: 0;
       border: none;
-      font-size: 0.95rem;
+      font-size: 0.92rem;
       line-height: 1.6;
+      font-family: 'Fira Code', 'Courier New', monospace;
     }
   }
 
-  /* Tabelas melhoradas */
   table {
     width: 100%;
     border-collapse: separate;
@@ -300,12 +258,12 @@ export const StyledMarkdown = styled.div`
     margin: ${({ theme }) => theme.spacing.xl} 0;
     overflow: hidden;
     border-radius: ${({ theme }) => theme.borderRadius.medium};
-    box-shadow: ${({ theme }) => theme.shadows.medium};
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
     border: 1px solid ${({ theme }) => theme.colors.border};
   }
 
   thead {
-    background: ${({ theme }) => theme.colors.primary};
+    background: linear-gradient(135deg, ${({ theme }) => theme.colors.primary} 0%, ${({ theme }) => theme.colors.primary}dd 100%);
     color: white;
   }
 
@@ -314,8 +272,9 @@ export const StyledMarkdown = styled.div`
     text-align: left;
     font-family: ${({ theme }) => theme.typography.fontFamily.heading};
     font-weight: ${({ theme }) => theme.typography.fontWeight.semiBold};
-    font-size: ${({ theme }) => theme.typography.fontSize.body};
-    border-bottom: 2px solid ${({ theme }) => theme.colors.primary};
+    font-size: 0.95rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
   }
 
   td {
@@ -323,6 +282,7 @@ export const StyledMarkdown = styled.div`
     border-bottom: 1px solid ${({ theme }) => theme.colors.border};
     font-family: ${({ theme }) => theme.typography.fontFamily.body};
     color: ${({ theme }) => theme.colors.textDark};
+    font-size: 0.95rem;
 
     &:first-child {
       font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
@@ -331,14 +291,15 @@ export const StyledMarkdown = styled.div`
 
   tbody tr {
     background: ${({ theme }) => theme.colors.white};
-    transition: background ${({ theme }) => theme.animations.fast} ease;
+    transition: all 0.2s ease;
 
     &:nth-child(even) {
       background: ${({ theme }) => theme.colors.backgroundAlt};
     }
 
     &:hover {
-      background: ${({ theme }) => theme.colors.primary}15;
+      background: ${({ theme }) => theme.colors.primary}08;
+      transform: scale(1.01);
     }
 
     &:last-child td {
@@ -346,40 +307,45 @@ export const StyledMarkdown = styled.div`
     }
   }
 
-  /* Divisor horizontal */
-  hr {
-    border: none;
-    height: 2px;
-    background: linear-gradient(
-      90deg,
-      ${({ theme }) => theme.colors.border} 0%,
-      ${({ theme }) => theme.colors.primary} 50%,
-      ${({ theme }) => theme.colors.border} 100%
-    );
-    margin: ${({ theme }) => theme.spacing.xxl} 0;
-  }
-
-  /* Links */
   a {
     color: ${({ theme }) => theme.colors.primary};
     text-decoration: none;
     font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-    border-bottom: 1px solid ${({ theme }) => theme.colors.primary};
-    transition: all ${({ theme }) => theme.animations.fast} ease;
+    border-bottom: 2px solid ${({ theme }) => theme.colors.primary}40;
+    transition: all 0.2s ease;
+    padding-bottom: 1px;
 
     &:hover {
       color: ${({ theme }) => theme.colors.secondary};
       border-bottom-color: ${({ theme }) => theme.colors.secondary};
+      background: ${({ theme }) => theme.colors.secondary}08;
+      padding: 2px 4px;
+      margin: -2px -4px;
+      border-radius: 3px;
     }
   }
 
-  /* Imagens responsivas */
+  hr {
+    border: none;
+    height: 3px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      ${({ theme }) => theme.colors.primary} 20%,
+      ${({ theme }) => theme.colors.secondary} 50%,
+      ${({ theme }) => theme.colors.primary} 80%,
+      transparent 100%
+    );
+    margin: ${({ theme }) => theme.spacing.xxl} 0;
+  }
+
   img {
     max-width: 100%;
     height: auto;
     border-radius: ${({ theme }) => theme.borderRadius.medium};
-    margin: ${({ theme }) => theme.spacing.lg} 0;
-    box-shadow: ${({ theme }) => theme.shadows.medium};
+    margin: ${({ theme }) => theme.spacing.xl} auto;
+    display: block;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
   }
 `;
 
@@ -426,26 +392,6 @@ export const InfoBox = styled.div`
 
   &::before {
     content: 'ℹ️';
-    margin-right: ${({ theme }) => theme.spacing.sm};
-    font-size: 1.2rem;
-  }
-`;
-
-/* Box de Atenção */
-export const WarningBox = styled.div`
-  background: linear-gradient(
-    135deg,
-    ${({ theme }) => theme.colors.warning}12 0%,
-    ${({ theme }) => theme.colors.warning}08 100%
-  );
-  border-left: 4px solid ${({ theme }) => theme.colors.warning};
-  padding: ${({ theme }) => theme.spacing.lg};
-  margin: ${({ theme }) => theme.spacing.xl} 0;
-  border-radius: ${({ theme }) => theme.borderRadius.medium};
-  box-shadow: ${({ theme }) => theme.shadows.small};
-
-  &::before {
-    content: '⚠️';
     margin-right: ${({ theme }) => theme.spacing.sm};
     font-size: 1.2rem;
   }
@@ -547,6 +493,209 @@ export const QuizQuestion = styled.div`
     color: ${({ theme }) => theme.colors.textDark};
     margin-bottom: ${({ theme }) => theme.spacing.lg};
     line-height: 1.6;
+  }
+`;
+
+export const TipBox = styled.blockquote`
+  background: ${({ theme }) => (theme as any).name === 'dark' 
+    ? 'rgba(255, 165, 0, 0.15)' 
+    : 'linear-gradient(135deg, #FFF9E6 0%, #FFFAED 100%)'};
+  border-left: 4px solid ${({ theme }) => theme.colors.accent};
+  padding: ${({ theme }) => theme.spacing.lg};
+  margin: ${({ theme }) => theme.spacing.xl} 0;
+  border-radius: ${({ theme }) => theme.borderRadius.medium};
+  box-shadow: 0 2px 8px ${({ theme }) => (theme as any).name === 'dark' 
+    ? 'rgba(255, 165, 0, 0.2)' 
+    : 'rgba(255, 165, 0, 0.1)'};
+  display: flex;
+  gap: ${({ theme }) => theme.spacing.md};
+  font-style: normal;
+
+  .tip-icon {
+    flex-shrink: 0;
+    color: ${({ theme }) => theme.colors.accent};
+    display: flex;
+    align-items: flex-start;
+    padding-top: 2px;
+  }
+
+  .tip-content {
+    flex: 1;
+    
+    p {
+      margin: 0;
+      color: ${({ theme }) => theme.colors.textDark};
+      font-size: 0.95rem;
+      line-height: 1.6;
+      
+      &:first-child {
+        font-weight: ${({ theme }) => theme.typography.fontWeight.semiBold};
+        color: ${({ theme }) => (theme as any).name === 'dark' ? '#FFB84D' : '#CC8400'};
+        margin-bottom: ${({ theme }) => theme.spacing.xs};
+      }
+    }
+
+    strong {
+      color: ${({ theme }) => theme.colors.textDark};
+    }
+  }
+`;
+
+export const WarningBox = styled.blockquote`
+  background: ${({ theme }) => (theme as any).name === 'dark' 
+    ? 'rgba(220, 53, 69, 0.15)' 
+    : 'linear-gradient(135deg, #FFF3F3 0%, #FFF5F5 100%)'};
+  border-left: 4px solid ${({ theme }) => theme.colors.error};
+  padding: ${({ theme }) => theme.spacing.lg};
+  margin: ${({ theme }) => theme.spacing.xl} 0;
+  border-radius: ${({ theme }) => theme.borderRadius.medium};
+  box-shadow: 0 2px 8px ${({ theme }) => (theme as any).name === 'dark' 
+    ? 'rgba(220, 53, 69, 0.2)' 
+    : 'rgba(220, 53, 69, 0.1)'};
+  display: flex;
+  gap: ${({ theme }) => theme.spacing.md};
+  font-style: normal;
+
+  .warning-icon {
+    flex-shrink: 0;
+    color: ${({ theme }) => theme.colors.error};
+    display: flex;
+    align-items: flex-start;
+    padding-top: 2px;
+  }
+
+  .warning-content {
+    flex: 1;
+    
+    p {
+      margin: 0;
+      color: ${({ theme }) => theme.colors.textDark};
+      font-size: 0.95rem;
+      line-height: 1.6;
+      
+      &:first-child {
+        font-weight: ${({ theme }) => theme.typography.fontWeight.semiBold};
+        color: ${({ theme }) => (theme as any).name === 'dark' ? '#FF6B7A' : '#A02834'};
+        margin-bottom: ${({ theme }) => theme.spacing.xs};
+      }
+    }
+
+    strong {
+      color: ${({ theme }) => theme.colors.textDark};
+    }
+  }
+`;
+
+export const SuccessBox = styled.blockquote`
+  background: ${({ theme }) => (theme as any).name === 'dark' 
+    ? 'rgba(40, 167, 69, 0.15)' 
+    : theme.colors.highlightGreen};
+  border-left: 4px solid ${({ theme }) => theme.colors.highlightGreenBorder};
+  padding: ${({ theme }) => theme.spacing.lg};
+  margin: ${({ theme }) => theme.spacing.xl} 0;
+  border-radius: ${({ theme }) => theme.borderRadius.medium};
+  box-shadow: 0 2px 8px ${({ theme }) => (theme as any).name === 'dark' 
+    ? 'rgba(40, 167, 69, 0.2)' 
+    : 'rgba(40, 167, 69, 0.1)'};
+  display: flex;
+  gap: ${({ theme }) => theme.spacing.md};
+  font-style: normal;
+
+  .success-icon {
+    flex-shrink: 0;
+    color: ${({ theme }) => theme.colors.highlightGreenBorder};
+    display: flex;
+    align-items: flex-start;
+    padding-top: 2px;
+  }
+
+  .success-content {
+    flex: 1;
+    
+    p {
+      margin: 0;
+      color: ${({ theme }) => theme.colors.textDark};
+      font-size: 0.95rem;
+      line-height: 1.6;
+      
+      &:first-child {
+        font-weight: ${({ theme }) => theme.typography.fontWeight.semiBold};
+        color: ${({ theme }) => (theme as any).name === 'dark' ? '#4ADE80' : '#1E7E34'};
+        margin-bottom: ${({ theme }) => theme.spacing.xs};
+      }
+    }
+
+    strong {
+      color: ${({ theme }) => theme.colors.textDark};
+    }
+  }
+`;
+
+export const QuoteBox = styled.blockquote`
+  background: ${({ theme }) => (theme as any).name === 'dark' 
+    ? 'rgba(0, 122, 204, 0.15)' 
+    : theme.colors.highlightBlue};
+  border-left: 4px solid ${({ theme }) => theme.colors.highlightBlueBorder};
+  padding: ${({ theme }) => theme.spacing.lg} ${({ theme }) => theme.spacing.lg}
+           ${({ theme }) => theme.spacing.lg} ${({ theme }) => theme.spacing.xl};
+  margin: ${({ theme }) => theme.spacing.xl} 0;
+  border-radius: ${({ theme }) => theme.borderRadius.medium};
+  box-shadow: 0 2px 8px ${({ theme }) => (theme as any).name === 'dark' 
+    ? 'rgba(0, 122, 204, 0.2)' 
+    : 'rgba(0, 122, 204, 0.08)'};
+  position: relative;
+  font-style: italic;
+
+  &::before {
+    content: '"';
+    position: absolute;
+    left: ${({ theme }) => theme.spacing.md};
+    top: ${({ theme }) => theme.spacing.sm};
+    font-size: 3.5rem;
+    font-family: Georgia, serif;
+    color: ${({ theme }) => theme.colors.primary};
+    opacity: ${({ theme }) => (theme as any).name === 'dark' ? '0.3' : '0.15'};
+    line-height: 1;
+  }
+
+  p {
+    margin: 0;
+    color: ${({ theme }) => theme.colors.textDark};
+    font-size: 1rem;
+    line-height: 1.7;
+  }
+
+  strong {
+    color: ${({ theme }) => theme.colors.textDark};
+  }
+`;
+
+export const InlineCode = styled.code`
+  background: ${({ theme }) => theme.colors.backgroundAlt};
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-family: 'Fira Code', 'Courier New', monospace;
+  font-size: 0.88em;
+  color: ${({ theme }) => (theme as any).name === 'dark' ? '#FF6B9D' : '#E53935'};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  white-space: nowrap;
+`;
+
+export const ListItem = styled.li`
+  position: relative;
+  padding-left: ${({ theme }) => theme.spacing.lg};
+  margin: ${({ theme }) => theme.spacing.sm} 0;
+  line-height: 1.8;
+  color: ${({ theme }) => theme.colors.textDark};
+
+  &::marker {
+    color: ${({ theme }) => theme.colors.primary};
+    font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  }
+
+  ul &,
+  ol & {
+    margin: ${({ theme }) => theme.spacing.xs} 0;
   }
 `;
 

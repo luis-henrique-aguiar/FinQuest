@@ -5,5 +5,6 @@ public record LessonCompletionDTO(
         int totalFinPoints,
         int level,
         boolean didLevelUp,
-        int courseProgress
+        int courseProgress,
+        AchievementDTO unlockedBadge
 ) {}
