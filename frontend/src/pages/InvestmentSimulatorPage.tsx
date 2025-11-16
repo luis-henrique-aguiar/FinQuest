@@ -16,6 +16,7 @@ import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import SectionTitle from "../components/common/SectionTitle";
 import { useToast } from "../hooks/useToast";
+import api from "../services/api";
 
 // --- Styled Components ---
 
@@ -289,6 +290,9 @@ interface SimulationResult {
 // --- Mock da API ---
 // TODO: Substituir por chamada real à API
 const fetchInvestmentRates = async (): Promise<InvestmentOption[]> => {
+
+  const response = await api.get("");
+
   // Simula delay de API
   await new Promise((resolve) => setTimeout(resolve, 1000));
 
