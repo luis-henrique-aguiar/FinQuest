@@ -36,7 +36,7 @@ const LessonPage = () => {
   const { addToast } = useToast();
   const navigate = useNavigate();
   const { updateUserContext } = useAuth();
-  const { showLevelUp } = useGamification();
+  const { showLevelUp, showBadgeUnlocked } = useGamification();
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -131,16 +131,32 @@ const LessonPage = () => {
         "Parabéns, você passou no quiz! Salvando seu progresso...",
         "success"
       );
+      
       const rewardData = await completeLesson(lessonId!);
+
+      console.log('🎯 Lesson Completion Data:', {
+        didLevelUp: rewardData.didLevelUp,
+        newLevel: rewardData.level,
+        unlockedBadge: rewardData.unlockedBadge,
+        totalFinPoints: rewardData.totalFinPoints,
+      });
+
+      if (rewardData.didLevelUp && rewardData.unlockedBadge) {
+        // Mostrar modal de badge desbloqueado (inclui level up)
+        showBadgeUnlocked(
+          rewardData.unlockedBadge,
+          rewardData.level,
+          rewardData.totalFinPoints
+        );
+      } else if (rewardData.didLevelUp) {
+        // Mostrar apenas modal de level up (sem badge para este nível)
+        showLevelUp(rewardData.level);
+      }
 
       updateUserContext({
         totalFinPoints: rewardData.totalFinPoints,
         level: rewardData.level,
       });
-
-      if (rewardData.didLevelUp) {
-        showLevelUp(rewardData.level);
-      }
 
       setIsQuizCompleted(true);
     } catch (error: any) {
@@ -148,6 +164,7 @@ const LessonPage = () => {
         addToast("Você já completou esta lição!", "info");
         setIsQuizCompleted(true);
       } else {
+        console.error("Erro ao completar lição:", error);
         addToast("Erro ao salvar seu progresso. Tente novamente.", "error");
       }
     } finally {
@@ -212,7 +229,6 @@ const LessonPage = () => {
         </S.ContentCard>
       </S.ContentWrapper>
 
-      {/* Quiz e navegação continuam iguais */}
       {quizQuestions.length > 0 && (
         <S.QuizContainer>
           <LessonQuiz

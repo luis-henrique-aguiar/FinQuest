@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { BookOpen, Award, TrendingUp, Filter } from 'react-feather';
 import { CourseCard } from '../components/gamification/CourseCard';
 import { getCoursesForUser, type CourseProgressDTO } from '../services/courseService';
@@ -13,7 +12,6 @@ export const LearnHubPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const { addToast } = useToast();
-  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchCourses = async () => {

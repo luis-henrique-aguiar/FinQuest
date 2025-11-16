@@ -1,13 +1,14 @@
-import React from 'react';
-import styled from 'styled-components';
-import { motion } from 'framer-motion';
-import Lottie from 'lottie-react';
-import { TrendingUp, Star, Award } from 'react-feather';
-import Button from '../common/Button';
-import celebrationAnimation from '../../assets/animations/coins_falling.json';
+import React from "react";
+import styled from "styled-components";
+import { motion } from "framer-motion";
+import { Award, Star, TrendingUp } from "react-feather";
+import Button from "../common/Button";
+import type { BadgeDTO } from "../../services/lessonService";
 
-interface LevelUpModalProps {
+interface BadgeUnlockedModalProps {
+  badge: BadgeDTO;
   newLevel: number;
+  totalFinPoints: number;
   onClose: () => void;
 }
 
@@ -41,24 +42,6 @@ const Content = styled.div`
   text-align: center;
 `;
 
-const IconContainer = styled(motion.div)`
-  width: 80px;
-  height: 80px;
-  margin: 0 auto ${({ theme }) => theme.spacing.md};
-  background: linear-gradient(135deg, ${({ theme }) => theme.colors.accent}22 0%, ${({ theme }) => theme.colors.accent}33 100%);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 8px 24px ${({ theme }) => theme.colors.accent}44;
-
-  svg {
-    color: ${({ theme }) => theme.colors.accent};
-    width: 40px;
-    height: 40px;
-  }
-`;
-
 const Title = styled.h2`
   margin: 0 0 ${({ theme }) => theme.spacing.sm};
   font-size: 1.75rem;
@@ -66,30 +49,43 @@ const Title = styled.h2`
   color: ${({ theme }) => theme.colors.textDark};
 `;
 
-const LevelBadge = styled(motion.div)`
-  display: inline-flex;
-  align-items: center;
-  gap: ${({ theme }) => theme.spacing.sm};
-  padding: ${({ theme }) => theme.spacing.md} ${({ theme }) => theme.spacing.lg};
-  background: linear-gradient(135deg, ${({ theme }) => theme.colors.accent}22 0%, ${({ theme }) => theme.colors.accent}33 100%);
-  border: 2px solid ${({ theme }) => theme.colors.accent};
-  border-radius: ${({ theme }) => theme.borderRadius.pill};
-  margin: ${({ theme }) => theme.spacing.lg} 0;
-  font-size: 1.5rem;
-  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
-  color: ${({ theme }) => theme.colors.accent};
-
-  svg {
-    width: 24px;
-    height: 24px;
-  }
-`;
-
-const Description = styled.p`
+const Subtitle = styled.p`
   margin: 0 0 ${({ theme }) => theme.spacing.xl};
   font-size: 1rem;
   color: ${({ theme }) => theme.colors.textMedium};
-  line-height: 1.6;
+`;
+
+const BadgeContainer = styled(motion.div)`
+  background: linear-gradient(
+    135deg,
+    ${({ theme }) => theme.colors.success}11 0%,
+    ${({ theme }) => theme.colors.success}22 100%
+  );
+  border: 3px solid ${({ theme }) => theme.colors.success};
+  border-radius: ${({ theme }) => theme.borderRadius.large};
+  padding: ${({ theme }) => theme.spacing.xl};
+  margin-bottom: ${({ theme }) => theme.spacing.xl};
+`;
+
+const BadgeIcon = styled.div`
+  font-size: 5rem;
+  line-height: 1;
+  margin-bottom: ${({ theme }) => theme.spacing.md};
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.2));
+`;
+
+const BadgeTitle = styled.h3`
+  margin: 0 0 ${({ theme }) => theme.spacing.xs};
+  font-size: 1.5rem;
+  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  color: ${({ theme }) => theme.colors.textDark};
+`;
+
+const BadgeDescription = styled.p`
+  margin: 0;
+  font-size: 0.875rem;
+  color: ${({ theme }) => theme.colors.textMedium};
+  line-height: 1.5;
 `;
 
 const StatsGrid = styled.div`
@@ -139,6 +135,30 @@ const StatLabel = styled.div`
   font-weight: ${({ theme }) => theme.typography.fontWeight.semiBold};
 `;
 
+const LevelUpBanner = styled(motion.div)`
+  background: linear-gradient(
+    135deg,
+    ${({ theme }) => theme.colors.accent}22 0%,
+    ${({ theme }) => theme.colors.accent}33 100%
+  );
+  border: 2px solid ${({ theme }) => theme.colors.accent};
+  border-radius: ${({ theme }) => theme.borderRadius.medium};
+  padding: ${({ theme }) => theme.spacing.md};
+  margin-bottom: ${({ theme }) => theme.spacing.xl};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: ${({ theme }) => theme.spacing.sm};
+  font-size: 1.125rem;
+  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  color: ${({ theme }) => theme.colors.accent};
+
+  svg {
+    width: 24px;
+    height: 24px;
+  }
+`;
+
 const overlayVariants = {
   hidden: { opacity: 0 },
   visible: { opacity: 1 },
@@ -156,25 +176,21 @@ const modalVariants = {
   exit: { scale: 0.8, opacity: 0, y: 50, transition: { duration: 0.2 } },
 } as const;
 
-const iconVariants = {
+const badgeVariants = {
   hidden: { scale: 0, rotate: -180 },
   visible: {
     scale: 1,
     rotate: 0,
-    transition: { type: 'spring' as const, stiffness: 500, damping: 20, delay: 0.2 },
+    transition: { type: 'spring' as const, stiffness: 500, damping: 20, delay: 0.3 },
   },
 } as const;
 
-const levelBadgeVariants = {
-  hidden: { scale: 0, y: 20 },
-  visible: {
-    scale: 1,
-    y: 0,
-    transition: { type: 'spring' as const, stiffness: 400, damping: 20, delay: 0.3 },
-  },
-} as const;
-
-export const LevelUpModal: React.FC<LevelUpModalProps> = ({ newLevel, onClose }) => {
+export const BadgeUnlockedModal: React.FC<BadgeUnlockedModalProps> = ({
+  badge,
+  newLevel,
+  totalFinPoints,
+  onClose,
+}) => {
   return (
     <Overlay
       variants={overlayVariants}
@@ -183,34 +199,31 @@ export const LevelUpModal: React.FC<LevelUpModalProps> = ({ newLevel, onClose })
       exit="exit"
       onClick={onClose}
     >
-      <ModalCard
-        variants={modalVariants}
-        onClick={(e) => e.stopPropagation()}
-      >
+      <ModalCard variants={modalVariants} onClick={(e) => e.stopPropagation()}>
         <Content>
-          <IconContainer
-            variants={iconVariants}
-            initial="hidden"
-            animate="visible"
+          <Title>🎉 Conquista Desbloqueada!</Title>
+          <Subtitle>
+            Você alcançou um novo marco em sua jornada financeira!
+          </Subtitle>
+
+          <LevelUpBanner
+            initial={{ scale: 0, rotate: -10 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ delay: 0.2, type: "spring", stiffness: 300 }}
           >
             <TrendingUp />
-          </IconContainer>
+            <span>Você subiu para o Nível {newLevel}!</span>
+          </LevelUpBanner>
 
-          <Title>🎉 Parabéns!</Title>
-
-          <LevelBadge
-            variants={levelBadgeVariants}
+          <BadgeContainer
+            variants={badgeVariants}
             initial="hidden"
             animate="visible"
           >
-            <Star />
-            <span>Nível {newLevel}</span>
-          </LevelBadge>
-
-          <Description>
-            Você alcançou um novo patamar em sua jornada de educação financeira!
-            Continue aprendendo para desbloquear mais conquistas.
-          </Description>
+            <BadgeIcon>{badge.icon}</BadgeIcon>
+            <BadgeTitle>{badge.title}</BadgeTitle>
+            <BadgeDescription>{badge.description}</BadgeDescription>
+          </BadgeContainer>
 
           <StatsGrid>
             <StatCard>
@@ -222,11 +235,11 @@ export const LevelUpModal: React.FC<LevelUpModalProps> = ({ newLevel, onClose })
             </StatCard>
 
             <StatCard>
-              <StatIcon color="#28A745">
-                <TrendingUp />
+              <StatIcon color="#007ACC">
+                <Star />
               </StatIcon>
-              <StatValue>+1</StatValue>
-              <StatLabel>Nível Ganho</StatLabel>
+              <StatValue>{totalFinPoints}</StatValue>
+              <StatLabel>Total FinPoints</StatLabel>
             </StatCard>
           </StatsGrid>
 

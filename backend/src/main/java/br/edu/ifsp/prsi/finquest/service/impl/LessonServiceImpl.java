@@ -121,6 +121,13 @@ public class LessonServiceImpl implements LessonService {
             throw new BusinessException("Lição já concluída.");
         }
 
+        User userBeforeAnything = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado: " + userId));
+        int levelBeforeLesson = userBeforeAnything.getLevel();
+        int pointsBeforeLesson = userBeforeAnything.getTotalFinPoints();
+
+        logger.info("📊 ANTES - Nível: {}, Pontos: {}", levelBeforeLesson, pointsBeforeLesson);
+
         UserLessonCompletion completion = new UserLessonCompletion();
         completion.setId(completionId);
         completion.setCompletedAt(LocalDateTime.now());
@@ -138,18 +145,33 @@ public class LessonServiceImpl implements LessonService {
 
         int pointsAwarded = lesson.getRecFinPoints();
 
-        boolean didLevelUp = userService.addFinPoints(userId, pointsAwarded);
+        userService.addFinPoints(userId, pointsAwarded);
 
         User updatedUser = userRepository.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado: " + userId));
 
-        AchievementDTO unlockedBadge = null;
-        if (didLevelUp) {
-            Optional<Achievement> badgeOpt = achievementRepository.findByRequiredLevel(updatedUser.getLevel());
-            unlockedBadge = badgeOpt.map(AchievementDTO::new).orElse(null);
+        int finalLevel = updatedUser.getLevel();
+        int finalPoints = updatedUser.getTotalFinPoints();
 
-            if (unlockedBadge != null) {
-                logger.info("Badge '{}' será exibido ao usuário {}", unlockedBadge.title(), userId);
+        logger.info("📊 DEPOIS - Nível: {}, Pontos: {}", finalLevel, finalPoints);
+
+        boolean actuallyLeveledUp = finalLevel > levelBeforeLesson;
+
+        logger.info("🎯 Detecção de Level Up: {} → {} = {}",
+                levelBeforeLesson, finalLevel, actuallyLeveledUp);
+
+        AchievementDTO unlockedBadge = null;
+        if (actuallyLeveledUp) {
+            logger.info("🔍 Buscando badge para o nível final {}", finalLevel);
+
+            Optional<Achievement> badgeOpt = achievementRepository.findByRequiredLevel(finalLevel);
+
+            if (badgeOpt.isPresent()) {
+                Achievement badge = badgeOpt.get();
+                unlockedBadge = new AchievementDTO(badge);
+                logger.info("✅ Badge encontrado: {} - {}", badge.getTitle(), badge.getIcon());
+            } else {
+                logger.warn("⚠️ Nenhum badge encontrado para o nível {}", finalLevel);
             }
         }
 
@@ -159,7 +181,7 @@ public class LessonServiceImpl implements LessonService {
                 pointsAwarded,
                 updatedUser.getTotalFinPoints(),
                 updatedUser.getLevel(),
-                didLevelUp,
+                actuallyLeveledUp,
                 newCourseProgress,
                 unlockedBadge
         );
