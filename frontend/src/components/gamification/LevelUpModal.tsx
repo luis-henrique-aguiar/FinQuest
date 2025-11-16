@@ -1,10 +1,8 @@
 import React from 'react';
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
-import Lottie from 'lottie-react';
 import { TrendingUp, Star, Award } from 'react-feather';
 import Button from '../common/Button';
-import celebrationAnimation from '../../assets/animations/coins_falling.json';
 
 interface LevelUpModalProps {
   newLevel: number;

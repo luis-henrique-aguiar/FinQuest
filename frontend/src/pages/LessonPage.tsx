@@ -2,7 +2,15 @@ import { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import { useParams, useNavigate } from "react-router-dom";
 import remarkGfm from "remark-gfm";
-import { ArrowLeft, ArrowRight, BookOpen, Clock } from "react-feather";
+import {
+  ArrowLeft,
+  ArrowRight,
+  BookOpen,
+  Clock,
+  Zap,
+  AlertCircle,
+  CheckCircle,
+} from "react-feather";
 import { useToast } from "../hooks/useToast";
 import {
   completeLesson,
@@ -51,13 +59,11 @@ const LessonPage = () => {
       setIsLoading(true);
       try {
         const detailsPromise = getLessonDetails(lessonId);
-
         const filePath = `/lessons/${lessonId}.md`;
         const contentPromise = fetch(filePath).then((res) => {
           if (!res.ok) throw new Error(`Lição não encontrada em ${filePath}`);
           return res.text();
         });
-
         const quizPromise = getLessonQuiz(lessonId);
 
         const [detailsData, contentData, quizData] = await Promise.all([
@@ -75,20 +81,10 @@ const LessonPage = () => {
         setReadingTime(minutes);
       } catch (error: any) {
         console.error("Erro ao carregar conteúdo da lição:", error);
-        if (error.config?.url?.includes("/quiz")) {
-          console.log(
-            "Nenhum quiz encontrado para esta lição. Carregando sem quiz."
-          );
-          setLessonContent(
-            "# ❌ Erro ao Carregar\n\nNão foi possível carregar o conteúdo ou o quiz desta lição."
-          );
-          addToast("Erro ao carregar a lição.", "error");
-        } else {
-          setLessonContent(
-            "# ❌ Lição Não Encontrada\n\nNão foi possível carregar o conteúdo desta lição."
-          );
-          addToast("Erro ao carregar a lição.", "error");
-        }
+        setLessonContent(
+          "# ❌ Erro ao Carregar\n\nNão foi possível carregar o conteúdo desta lição."
+        );
+        addToast("Erro ao carregar a lição.", "error");
       } finally {
         setIsLoading(false);
       }
@@ -131,25 +127,17 @@ const LessonPage = () => {
         "Parabéns, você passou no quiz! Salvando seu progresso...",
         "success"
       );
-      
       const rewardData = await completeLesson(lessonId!);
 
-      console.log('🎯 Lesson Completion Data:', {
-        didLevelUp: rewardData.didLevelUp,
-        newLevel: rewardData.level,
-        unlockedBadge: rewardData.unlockedBadge,
-        totalFinPoints: rewardData.totalFinPoints,
-      });
+      console.log("🎯 Lesson Completion Data:", rewardData);
 
       if (rewardData.didLevelUp && rewardData.unlockedBadge) {
-        // Mostrar modal de badge desbloqueado (inclui level up)
         showBadgeUnlocked(
           rewardData.unlockedBadge,
           rewardData.level,
           rewardData.totalFinPoints
         );
       } else if (rewardData.didLevelUp) {
-        // Mostrar apenas modal de level up (sem badge para este nível)
         showLevelUp(rewardData.level);
       }
 
@@ -202,10 +190,12 @@ const LessonPage = () => {
       <S.ContentWrapper>
         <S.LessonMeta>
           <div className="meta-item">
-            <BookOpen size={16} /> <span>Educação Financeira</span>
+            <BookOpen size={18} />
+            <span>Educação Financeira</span>
           </div>
           <div className="meta-item">
-            <Clock size={16} /> <span>{readingTime} min de leitura</span>
+            <Clock size={18} />
+            <span>{readingTime} min de leitura</span>
           </div>
         </S.LessonMeta>
 
@@ -214,12 +204,62 @@ const LessonPage = () => {
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               components={{
-                blockquote: ({ node, children, ...props }) => {
-                  const content = children?.toString() || '';
-                  if (content.includes('💡')) {
-                    return <S.HighlightBox>{children}</S.HighlightBox>;
+                blockquote: ({ children }) => {
+                  const content = children?.toString() || "";
+
+                  // 💡 Dicas (contém emoji de lâmpada)
+                  if (content.includes("💡")) {
+                    return (
+                      <S.TipBox>
+                        <div className="tip-icon">
+                          <Zap size={24} />
+                        </div>
+                        <div className="tip-content">{children}</div>
+                      </S.TipBox>
+                    );
                   }
-                  return <blockquote {...props}>{children}</blockquote>;
+
+                  // ⚠️ Avisos (contém emoji de alerta)
+                  if (
+                    content.includes("⚠️") ||
+                    content.includes("Atenção") ||
+                    content.includes("Cuidado")
+                  ) {
+                    return (
+                      <S.WarningBox>
+                        <div className="warning-icon">
+                          <AlertCircle size={24} />
+                        </div>
+                        <div className="warning-content">{children}</div>
+                      </S.WarningBox>
+                    );
+                  }
+
+                  // ✅ Sucesso (contém emoji de check)
+                  if (content.includes("✅")) {
+                    return (
+                      <S.SuccessBox>
+                        <div className="success-icon">
+                          <CheckCircle size={24} />
+                        </div>
+                        <div className="success-content">{children}</div>
+                      </S.SuccessBox>
+                    );
+                  }
+
+                  // Citação padrão
+                  return <S.QuoteBox>{children}</S.QuoteBox>;
+                },
+
+                code: ({ inline, children, ...props }: any) => {
+                  if (inline) {
+                    return <S.InlineCode>{children}</S.InlineCode>;
+                  }
+                  return <code {...props}>{children}</code>;
+                },
+
+                li: ({ children, ...props }) => {
+                  return <S.ListItem {...props}>{children}</S.ListItem>;
                 },
               }}
             >
@@ -259,7 +299,7 @@ const LessonPage = () => {
             isLoadingQuiz || (quizQuestions.length > 0 && !isQuizCompleted)
           }
         >
-          {lessonDetails?.nextLessonId ? "Próxima Lição" : "Concluir Curso"}
+          {lessonDetails?.nextLessonId ? "Próxima Lição" : "Concluir Lição"}
         </Button>
       </S.FooterNavigation>
     </S.PageContainer>
