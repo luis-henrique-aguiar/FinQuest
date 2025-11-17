@@ -21,6 +21,9 @@ public class Lesson {
     @JoinColumn(name = "course_id", nullable = false)
     private Course course;
 
+    @Column(name = "lesson_order", nullable = false)
+    private Integer lessonOrder;
+
     public Lesson() {}
 
     public Lesson(String id, String title, Integer recFinPoints, Course course) {
@@ -62,6 +65,14 @@ public class Lesson {
         this.course = course;
     }
 
+    public Integer getLessonOrder() {
+        return lessonOrder;
+    }
+
+    public void setLessonOrder(Integer lessonOrder) {
+        this.lessonOrder = lessonOrder;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;
@@ -81,6 +92,7 @@ public class Lesson {
                 ", title='" + title + '\'' +
                 ", recFinPoints=" + recFinPoints +
                 ", course=" + course +
+                ", lessonOrder=" + lessonOrder +
                 '}';
     }
 }

@@ -35,6 +35,7 @@ import BudgetPage from "./pages/BudgetPage";
 import GoalsPage from "./pages/GoalsPage";
 import InvestmentSimulatorPage from "./pages/InvestmentSimulatorPage";
 import ReportsPage from "./pages/ReportsPage";
+import { GamificationProvider } from "./context/GamificationContext";
 
 const AppRoutes = () => {
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(() => {
@@ -63,7 +64,7 @@ const AppRoutes = () => {
         <Route element={<PublicOnlyRoute />}>
           <Route path="/" element={<LandingPage />} />
           <Route path="/register" element={<RegisterPage />} />
-          <Route path="/login" element={<LoginPage />} /> 
+          <Route path="/login" element={<LoginPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         </Route>
       </Route>
@@ -79,6 +80,7 @@ const AppRoutes = () => {
           <Route path="/goals" element={<GoalsPage />} />
           <Route path="/simulator" element={<InvestmentSimulatorPage />} />
           <Route path="/reports" element={<ReportsPage />} />
+          <Route path="/learn/:courseId/:lessonId" element={<LessonPage />} />
         </Route>
       </Route>
 
@@ -92,9 +94,11 @@ function App() {
     <ThemeProvider>
       <ToastProvider>
         <AuthProvider>
-          <Router>
-            <AppRoutes />
-          </Router>
+          <GamificationProvider>
+            <Router>
+              <AppRoutes />
+            </Router>
+          </GamificationProvider>
         </AuthProvider>
       </ToastProvider>
     </ThemeProvider>

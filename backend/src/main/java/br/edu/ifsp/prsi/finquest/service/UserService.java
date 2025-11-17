@@ -9,4 +9,6 @@ public interface UserService {
 
     UserDTO findUserById(String id);
 
+    boolean addFinPoints(String userId, int pointsToAdd);
+
 }

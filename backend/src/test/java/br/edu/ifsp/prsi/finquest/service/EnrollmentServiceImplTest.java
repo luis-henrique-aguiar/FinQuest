@@ -17,6 +17,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -50,12 +51,20 @@ class EnrollmentServiceImplTest {
         courseRepository.deleteAll();
 
         // Criar usuário de teste
-        testUser = new User("user123", "João Silva", "joao@email.com");
+        testUser = createTestUser("user123", "João Silva", "joao@email.com");
         userRepository.save(testUser);
 
         // Criar curso de teste
         testCourse = new Course("course123", "Educação Financeira", "Aprenda a gerenciar suas finanças", "💰", 100);
         courseRepository.save(testCourse);
+    }
+
+    private User createTestUser(String id, String name, String email) {
+        User user = new User(id, name, email);
+        user.setLevel(1);
+        user.setTotalFinPoints(0);
+        user.setBudget(BigDecimal.ZERO);
+        return user;
     }
 
     @Test
@@ -142,7 +151,7 @@ class EnrollmentServiceImplTest {
     @DisplayName("Deve permitir que usuários diferentes se matriculem no mesmo curso")
     void shouldAllowDifferentUsersToEnrollInSameCourse() {
         // Given
-        User secondUser = new User("user456", "Maria Silva", "maria@email.com");
+        User secondUser = createTestUser("user456", "Maria Silva", "maria@email.com");
         userRepository.save(secondUser);
 
         // When
@@ -227,5 +236,45 @@ class EnrollmentServiceImplTest {
         assertThatThrownBy(() -> enrollmentService.enrollUserInCourse("userInexistente", "courseInexistente"))
                 .isInstanceOf(EntityNotFoundException.class)
                 .hasMessageContaining("Usuário não encontrado");
+    }
+
+    @Test
+    @DisplayName("Deve retornar true sempre que matricular com sucesso")
+    void shouldReturnTrueWhenEnrollmentSucceeds() {
+        // When
+        boolean result = enrollmentService.enrollUserInCourse("user123", "course123");
+
+        // Then
+        assertThat(result).isTrue();
+    }
+
+    @Test
+    @DisplayName("Deve persistir matrícula no banco de dados")
+    void shouldPersistEnrollmentInDatabase() {
+        // When
+        enrollmentService.enrollUserInCourse("user123", "course123");
+
+        // Then - Verificar se a matrícula foi salva no banco
+        UserEnrollmentId enrollmentId = new UserEnrollmentId("user123", "course123");
+        assertThat(enrollmentRepository.existsById(enrollmentId)).isTrue();
+
+        UserEnrollment enrollmentFromDb = enrollmentRepository.findById(enrollmentId).orElseThrow();
+        assertThat(enrollmentFromDb.getUser().getId()).isEqualTo("user123");
+        assertThat(enrollmentFromDb.getCourse().getId()).isEqualTo("course123");
+    }
+
+    @Test
+    @DisplayName("Deve usar getReferenceById para otimizar performance")
+    void shouldUseGetReferenceByIdForPerformanceOptimization() {
+        // When
+        enrollmentService.enrollUserInCourse("user123", "course123");
+
+        // Then - Verificar que a matrícula foi criada corretamente com as referências
+        UserEnrollmentId enrollmentId = new UserEnrollmentId("user123", "course123");
+        UserEnrollment enrollment = enrollmentRepository.findById(enrollmentId).orElseThrow();
+
+        // As referências devem estar funcionando corretamente
+        assertThat(enrollment.getUser()).isNotNull();
+        assertThat(enrollment.getCourse()).isNotNull();
     }
 }

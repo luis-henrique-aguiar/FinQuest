@@ -1,13 +1,8 @@
 package br.edu.ifsp.prsi.finquest.controller;
 
 import br.edu.ifsp.prsi.finquest.config.TestSecurityConfig;
-import br.edu.ifsp.prsi.finquest.model.Course;
-import br.edu.ifsp.prsi.finquest.model.User;
-import br.edu.ifsp.prsi.finquest.model.UserEnrollment;
-import br.edu.ifsp.prsi.finquest.model.UserEnrollmentId;
-import br.edu.ifsp.prsi.finquest.repository.CourseRepository;
-import br.edu.ifsp.prsi.finquest.repository.UserEnrollmentRepository;
-import br.edu.ifsp.prsi.finquest.repository.UserRepository;
+import br.edu.ifsp.prsi.finquest.model.*;
+import br.edu.ifsp.prsi.finquest.repository.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -20,7 +15,9 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasSize;
@@ -47,18 +44,26 @@ class CourseControllerTest {
     @Autowired
     private UserEnrollmentRepository enrollmentRepository;
 
+    @Autowired
+    private LessonRepository lessonRepository;
+
+    @Autowired
+    private UserLessonCompletionRepository completionRepository;
+
     private User testUser;
     private Course course1;
     private Course course2;
 
     @BeforeEach
     void setUp() {
+        completionRepository.deleteAll();
+        lessonRepository.deleteAll();
         enrollmentRepository.deleteAll();
         courseRepository.deleteAll();
         userRepository.deleteAll();
 
         // Criar usuário de teste
-        testUser = new User("user123", "João Silva", "joao@email.com");
+        testUser = createTestUser("user123", "João Silva", "joao@email.com");
         userRepository.save(testUser);
 
         // Criar cursos de teste
@@ -67,6 +72,32 @@ class CourseControllerTest {
         courseRepository.save(course1);
         courseRepository.save(course2);
     }
+
+    private User createTestUser(String id, String name, String email) {
+        User user = new User(id, name, email);
+        user.setLevel(1);
+        user.setTotalFinPoints(0);
+        user.setBudget(BigDecimal.ZERO);
+        return user;
+    }
+
+    private void createEnrollment(String userId, String courseId, int progress) {
+        UserEnrollmentId enrollmentId = new UserEnrollmentId(userId, courseId);
+        User user = userRepository.findById(userId).orElseThrow();
+        Course course = courseRepository.findById(courseId).orElseThrow();
+
+        UserEnrollment enrollment = new UserEnrollment();
+        enrollment.setId(enrollmentId);
+        enrollment.setUser(user);
+        enrollment.setCourse(course);
+        enrollment.setProgress(progress);
+        enrollment.setStartDate(LocalDate.now());
+        enrollment.setCompletionDate(progress == 100 ? LocalDate.now() : null);
+
+        enrollmentRepository.save(enrollment);
+    }
+
+    // ===== TESTES DE GET /courses =====
 
     @Test
     @DisplayName("GET /courses - Deve retornar todos os cursos com progresso null quando usuário não está matriculado")
@@ -112,6 +143,8 @@ class CourseControllerTest {
                 .andExpect(jsonPath("$[0].description").value("Aprenda finanças"))
                 .andExpect(jsonPath("$[0].icon").value("💰"));
     }
+
+    // ===== TESTES DE POST /courses/{courseId}/enroll =====
 
     @Test
     @DisplayName("POST /courses/{courseId}/enroll - Deve matricular usuário em curso com sucesso")
@@ -195,6 +228,89 @@ class CourseControllerTest {
         assertThat(enrollmentRepository.findById(enrollment2Id)).isPresent();
     }
 
+    // ===== TESTES DE GET /courses/{courseId}/details =====
+
+    @Test
+    @DisplayName("GET /courses/{courseId}/details - Deve retornar detalhes do curso com lições")
+    @WithMockUser(username = "user123")
+    void shouldReturnCourseDetailsWithLessons() throws Exception {
+        // Given
+        Lesson lesson1 = new Lesson("lesson1", "Introdução", 10, course1);
+        lesson1.setLessonOrder(1);
+        Lesson lesson2 = new Lesson("lesson2", "Conceitos", 15, course1);
+        lesson2.setLessonOrder(2);
+        lessonRepository.save(lesson1);
+        lessonRepository.save(lesson2);
+
+        // When & Then
+        mockMvc.perform(get("/courses/course1/details"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value("course1"))
+                .andExpect(jsonPath("$.title").value("Educação Financeira"))
+                .andExpect(jsonPath("$.description").value("Aprenda finanças"))
+                .andExpect(jsonPath("$.lessons", hasSize(2)))
+                .andExpect(jsonPath("$.lessons[0].id").value("lesson1"))
+                .andExpect(jsonPath("$.lessons[0].title").value("Introdução"))
+                .andExpect(jsonPath("$.lessons[0].isCompleted").value(false))
+                .andExpect(jsonPath("$.lessons[1].id").value("lesson2"))
+                .andExpect(jsonPath("$.lessons[1].title").value("Conceitos"))
+                .andExpect(jsonPath("$.lessons[1].isCompleted").value(false));
+    }
+
+    @Test
+    @DisplayName("GET /courses/{courseId}/details - Deve retornar 404 quando curso não existe")
+    @WithMockUser(username = "user123")
+    void shouldReturn404WhenCourseDoesNotExistForDetails() throws Exception {
+        // When & Then
+        mockMvc.perform(get("/courses/courseInexistente/details"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.error").value("NOT_FOUND"))
+                .andExpect(jsonPath("$.message").value("Curso não encontrado: courseInexistente"));
+    }
+
+    @Test
+    @DisplayName("GET /courses/{courseId}/details - Deve marcar lições como completadas corretamente")
+    @WithMockUser(username = "user123")
+    void shouldMarkLessonsAsCompletedCorrectly() throws Exception {
+        // Given
+        Lesson lesson1 = new Lesson("lesson1", "Introdução", 10, course1);
+        lesson1.setLessonOrder(1);
+        Lesson lesson2 = new Lesson("lesson2", "Avançado", 15, course1);
+        lesson2.setLessonOrder(2);
+        lessonRepository.save(lesson1);
+        lessonRepository.save(lesson2);
+
+        // Marcar lesson1 como completada
+        UserLessonCompletionId completionId = new UserLessonCompletionId("user123", "lesson1");
+        UserLessonCompletion completion = new UserLessonCompletion(
+                completionId,
+                LocalDateTime.now(),
+                testUser,
+                lesson1
+        );
+        completionRepository.save(completion);
+
+        // When & Then
+        mockMvc.perform(get("/courses/course1/details"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.lessons[0].id").value("lesson1"))
+                .andExpect(jsonPath("$.lessons[0].isCompleted").value(true))
+                .andExpect(jsonPath("$.lessons[1].id").value("lesson2"))
+                .andExpect(jsonPath("$.lessons[1].isCompleted").value(false));
+    }
+
+    @Test
+    @DisplayName("GET /courses/{courseId}/details - Deve retornar curso sem lições quando não há lições")
+    @WithMockUser(username = "user123")
+    void shouldReturnCourseWithoutLessonsWhenNoLessons() throws Exception {
+        // When & Then
+        mockMvc.perform(get("/courses/course1/details"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value("course1"))
+                .andExpect(jsonPath("$.lessons", hasSize(0)));
+    }
+
     @Test
     @DisplayName("GET /courses - Deve retornar lista vazia quando não há cursos cadastrados")
     @WithMockUser(username = "user123")
@@ -213,7 +329,7 @@ class CourseControllerTest {
     @WithMockUser(username = "user123")
     void shouldReturnOnlyAuthenticatedUserProgress() throws Exception {
         // Given
-        User anotherUser = new User("user456", "Maria Silva", "maria@email.com");
+        User anotherUser = createTestUser("user456", "Maria Silva", "maria@email.com");
         userRepository.save(anotherUser);
 
         createEnrollment("user123", "course1", 30);
@@ -282,20 +398,44 @@ class CourseControllerTest {
         assertThat(enrollment.getCompletionDate()).isNull();
     }
 
-    // Método auxiliar para criar matrículas
-    private void createEnrollment(String userId, String courseId, Integer progress) {
-        UserEnrollmentId enrollmentId = new UserEnrollmentId(userId, courseId);
-        User user = userRepository.findById(userId).orElseThrow();
-        Course course = courseRepository.findById(courseId).orElseThrow();
+    @Test
+    @DisplayName("GET /courses/{courseId}/details - Deve retornar lições ordenadas corretamente")
+    @WithMockUser(username = "user123")
+    void shouldReturnLessonsInCorrectOrder() throws Exception {
+        // Given - Salvar fora de ordem
+        Lesson lesson3 = new Lesson("lesson3", "Avançado", 20, course1);
+        lesson3.setLessonOrder(3);
+        Lesson lesson1 = new Lesson("lesson1", "Iniciante", 10, course1);
+        lesson1.setLessonOrder(1);
+        Lesson lesson2 = new Lesson("lesson2", "Intermediário", 15, course1);
+        lesson2.setLessonOrder(2);
 
-        UserEnrollment enrollment = new UserEnrollment();
-        enrollment.setId(enrollmentId);
-        enrollment.setUser(user);
-        enrollment.setCourse(course);
-        enrollment.setProgress(progress);
-        enrollment.setStartDate(LocalDate.now());
-        enrollment.setCompletionDate(progress == 100 ? LocalDate.now() : null);
+        lessonRepository.save(lesson3);
+        lessonRepository.save(lesson1);
+        lessonRepository.save(lesson2);
 
-        enrollmentRepository.save(enrollment);
+        // When & Then - Deve retornar ordenado por lessonOrder
+        mockMvc.perform(get("/courses/course1/details"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.lessons[0].id").value("lesson1"))
+                .andExpect(jsonPath("$.lessons[1].id").value("lesson2"))
+                .andExpect(jsonPath("$.lessons[2].id").value("lesson3"));
+    }
+
+    @Test
+    @DisplayName("GET /courses/{courseId}/details - Deve retornar detalhes para usuário não matriculado")
+    @WithMockUser(username = "userNaoMatriculado")
+    void shouldReturnDetailsForNonEnrolledUser() throws Exception {
+        // Given
+        Lesson lesson1 = new Lesson("lesson1", "Introdução", 10, course1);
+        lesson1.setLessonOrder(1);
+        lessonRepository.save(lesson1);
+
+        // When & Then
+        mockMvc.perform(get("/courses/course1/details"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value("course1"))
+                .andExpect(jsonPath("$.lessons", hasSize(1)))
+                .andExpect(jsonPath("$.lessons[0].isCompleted").value(false));
     }
 }

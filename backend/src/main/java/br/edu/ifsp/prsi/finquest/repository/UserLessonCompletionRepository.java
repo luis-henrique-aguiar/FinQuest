@@ -21,4 +21,12 @@ public interface UserLessonCompletionRepository extends JpaRepository<UserLesson
             @Param("userId") String userId,
             @Param("courseId") String courseId
     );
+
+    @Query("SELECT COUNT(c) FROM UserLessonCompletion c " +
+            "WHERE c.id.userId = :userId " +
+            "AND c.lesson.course.id = :courseId")
+    long countCompletedLessonsByCourse(
+            @Param("userId") String userId,
+            @Param("courseId") String courseId
+    );
 }

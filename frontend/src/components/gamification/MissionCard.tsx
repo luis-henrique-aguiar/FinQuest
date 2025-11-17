@@ -1,221 +1,328 @@
 import React from "react";
 import styled from "styled-components";
 import { motion } from "framer-motion";
-import Card from "../common/Card";
-import ProgressBar from "./ProgressBar";
+import { Target, Book, DollarSign, Users } from "react-feather";
+import {
+  MissionCategory,
+  MissionStatus,
+  type MissionProgressDTO,
+} from "../../services/missionService";
 
 interface MissionCardProps {
-  title: string;
-  description: string;
-  icon: React.ReactNode;
-  progress: number; // 0 to 100
-  reward: {
-    finPoints?: number;
-    coins?: number;
-  };
-  timeEstimate?: string; // e.g. "5 min"
-  completed?: boolean;
-  locked?: boolean;
-  onClick?: () => void;
-  className?: string;
+  mission: MissionProgressDTO;
 }
 
-const StyledCard = styled(Card)<{ completed: boolean; locked: boolean }>`
+const CardContainer = styled(motion.div)<{ status: MissionStatus }>`
+  background: ${({ theme }) => theme.colors.white};
+  border-radius: ${({ theme }) => theme.borderRadius.large};
+  padding: ${({ theme }) => theme.spacing.lg};
+  box-shadow: ${({ theme }) => theme.shadows.medium};
+  border: 2px solid
+    ${({ status, theme }) =>
+      status === MissionStatus.COMPLETED
+        ? theme.colors.success
+        : theme.colors.border};
   position: relative;
   overflow: hidden;
-  opacity: ${({ locked }) => (locked ? 0.7 : 1)};
   transition: all 0.3s ease;
+  cursor: pointer;
 
-  ${({ completed, theme }) =>
-    completed &&
+  ${({ status, theme }) =>
+    status === MissionStatus.COMPLETED &&
     `
-    border: 2px solid ${theme.colors.accent};
-    background: linear-gradient(135deg, ${theme.colors.accent}11 0%, ${theme.colors.accent}22 100%);
+    background: linear-gradient(135deg, ${theme.colors.success}05 0%, ${theme.colors.success}08 100%);
   `}
 
   &:hover {
-    transform: ${({ locked }) => (locked ? 'none' : 'translateY(-2px)')};
-    box-shadow: ${({ locked, theme }) => 
-      locked ? 'none' : `0 8px 25px ${theme.colors.primary}22`};
+    transform: scale(1.03);
+    box-shadow: ${({ theme }) => theme.shadows.large};
+    border-color: ${({ status, theme }) =>
+      status === MissionStatus.COMPLETED
+        ? theme.colors.success
+        : theme.colors.primary};
+  }
+
+  &:active {
+    transform: scale(1.01);
   }
 `;
 
-const MissionContent = styled.div`
+const Header = styled.div`
   display: flex;
+  align-items: flex-start;
   gap: ${({ theme }) => theme.spacing.md};
+  margin-bottom: ${({ theme }) => theme.spacing.md};
 `;
 
-const IconContainer = styled.div`
+const IconContainer = styled.div<{
+  category: MissionCategory;
+  status: MissionStatus;
+}>`
+  width: 56px;
+  height: 56px;
+  border-radius: ${({ theme }) => theme.borderRadius.medium};
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
-  background: linear-gradient(135deg, ${({ theme }) => theme.colors.primary}22 0%, ${({ theme }) => theme.colors.accent}22 100%);
-  border-radius: ${({ theme }) => theme.borderRadius.medium};
-  font-size: 24px;
   flex-shrink: 0;
+  background: ${({ category, status, theme }) => {
+    if (status === MissionStatus.COMPLETED) {
+      return `linear-gradient(135deg, ${theme.colors.success}22 0%, ${theme.colors.success}33 100%)`;
+    }
+
+    switch (category) {
+      case MissionCategory.LEARNING:
+        return `linear-gradient(135deg, ${theme.colors.primary}22 0%, ${theme.colors.primary}33 100%)`;
+      case MissionCategory.BUDGET:
+        return `linear-gradient(135deg, ${theme.colors.secondary}22 0%, ${theme.colors.secondary}33 100%)`;
+      case MissionCategory.GOALS:
+        return `linear-gradient(135deg, ${theme.colors.accent}22 0%, ${theme.colors.accent}33 100%)`;
+      case MissionCategory.SOCIAL:
+        return `linear-gradient(135deg, ${theme.colors.info}22 0%, ${theme.colors.info}33 100%)`;
+      default:
+        return theme.colors.background;
+    }
+  }};
+
+  svg {
+    width: 28px;
+    height: 28px;
+    color: ${({ category, status, theme }) => {
+      if (status === MissionStatus.COMPLETED) return theme.colors.success;
+
+      switch (category) {
+        case MissionCategory.LEARNING:
+          return theme.colors.primary;
+        case MissionCategory.BUDGET:
+          return theme.colors.secondary;
+        case MissionCategory.GOALS:
+          return theme.colors.accent;
+        case MissionCategory.SOCIAL:
+          return theme.colors.info;
+        default:
+          return theme.colors.textMedium;
+      }
+    }};
+  }
 `;
 
-const MissionInfo = styled.div`
+const Content = styled.div`
   flex: 1;
-  min-width: 0; /* Permite que o texto seja truncado se necessário */
+  min-width: 0;
 `;
 
-const MissionTitle = styled.h3`
+const Title = styled.h3`
   margin: 0 0 ${({ theme }) => theme.spacing.xs};
-  font-size: 1.1rem;
+  font-size: 1.125rem;
   font-weight: ${({ theme }) => theme.typography.fontWeight.semiBold};
   color: ${({ theme }) => theme.colors.textDark};
-  line-height: 1.3;
 `;
 
-const MissionDescription = styled.p`
-  margin: 0 0 ${({ theme }) => theme.spacing.sm};
-  font-size: 0.9rem;
+const Description = styled.p`
+  margin: 0;
+  font-size: 0.875rem;
   color: ${({ theme }) => theme.colors.textMedium};
-  line-height: 1.4;
+  line-height: 1.5;
 `;
 
-const ProgressContainer = styled.div`
-  margin-bottom: ${({ theme }) => theme.spacing.sm};
+const ProgressSection = styled.div`
+  margin-top: ${({ theme }) => theme.spacing.md};
 `;
 
-const MissionFooter = styled.div`
+const ProgressHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: ${({ theme }) => theme.spacing.xs};
+`;
+
+const ProgressText = styled.span`
+  font-size: 0.875rem;
+  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  color: ${({ theme }) => theme.colors.textMedium};
+`;
+
+const ProgressPercentage = styled.span`
+  font-size: 0.875rem;
+  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  color: ${({ theme }) => theme.colors.primary};
+`;
+
+const ProgressBar = styled.div`
+  width: 100%;
+  height: 8px;
+  background: ${({ theme }) => theme.colors.backgroundAlt};
+  border-radius: ${({ theme }) => theme.borderRadius.pill};
+  overflow: hidden;
+`;
+
+const ProgressFill = styled(motion.div)<{ status: MissionStatus }>`
+  height: 100%;
+  background: ${({ status, theme }) => {
+    if (status === MissionStatus.COMPLETED) {
+      return `linear-gradient(90deg, ${theme.colors.success} 0%, ${theme.colors.success}dd 100%)`;
+    }
+    if (status === MissionStatus.IN_PROGRESS) {
+      return `linear-gradient(90deg, ${theme.colors.primary} 0%, ${theme.colors.accent} 100%)`;
+    }
+    return theme.colors.textLight;
+  }};
+  border-radius: ${({ theme }) => theme.borderRadius.pill};
+`;
+
+const Footer = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-top: ${({ theme }) => theme.spacing.md};
-  
-  @media (max-width: 480px) {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: ${({ theme }) => theme.spacing.xs};
+  padding-top: ${({ theme }) => theme.spacing.md};
+  border-top: 1px solid ${({ theme }) => theme.colors.border};
+`;
+
+const RewardBadge = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.xs};
+  padding: ${({ theme }) => theme.spacing.xs} ${({ theme }) => theme.spacing.sm};
+  background: ${({ theme }) => theme.colors.highlightYellow};
+  border: 1px solid ${({ theme }) => theme.colors.highlightYellowBorder};
+  border-radius: ${({ theme }) => theme.borderRadius.pill};
+  font-size: 0.875rem;
+  font-weight: ${({ theme }) => theme.typography.fontWeight.semiBold};
+  color: ${({ theme }) => theme.colors.textDark};
+
+  svg {
+    width: 16px;
+    height: 16px;
+    color: ${({ theme }) => theme.colors.highlightYellowBorder};
   }
 `;
 
-const RewardContainer = styled.div`
-  display: flex;
-  gap: ${({ theme }) => theme.spacing.sm};
-`;
-
-const Reward = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 0.85rem;
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  background-color: ${({ theme }) => theme.colors.white};
-  padding: 4px 8px;
-  border-radius: ${({ theme }) => theme.borderRadius.small};
-  border: 1px solid ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textDark};
-`;
-
-const TimeEstimate = styled.div`
-  font-size: 0.75rem;
-  color: ${({ theme }) => theme.colors.textMedium};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  background-color: ${({ theme }) => theme.colors.background};
-  padding: 4px 8px;
+const StatusBadge = styled.div<{ status: MissionStatus }>`
+  padding: ${({ theme }) => theme.spacing.xs} ${({ theme }) => theme.spacing.sm};
   border-radius: ${({ theme }) => theme.borderRadius.pill};
-`;
-
-const CompletedBadge = styled(motion.div)`
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  background: linear-gradient(135deg, ${({ theme }) => theme.colors.accent} 0%, ${({ theme }) => theme.colors.accent}DD 100%);
-  color: white;
   font-size: 0.75rem;
-  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
-  padding: 6px 10px;
-  border-radius: ${({ theme }) => theme.borderRadius.pill};
-  box-shadow: 0 2px 8px ${({ theme }) => theme.colors.accent}44;
+  font-weight: ${({ theme }) => theme.typography.fontWeight.semiBold};
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+
+  ${({ status, theme }) => {
+    switch (status) {
+      case MissionStatus.COMPLETED:
+        return `
+          background: ${theme.colors.success}22;
+          color: ${theme.colors.success};
+        `;
+      case MissionStatus.IN_PROGRESS:
+        return `
+          background: ${theme.colors.primary}22;
+          color: ${theme.colors.primary};
+        `;
+      default:
+        return `
+          background: ${theme.colors.backgroundAlt};
+          color: ${theme.colors.textMedium};
+        `;
+    }
+  }}
 `;
 
-const LockOverlay = styled.div`
+const CompletedCheckmark = styled(motion.div)`
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(1px);
+  top: 16px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  background: ${({ theme }) => theme.colors.success};
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 2rem;
-  border-radius: inherit;
+  color: white;
+  font-size: 18px;
+  box-shadow: 0 4px 12px ${({ theme }) => theme.colors.success}44;
 `;
 
-export const MissionCard: React.FC<MissionCardProps> = ({
-  title,
-  description,
-  icon,
-  progress,
-  reward,
-  timeEstimate,
-  completed = false,
-  locked = false,
-  onClick,
-  className,
-}) => {
-  return (
-    <StyledCard
-      variant="default"
-      padding="medium"
-      completed={completed}
-      locked={locked}
-      onClick={locked ? undefined : onClick}
-      interactive={!locked && !!onClick}
-      className={className}
-    >
-      <MissionContent>
-        <IconContainer>{icon}</IconContainer>
-        <MissionInfo>
-          <MissionTitle>{title}</MissionTitle>
-          <MissionDescription>{description}</MissionDescription>
-
-          {!completed && !locked && progress > 0 && (
-            <ProgressContainer>
-              <ProgressBar progress={progress} variant="xp" height={6} />
-            </ProgressContainer>
-          )}
-
-          <MissionFooter>
-            <RewardContainer>
-              {reward.finPoints && (
-                <Reward>
-                  <span>💎</span>
-                  <span>{reward.finPoints}</span>
-                </Reward>
-              )}
-              {reward.coins && (
-                <Reward>
-                  <span>🪙</span>
-                  <span>{reward.coins}</span>
-                </Reward>
-              )}
-            </RewardContainer>
-            {timeEstimate && <TimeEstimate>{timeEstimate}</TimeEstimate>}
-          </MissionFooter>
-        </MissionInfo>
-      </MissionContent>
-
-      {completed && (
-        <CompletedBadge
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ type: "spring", stiffness: 500, damping: 15 }}
-        >
-          Concluído ✓
-        </CompletedBadge>
-      )}
-
-      {locked && <LockOverlay>🔒</LockOverlay>}
-    </StyledCard>
-  );
+const getCategoryIcon = (category: MissionCategory) => {
+  switch (category) {
+    case MissionCategory.LEARNING:
+      return <Book />;
+    case MissionCategory.BUDGET:
+      return <DollarSign />;
+    case MissionCategory.GOALS:
+      return <Target />;
+    case MissionCategory.SOCIAL:
+      return <Users />;
+    default:
+      return <Book />;
+  }
 };
 
-export default MissionCard;
+const getStatusText = (status: MissionStatus) => {
+  switch (status) {
+    case MissionStatus.COMPLETED:
+      return "Concluída";
+    case MissionStatus.IN_PROGRESS:
+      return "Em Progresso";
+    default:
+      return "Disponível";
+  }
+};
+
+export const MissionCard: React.FC<MissionCardProps> = ({ mission }) => {
+  return (
+    <CardContainer
+      status={mission.status}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      {mission.status === MissionStatus.COMPLETED && (
+        <CompletedCheckmark
+          initial={{ scale: 0, rotate: -180 }}
+          animate={{ scale: 1, rotate: 0 }}
+          transition={{ type: "spring", stiffness: 500, damping: 20 }}
+        >
+          ✓
+        </CompletedCheckmark>
+      )}
+
+      <Header>
+        <IconContainer category={mission.category} status={mission.status}>
+          {getCategoryIcon(mission.category)}
+        </IconContainer>
+        <Content>
+          <Title>{mission.title}</Title>
+          <Description>{mission.description}</Description>
+        </Content>
+      </Header>
+
+      <ProgressSection>
+        <ProgressHeader>
+          <ProgressText>
+            {mission.currentCount} / {mission.targetCount}
+          </ProgressText>
+          <ProgressPercentage>{mission.progressPercentage}%</ProgressPercentage>
+        </ProgressHeader>
+        <ProgressBar>
+          <ProgressFill
+            status={mission.status}
+            initial={{ width: 0 }}
+            animate={{ width: `${mission.progressPercentage}%` }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+          />
+        </ProgressBar>
+      </ProgressSection>
+
+      <Footer>
+        <RewardBadge>
+          💎
+          <span>+{mission.rewardFinPoints} FinPoints</span>
+        </RewardBadge>
+        <StatusBadge status={mission.status}>
+          {getStatusText(mission.status)}
+        </StatusBadge>
+      </Footer>
+    </CardContainer>
+  );
+};
