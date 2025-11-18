@@ -1,8 +1,6 @@
 package br.edu.ifsp.prsi.finquest.service.impl;
 
-import br.edu.ifsp.prsi.finquest.dto.RegisterUserDTO;
 import br.edu.ifsp.prsi.finquest.dto.UserDTO;
-import br.edu.ifsp.prsi.finquest.exception.BusinessException;
 import br.edu.ifsp.prsi.finquest.model.Achievement;
 import br.edu.ifsp.prsi.finquest.model.User;
 import br.edu.ifsp.prsi.finquest.model.UserAchievement;
@@ -15,11 +13,9 @@ import br.edu.ifsp.prsi.finquest.utils.LevelingSystem;
 import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Optional;
 
@@ -35,8 +31,7 @@ public class UserServiceImpl implements UserService {
     public UserServiceImpl(
             UserRepository userRepository,
             AchievementRepository achievementRepository,
-            UserAchievementRepository userAchievementRepository,
-            ApplicationEventPublisher eventPublisher
+            UserAchievementRepository userAchievementRepository
     ) {
         this.userRepository = userRepository;
         this.achievementRepository = achievementRepository;
@@ -44,29 +39,6 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    @Transactional
-    public UserDTO registerUser(RegisterUserDTO registerUserDTO) {
-        if (userRepository.findById(registerUserDTO.id()).isPresent()) {
-            throw new BusinessException("Usuário com ID: " + registerUserDTO.id() + " já está cadastrado.");
-        }
-
-        if (userRepository.existsByEmail(registerUserDTO.email())) {
-            throw new BusinessException("Email já cadastrado.");
-        }
-
-        User newUser = new User();
-        newUser.setId(registerUserDTO.id());
-        newUser.setBudget(BigDecimal.ZERO);
-        newUser.setAvatarUrl(null);
-        newUser.setTotalFinPoints(0);
-        newUser.setEmail(registerUserDTO.email());
-        newUser.setName(registerUserDTO.name());
-        newUser.setLevel(1);
-
-        User savedUser = userRepository.save(newUser);
-        return UserDTO.convertToDTO(savedUser);
-    }
-
     public UserDTO findUserById(String id){
         User user = userRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado para o ID: " + id));
         return UserDTO.convertToDTO(user);
