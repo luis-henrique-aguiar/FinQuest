@@ -13,7 +13,6 @@ public class GoalDTO {
     private BigDecimal targetAmount;
     private String completionPercentage;
     private BigDecimal remainingAmount;
-    private boolean deletable;
 
     public GoalDTO(){}
 
@@ -25,7 +24,6 @@ public class GoalDTO {
         response.statusLabel = goal.getStatus().getDescription();
         response.currentAmount = goal.getCurrentAmount();
         response.targetAmount = goal.getTargetAmount();
-        response.deletable = !goal.isXpGenerated();
 
         response.remainingAmount = goal.getTargetAmount().subtract(goal.getCurrentAmount());
 
@@ -99,13 +97,5 @@ public class GoalDTO {
 
     public void setRemainingAmount(BigDecimal remainingAmount) {
         this.remainingAmount = remainingAmount;
-    }
-
-    public boolean isDeletable() {
-        return deletable;
-    }
-
-    public void setDeletable(boolean deletable) {
-        this.deletable = deletable;
     }
 }

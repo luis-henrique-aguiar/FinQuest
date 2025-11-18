@@ -1,6 +1,6 @@
 package br.edu.ifsp.prsi.finquest.model;
 
-import br.edu.ifsp.prsi.finquest.utils.GoalStatus;
+import br.edu.ifsp.prsi.finquest.model.enums.GoalStatus;
 import jakarta.persistence.*;
 
 import java.math.BigDecimal;
@@ -28,9 +28,6 @@ public class Goal {
     @Column(name = "status", nullable = false)
     private GoalStatus status = GoalStatus.IN_PROGRESS;
 
-    @Column(name = "xp_generated", nullable = false)
-    private Boolean xpGenerated = false;
-
     public Goal() {}
 
     public String getId() { return id; }
@@ -52,7 +49,4 @@ public class Goal {
 
     public GoalStatus getStatus() { return status; }
     public void setStatus(GoalStatus status) { this.status = status; }
-
-    public Boolean isXpGenerated() { return xpGenerated; }
-    public void setXpGenerated(Boolean xpGenerated) { this.xpGenerated = xpGenerated; }
 }

@@ -1,13 +1,18 @@
 package br.edu.ifsp.prsi.finquest.service.impl;
 
-import br.edu.ifsp.prsi.finquest.dto.GoalDTO;
-import br.edu.ifsp.prsi.finquest.dto.RegisterGoalDTO;
+import br.edu.ifsp.prsi.finquest.dto.*;
+import br.edu.ifsp.prsi.finquest.events.GoalCompletedEvent;
+import br.edu.ifsp.prsi.finquest.events.LessonCompletedEvent;
 import br.edu.ifsp.prsi.finquest.exception.BusinessException;
-import br.edu.ifsp.prsi.finquest.model.Goal;
+import br.edu.ifsp.prsi.finquest.model.*;
 import br.edu.ifsp.prsi.finquest.repository.GoalRepository;
+import br.edu.ifsp.prsi.finquest.repository.UserRepository;
 import br.edu.ifsp.prsi.finquest.service.GoalService;
-import br.edu.ifsp.prsi.finquest.utils.GoalStatus;
+import br.edu.ifsp.prsi.finquest.model.enums.GoalStatus;
 import jakarta.persistence.EntityNotFoundException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 
@@ -19,10 +24,23 @@ import java.util.stream.Collectors;
 @Service
 public class GoalServiceImpl implements GoalService {
 
-    private final GoalRepository goalRepository;
+    private static final Logger logger = LoggerFactory.getLogger(GoalServiceImpl.class);
 
-    public GoalServiceImpl(GoalRepository goalRepository) {
+    private final GoalRepository goalRepository;
+    private final UserRepository userRepository;
+    private final ApplicationEventPublisher eventPublisher;
+    private final MissionServiceImpl missionService;
+
+    public GoalServiceImpl(
+            GoalRepository goalRepository,
+            UserRepository userRepository,
+            ApplicationEventPublisher eventPublisher,
+            MissionServiceImpl missionService
+    ) {
         this.goalRepository = goalRepository;
+        this.userRepository = userRepository;
+        this.eventPublisher = eventPublisher;
+        this.missionService = missionService;
     }
 
     private Goal findGoalAndValidateUser(String userId, String goalId) {
@@ -48,7 +66,6 @@ public class GoalServiceImpl implements GoalService {
 
         newGoal.setCurrentAmount(BigDecimal.ZERO);
         newGoal.setStatus(GoalStatus.IN_PROGRESS);
-        newGoal.setXpGenerated(false);
 
         Goal savedGoal = goalRepository.save(newGoal);
         return GoalDTO.fromEntity(savedGoal);
@@ -56,13 +73,17 @@ public class GoalServiceImpl implements GoalService {
 
     @Override
     @Transactional
-    public GoalDTO updateGoal(String userId, String goalId, RegisterGoalDTO request) {
+    public GoalUpdateResponseDTO updateGoal(String userId, String goalId, RegisterGoalDTO request) {
         Goal goal = findGoalAndValidateUser(userId, goalId);
 
         goal.setName(request.name());
         goal.setTargetAmount(request.targetAmount());
 
-        if (goal.getTargetAmount().compareTo(goal.getCurrentAmount()) > 0) {
+        GoalStatus oldStatus = goal.getStatus();
+
+        determineGoalStatus(goal);
+
+        /*if (goal.getTargetAmount().compareTo(goal.getCurrentAmount()) > 0) {
             if (goal.getStatus().equals(GoalStatus.COMPLETED)) {
                 goal.setStatus(GoalStatus.IN_PROGRESS);
             }
@@ -70,10 +91,23 @@ public class GoalServiceImpl implements GoalService {
             if (!goal.getStatus().equals(GoalStatus.COMPLETED)) {
                 goal.setStatus(GoalStatus.COMPLETED);
             }
-        }
+        }*/
 
-        Goal updatedGoal = goalRepository.save(goal);
-        return GoalDTO.fromEntity(updatedGoal);
+        Goal updatedGoalEntity = goalRepository.save(goal);
+        GoalCompletionDTO completionDto = handleGoalCompletionEvent(updatedGoalEntity, oldStatus);
+
+        GoalDTO updatedGoalDto = GoalDTO.fromEntity(updatedGoalEntity);
+        /*GoalCompletionDTO completionDto = null;
+
+        boolean justCompleted = updatedGoalEntity.getStatus().equals(GoalStatus.COMPLETED)
+                && !oldStatus.equals(GoalStatus.COMPLETED);
+
+        if (justCompleted) {
+            GoalCompletedEvent event = new GoalCompletedEvent(this, userId, goalId);
+            completionDto = missionService.handleGoalCompleted(event);
+        }*/
+
+        return new GoalUpdateResponseDTO(updatedGoalDto, completionDto);
     }
 
     @Override
@@ -84,37 +118,46 @@ public class GoalServiceImpl implements GoalService {
 
     @Override
     @Transactional
-    public GoalDTO depositAmount(String userId, String goalId, BigDecimal amount) {
+    public GoalUpdateResponseDTO depositAmount(String userId, String goalId, BigDecimal amount) {
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new BusinessException("O valor do depósito deve ser maior que zero.");
         }
 
         Goal goal = findGoalAndValidateUser(userId, goalId);
+        GoalStatus oldStatus = goal.getStatus(); // Captura o status ANTERIOR
+
         goal.setCurrentAmount(goal.getCurrentAmount().add(amount));
 
-        if (goal.getCurrentAmount().compareTo(goal.getTargetAmount()) >= 0) {
-
-            // Alterar depois de implementação de missões, para verificar se alguma nova missao foi concluída.
-            if (!goal.isXpGenerated()) {
-                goal.setXpGenerated(true);
-            }
-
+        /*if (goal.getCurrentAmount().compareTo(goal.getTargetAmount()) >= 0) {
             goal.setStatus(GoalStatus.COMPLETED);
         } else {
             goal.setStatus(GoalStatus.IN_PROGRESS);
-        }
+        }*/
 
-        Goal savedGoal = goalRepository.save(goal);
-        return GoalDTO.fromEntity(savedGoal);
+        determineGoalStatus(goal);
+
+        Goal updatedGoalEntity = goalRepository.save(goal);
+        GoalCompletionDTO completionDto = handleGoalCompletionEvent(updatedGoalEntity, oldStatus);
+        GoalDTO updatedGoalDto = GoalDTO.fromEntity(updatedGoalEntity);
+
+        /*GoalCompletionDTO completionDto = null;
+
+        boolean justCompleted = updatedGoalEntity.getStatus().equals(GoalStatus.COMPLETED)
+                && !oldStatus.equals(GoalStatus.COMPLETED);
+
+        if (justCompleted) {
+            GoalCompletedEvent event = new GoalCompletedEvent(this, userId, goalId);
+            completionDto = missionService.handleGoalCompleted(event);
+        }*/
+
+
+        return new GoalUpdateResponseDTO(updatedGoalDto, completionDto);
     }
 
     @Override
     @Transactional
     public GoalDTO deleteGoal(String userId, String goalId) {
         Goal goal = findGoalAndValidateUser(userId, goalId);
-        if (goal.isXpGenerated()) {
-            throw new BusinessException("Meta já utilizada para contagem de recompensas (XP) e não pode ser excluída.");
-        }
         goalRepository.delete(goal);
 
         return null;
@@ -142,5 +185,28 @@ public class GoalServiceImpl implements GoalService {
         return goals.stream()
                 .map(GoalDTO::fromEntity)
                 .collect(Collectors.toList());
+    }
+
+    private void determineGoalStatus(Goal goal) {
+        if (goal.getTargetAmount().compareTo(goal.getCurrentAmount()) > 0) {
+            if (goal.getStatus().equals(GoalStatus.COMPLETED)) {
+                goal.setStatus(GoalStatus.IN_PROGRESS);
+            }
+        } else {
+            if (!goal.getStatus().equals(GoalStatus.COMPLETED)) {
+                goal.setStatus(GoalStatus.COMPLETED);
+            }
+        }
+    }
+
+    private GoalCompletionDTO handleGoalCompletionEvent(Goal updatedGoalEntity, GoalStatus oldStatus) {
+        boolean justCompleted = updatedGoalEntity.getStatus().equals(GoalStatus.COMPLETED)
+                && !oldStatus.equals(GoalStatus.COMPLETED);
+
+        if (justCompleted) {
+            GoalCompletedEvent event = new GoalCompletedEvent(this, updatedGoalEntity.getUserId(), updatedGoalEntity.getId());
+            return missionService.handleGoalCompleted(event);
+        }
+        return null;
     }
 }

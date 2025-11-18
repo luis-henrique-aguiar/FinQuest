@@ -1,15 +1,15 @@
 package br.edu.ifsp.prsi.finquest.service.impl;
 
+import br.edu.ifsp.prsi.finquest.dto.AchievementDTO;
+import br.edu.ifsp.prsi.finquest.dto.GoalCompletionDTO;
+import br.edu.ifsp.prsi.finquest.dto.LessonCompletionDTO;
 import br.edu.ifsp.prsi.finquest.dto.MissionProgressDTO;
+import br.edu.ifsp.prsi.finquest.events.GoalCompletedEvent;
 import br.edu.ifsp.prsi.finquest.events.LessonCompletedEvent;
-import br.edu.ifsp.prsi.finquest.model.Mission;
-import br.edu.ifsp.prsi.finquest.model.UserMissionProgress;
-import br.edu.ifsp.prsi.finquest.model.UserMissionProgressId;
+import br.edu.ifsp.prsi.finquest.model.*;
 import br.edu.ifsp.prsi.finquest.model.enums.MissionStatus;
 import br.edu.ifsp.prsi.finquest.model.enums.MissionTriggerType;
-import br.edu.ifsp.prsi.finquest.repository.MissionRepository;
-import br.edu.ifsp.prsi.finquest.repository.UserMissionProgressRepository;
-import br.edu.ifsp.prsi.finquest.repository.UserRepository;
+import br.edu.ifsp.prsi.finquest.repository.*;
 import br.edu.ifsp.prsi.finquest.service.MissionService;
 import br.edu.ifsp.prsi.finquest.service.UserService;
 import jakarta.persistence.EntityNotFoundException;
@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -33,17 +34,23 @@ public class MissionServiceImpl implements MissionService {
     private final UserMissionProgressRepository progressRepository;
     private final UserService userService;
     private final UserRepository userRepository;
+    private final GoalRepository goalRepository;
+    private final AchievementRepository achievementRepository;
 
     public MissionServiceImpl(
             MissionRepository missionRepository,
             UserMissionProgressRepository progressRepository,
             UserService userService,
-            UserRepository userRepository
+            UserRepository userRepository,
+            GoalRepository goalRepository,
+            AchievementRepository achievementRepository
     ) {
         this.missionRepository = missionRepository;
         this.progressRepository = progressRepository;
         this.userService = userService;
         this.userRepository = userRepository;
+        this.goalRepository = goalRepository;
+        this.achievementRepository = achievementRepository;
     }
 
     /**
@@ -71,6 +78,76 @@ public class MissionServiceImpl implements MissionService {
         }
 
         logger.info("Processamento de missões concluído para userId={}", userId);
+    }
+
+    //@EventListener
+    @Transactional
+    public GoalCompletionDTO handleGoalCompleted(GoalCompletedEvent event) {
+        String userId = event.getUserId();
+        String goalId = event.getGoalId();
+
+        Goal goal = goalRepository.findById(goalId)
+                .orElseThrow(() -> new EntityNotFoundException("Meta não encontrada: " + goalId));
+
+        User userBeforeAnything = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado: " + userId));
+
+        int levelBeforeGoal = userBeforeAnything.getLevel();
+        int pointsBeforeGoal = userBeforeAnything.getTotalFinPoints();
+
+        logger.info("📊 ANTES - Nível: {}, Pontos: {}", levelBeforeGoal, pointsBeforeGoal);
+
+        logger.info("Processando evento de conclusão de meta. UserId={}, GoalId={}", userId, goalId);
+
+        List<Mission> relevantMissions = missionRepository.findByTriggerEventType(MissionTriggerType.GOAL_COMPLETED);
+
+        logger.debug("Encontradas {} missões relacionadas ao tipo LESSON_COMPLETED", relevantMissions.size());
+
+        for (Mission mission : relevantMissions) {
+            try {
+                updateMissionProgress(userId, mission);
+            } catch (Exception e) {
+                logger.error("Erro ao atualizar progresso da missão {} para o usuário {}: {}",
+                        mission.getId(), userId, e.getMessage(), e);
+            }
+        }
+
+        User updatedUser = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado: " + userId));
+
+        int finalLevel = updatedUser.getLevel();
+        int finalPoints = updatedUser.getTotalFinPoints();
+
+        logger.info("📊 DEPOIS - Nível: {}, Pontos: {}", finalLevel, finalPoints);
+
+        boolean actuallyLeveledUp = finalLevel > levelBeforeGoal;
+
+        logger.info("🎯 Detecção de Level Up: {} → {} = {}",
+                levelBeforeGoal, finalLevel, actuallyLeveledUp);
+
+        AchievementDTO unlockedBadge = null;
+        if (actuallyLeveledUp) {
+            logger.info("🔍 Buscando badge para o nível final {}", finalLevel);
+
+            Optional<Achievement> badgeOpt = achievementRepository.findByRequiredLevel(finalLevel);
+
+            if (badgeOpt.isPresent()) {
+                Achievement badge = badgeOpt.get();
+                unlockedBadge = new AchievementDTO(badge);
+                logger.info("✅ Badge encontrado: {} - {}", badge.getTitle(), badge.getIcon());
+            } else {
+                logger.warn("⚠️ Nenhum badge encontrado para o nível {}", finalLevel);
+            }
+        }
+
+        logger.info("Processamento de missões concluído para userId={}", userId);
+
+        return new GoalCompletionDTO(
+                updatedUser.getTotalFinPoints(),
+                updatedUser.getLevel(),
+                actuallyLeveledUp,
+                unlockedBadge
+        );
     }
 
     /**

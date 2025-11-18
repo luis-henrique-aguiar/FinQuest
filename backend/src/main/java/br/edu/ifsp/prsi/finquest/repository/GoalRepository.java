@@ -1,7 +1,7 @@
 package br.edu.ifsp.prsi.finquest.repository;
 
 import br.edu.ifsp.prsi.finquest.model.Goal;
-import br.edu.ifsp.prsi.finquest.utils.GoalStatus;
+import br.edu.ifsp.prsi.finquest.model.enums.GoalStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

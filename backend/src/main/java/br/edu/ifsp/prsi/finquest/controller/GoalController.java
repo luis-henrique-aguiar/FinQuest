@@ -2,6 +2,7 @@ package br.edu.ifsp.prsi.finquest.controller;
 
 import br.edu.ifsp.prsi.finquest.dto.DepositDTO;
 import br.edu.ifsp.prsi.finquest.dto.GoalDTO;
+import br.edu.ifsp.prsi.finquest.dto.GoalUpdateResponseDTO;
 import br.edu.ifsp.prsi.finquest.dto.RegisterGoalDTO;
 import br.edu.ifsp.prsi.finquest.model.Goal;
 import br.edu.ifsp.prsi.finquest.service.GoalService;
@@ -31,16 +32,16 @@ public class GoalController {
     }
 
     @PutMapping("/{goalId}")
-    public ResponseEntity<GoalDTO> updateGoal(@PathVariable("goalId") String idGoal, @RequestBody @Valid RegisterGoalDTO request, @AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<GoalUpdateResponseDTO> updateGoal(@PathVariable("goalId") String idGoal, @RequestBody @Valid RegisterGoalDTO request, @AuthenticationPrincipal UserDetails userDetails) {
         String userId = userDetails.getUsername();
-        GoalDTO responseDto = goalService.updateGoal(userId, idGoal, request);
+        GoalUpdateResponseDTO responseDto = goalService.updateGoal(userId, idGoal, request);
         return ResponseEntity.ok(responseDto);
     }
 
     @PutMapping("/{goalId}/deposit")
-    public ResponseEntity<GoalDTO> depositAmount(@PathVariable("goalId") String goalId, @RequestBody @Valid DepositDTO request, @AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<GoalUpdateResponseDTO> depositAmount(@PathVariable("goalId") String goalId, @RequestBody @Valid DepositDTO request, @AuthenticationPrincipal UserDetails userDetails) {
         String userId = userDetails.getUsername();
-        GoalDTO responseDto = goalService.depositAmount(userId, goalId, request.amount());
+        GoalUpdateResponseDTO responseDto = goalService.depositAmount(userId, goalId, request.amount());
         return ResponseEntity.ok(responseDto);
     }
 

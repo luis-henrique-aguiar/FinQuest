@@ -1,4 +1,4 @@
-package br.edu.ifsp.prsi.finquest.utils;
+package br.edu.ifsp.prsi.finquest.model.enums;
 
 public enum GoalStatus {
     IN_PROGRESS("Em andamento"),
