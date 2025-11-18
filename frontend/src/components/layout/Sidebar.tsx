@@ -255,6 +255,12 @@ export const Sidebar: React.FC = () => {
             <span>👤</span>
             <span>Perfil</span>
           </NavItem>
+          {user?.role === "ADMIN" && (
+            <NavItem to="/admin" onClick={() => setIsOpen(false)}>
+              <span>🛡️</span>
+              <span>Admin</span>
+            </NavItem>
+          )}
         </Nav>
 
         <ThemeToggleContainer>
