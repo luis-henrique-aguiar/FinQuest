@@ -3,6 +3,7 @@ package br.edu.ifsp.prsi.finquest.service.impl;
 import br.edu.ifsp.prsi.finquest.dto.AdminStatsDTO;
 import br.edu.ifsp.prsi.finquest.dto.UserSummaryDTO;
 import br.edu.ifsp.prsi.finquest.model.User;
+import br.edu.ifsp.prsi.finquest.model.UserLessonCompletion;
 import br.edu.ifsp.prsi.finquest.model.enums.MissionStatus;
 import br.edu.ifsp.prsi.finquest.model.enums.UserRole;
 import br.edu.ifsp.prsi.finquest.repository.*;
@@ -16,6 +17,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 public class AdminServiceImpl implements AdminService {
@@ -42,7 +45,7 @@ public class AdminServiceImpl implements AdminService {
         long totalUsers = userRepository.count();
 
         // Usuários ativos nos últimos 30 dias (baseado em lesson completion)
-        LocalDate thirtyDaysAgo = LocalDate.now().minusDays(30);
+        LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
         long activeUsers = lessonCompletionRepository.countDistinctUsersByCompletedAtAfter(thirtyDaysAgo);
 
         long totalLessonsCompleted = lessonCompletionRepository.count();
@@ -72,10 +75,13 @@ public class AdminServiceImpl implements AdminService {
         Page<User> users = userRepository.findAll(pageable);
 
         return users.map(user -> {
-            LocalDate lastActivity = lessonCompletionRepository
-                    .findTopByUserIdOrderByCompletedAtDesc(user.getId())
-                    .map(completion -> completion.getCompletedAt().toLocalDate())
-                    .orElse(null);
+            List<UserLessonCompletion> completions = lessonCompletionRepository
+                    .findAllByUserIdOrderByCompletedAtDesc(user.getId());
+
+            LocalDate lastActivity = null;
+            if (!completions.isEmpty()) {
+                lastActivity = completions.get(0).getCompletedAt().toLocalDate();
+            }
 
             long completedLessons = lessonCompletionRepository.countByUserId(user.getId());
 

@@ -4,6 +4,7 @@ import br.edu.ifsp.prsi.finquest.model.UserMissionProgress;
 import br.edu.ifsp.prsi.finquest.model.UserMissionProgressId;
 import br.edu.ifsp.prsi.finquest.model.enums.MissionStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -14,5 +15,8 @@ public interface UserMissionProgressRepository extends JpaRepository<UserMission
     List<UserMissionProgress> findAllByIdUserId(String userId);
 
     long countByStatus(MissionStatus status);
+
+    @Query("SELECT COUNT(ump) FROM UserMissionProgress ump WHERE ump.status = 'COMPLETED'")
+    long countByStatusCompleted();
 
 }

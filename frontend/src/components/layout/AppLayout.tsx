@@ -19,19 +19,34 @@ const MainContentWrapper = styled.div`
   flex: 1;
   display: flex;
   flex-direction: column;
-  transition: margin-left 0.3s ease-in-out;
+  transition: margin-left ${({ theme }) => theme.animations.medium} ease-in-out;
 
   @media (min-width: 769px) {
-    margin-left: 250px;
+    margin-left: 280px; /* ✅ Atualizado para nova largura da sidebar */
   }
+`;
+
+const ContentArea = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
 `;
 
 const MainContent = styled(motion.main)`
   flex: 1;
-  padding: ${({ theme }) => theme.spacing.lg};
-  max-width: 1000px;
+  padding: ${({ theme }) => theme.spacing.xl};
+  max-width: 1400px; /* ✅ Aumentado para aproveitar mais espaço */
   margin: 0 auto;
   width: 100%;
+
+  @media (max-width: 1024px) {
+    padding: ${({ theme }) => theme.spacing.lg};
+  }
+
+  @media (max-width: 768px) {
+    padding: ${({ theme }) => theme.spacing.md};
+  }
 `;
 
 const pageVariants = {
@@ -42,8 +57,8 @@ const pageVariants = {
 
 const pageTransition: Transition = {
   type: "tween",
-  ease: "easeInOut",
-  duration: 0.3,
+  ease: "anticipate",
+  duration: 0.4,
 };
 
 export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
@@ -52,15 +67,17 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       <Sidebar />
       <MainContentWrapper>
         <TopBar />
-        <MainContent
-          initial="initial"
-          animate="in"
-          exit="out"
-          variants={pageVariants}
-          transition={pageTransition}
-        >
-          {children || <Outlet />}
-        </MainContent>
+        <ContentArea>
+          <MainContent
+            initial="initial"
+            animate="in"
+            exit="out"
+            variants={pageVariants}
+            transition={pageTransition}
+          >
+            {children || <Outlet />}
+          </MainContent>
+        </ContentArea>
       </MainContentWrapper>
     </LayoutContainer>
   );
