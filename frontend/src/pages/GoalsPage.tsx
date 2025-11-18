@@ -6,75 +6,14 @@ import { Modal } from "../components/common/Modal";
 import { useToast } from "../hooks/useToast";
 import { GoalCard } from "../components/gamification/GoalCard";
 import * as S from "./GoalsPage.styles";
+import api from "../services/api";
+import { getAllGoals, type GoalCompletionDTO, type GoalDTO, type GoalUpdateResponseDTO } from "../services/goalService";
 
-interface Goal {
-  id: string;
-  name: string;
-  target: number;
-  saved: number;
-  status: 'active' | 'completed' | 'archived';
-  createdAt: string;
-  completedAt?: string;
-}
-
-type FilterType = 'all' | 'active' | 'completed' | 'archived';
+type FilterType = 'all' | 'IN_PROGRESS' | 'COMPLETED';
 
 export const GoalsPage: React.FC = () => {
-  const [goals, setGoals] = useState<Goal[]>([
-    // Dados mockados para demonstração
-    {
-      id: '1',
-      name: 'Viagem para Europa',
-      target: 15000,
-      saved: 8500,
-      status: 'active',
-      createdAt: '2024-01-15',
-    },
-    {
-      id: '2',
-      name: 'Fundo de Emergência',
-      target: 10000,
-      saved: 10000,
-      status: 'completed',
-      createdAt: '2024-01-10',
-      completedAt: '2024-02-15',
-    },
-    {
-      id: '3',
-      name: 'Novo Notebook',
-      target: 3500,
-      saved: 1200,
-      status: 'active',
-      createdAt: '2024-02-01',
-    },
-    {
-      id: '4',
-      name: 'Curso de Especialização',
-      target: 2500,
-      saved: 800,
-      status: 'active',
-      createdAt: '2024-02-10',
-    },
-    {
-      id: '5',
-      name: 'Carro Usado',
-      target: 25000,
-      saved: 25000,
-      status: 'archived',
-      createdAt: '2023-06-01',
-      completedAt: '2023-12-15',
-    },
-    {
-      id: '6',
-      name: 'Intercâmbio',
-      target: 20000,
-      saved: 20000,
-      status: 'completed',
-      createdAt: '2023-08-01',
-      completedAt: '2024-01-20',
-    },
-  ]);
-  
+  const [goals, setGoals] = useState<GoalDTO[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const { addToast } = useToast();
 
@@ -82,37 +21,55 @@ export const GoalsPage: React.FC = () => {
   const [isAddGoalModalOpen, setAddGoalModalOpen] = useState(false);
   const [isAddFundsModalOpen, setAddFundsModalOpen] = useState(false);
   const [isCelebrationModalOpen, setCelebrationModalOpen] = useState(false);
+  const [isLevelUpModalOpen, setLevelUpModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isConfirmDeleteModalOpen, setConfirmDeleteModalOpen] = useState(false);
 
   // Estados para gerenciar a meta selecionada
-  const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
+  const [selectedGoal, setSelectedGoal] = useState<GoalDTO | null>(null);
+  const [levelUpInfo, setLevelUpInfo] = useState<GoalCompletionDTO | null>(null);
 
   // Estados para os formulários
   const [goalName, setGoalName] = useState("");
   const [goalTarget, setGoalTarget] = useState("");
   const [fundsToAdd, setFundsToAdd] = useState("");
 
+  // Carregar metas ao montar o componente
+  useEffect(() => {
+    loadGoals();
+  }, []);
+
+  const loadGoals = async () => {
+    try {
+      setIsLoading(true);
+      const goals = await getAllGoals();
+      setGoals(goals);
+    } catch (error) {
+      console.error('Erro ao carregar metas:', error);
+      addToast('Erro ao carregar suas metas', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Filtrar metas baseado no filtro ativo
   const filteredGoals = useMemo(() => {
     switch (activeFilter) {
-      case 'active':
-        return goals.filter(goal => goal.status === 'active');
-      case 'completed':
-        return goals.filter(goal => goal.status === 'completed');
-      case 'archived':
-        return goals.filter(goal => goal.status === 'archived');
+      case 'IN_PROGRESS':
+        return goals.filter(goal => goal.completionPercentage !== '100%');
+      case 'COMPLETED':
+        return goals.filter(goal => goal.completionPercentage === '100%');
       default:
-        return goals.filter(goal => goal.status !== 'archived'); // Mostra active e completed
+        return goals;
     }
   }, [goals, activeFilter]);
 
   // Estatísticas calculadas
   const stats = useMemo(() => {
-    const activeGoals = goals.filter(goal => goal.status === 'active');
-    const completedGoals = goals.filter(goal => goal.status === 'completed');
-    const totalSaved = activeGoals.reduce((sum, goal) => sum + goal.saved, 0);
-    const totalTarget = activeGoals.reduce((sum, goal) => sum + goal.target, 0);
+    const activeGoals = goals.filter(goal => goal.completionPercentage !== '100%');
+    const completedGoals = goals.filter(goal => goal.completionPercentage === '100%');
+    const totalSaved = activeGoals.reduce((sum, goal) => sum + goal.currentAmount, 0);
+    const totalTarget = activeGoals.reduce((sum, goal) => sum + goal.targetAmount, 0);
     const overallProgress = totalTarget > 0 ? (totalSaved / totalTarget) * 100 : 0;
 
     return {
@@ -128,7 +85,7 @@ export const GoalsPage: React.FC = () => {
   useEffect(() => {
     if (selectedGoal) {
       setGoalName(selectedGoal.name);
-      setGoalTarget(selectedGoal.target.toString());
+      setGoalTarget(selectedGoal.targetAmount.toString());
     }
   }, [selectedGoal]);
 
@@ -143,120 +100,144 @@ export const GoalsPage: React.FC = () => {
     return value.toLocaleString("pt-BR", {
       style: "currency",
       currency: "BRL",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     });
   };
 
-  const handleCreateGoal = (e: React.FormEvent) => {
+  const handleCreateGoal = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!goalName.trim() || !goalTarget || parseFloat(goalTarget) <= 0) {
       addToast("Por favor, preencha todos os campos corretamente", "error");
       return;
     }
 
-    const newGoal: Goal = {
-      id: Date.now().toString(),
-      name: goalName.trim(),
-      target: parseFloat(goalTarget),
-      saved: 0,
-      status: 'active',
-      createdAt: new Date().toISOString(),
-    };
+    try {
+      const response = await api.post('/goals', {
+        name: goalName.trim(),
+        targetAmount: parseFloat(goalTarget),
+      });
 
-    setGoals((prev) => [...prev, newGoal]);
-    setAddGoalModalOpen(false);
-    resetForm();
-    addToast("Nova meta criada com sucesso!", "success");
+      setGoals((prev) => [...prev, response.data]);
+      setAddGoalModalOpen(false);
+      resetForm();
+      addToast("Nova meta criada com sucesso!", "success");
+    } catch (error) {
+      console.error('Erro ao criar meta:', error);
+      addToast("Erro ao criar meta. Tente novamente.", "error");
+    }
   };
 
-  const handleUpdateGoal = (e: React.FormEvent) => {
+  const handleUpdateGoal = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!selectedGoal || !goalName.trim() || !goalTarget || parseFloat(goalTarget) <= 0) {
       addToast("Por favor, preencha todos os campos corretamente", "error");
       return;
     }
 
-    const updatedTarget = parseFloat(goalTarget);
-    
-    setGoals((prev) =>
-      prev.map((g) =>
-        g.id === selectedGoal.id
-          ? { ...g, name: goalName.trim(), target: updatedTarget }
-          : g
-      )
-    );
+    try {
+      const response = await api.put(`/goals/${selectedGoal.id}`, {
+        name: goalName.trim(),
+        targetAmount: parseFloat(goalTarget),
+      });
 
-    setIsEditModalOpen(false);
-    resetForm();
-    addToast("Meta atualizada com sucesso!", "success");
+      setGoals((prev) =>
+        prev.map((g) => g.id === selectedGoal.id ? response.data : g)
+      );
+
+      setIsEditModalOpen(false);
+      resetForm();
+      addToast("Meta atualizada com sucesso!", "success");
+    } catch (error) {
+      console.error('Erro ao atualizar meta:', error);
+      addToast("Erro ao atualizar meta. Tente novamente.", "error");
+    }
   };
 
-  const handleDeleteGoal = () => {
+  const handleDeleteGoal = async () => {
     if (!selectedGoal) return;
 
-    setGoals((prev) => prev.filter((g) => g.id !== selectedGoal.id));
-    setConfirmDeleteModalOpen(false);
-    resetForm();
-    addToast("Meta excluída com sucesso", "success");
+    try {
+      await api.delete(`/goals/${selectedGoal.id}`);
+
+      setGoals((prev) => prev.filter((g) => g.id !== selectedGoal.id));
+      setConfirmDeleteModalOpen(false);
+      resetForm();
+      addToast("Meta excluída com sucesso", "success");
+    } catch (error) {
+      console.error('Erro ao excluir meta:', error);
+      addToast("Erro ao excluir meta. Tente novamente.", "error");
+    }
   };
 
-  const handleAddFunds = (e: React.FormEvent) => {
+  const handleAddFunds = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!selectedGoal || !fundsToAdd || parseFloat(fundsToAdd) <= 0) {
       addToast("Por favor, insira um valor válido", "error");
       return;
     }
 
-    const amountToAdd = parseFloat(fundsToAdd);
-    let wasCompleted = false;
+    try {
+      const amountToAdd = parseFloat(fundsToAdd);
+      const previousCompletion = selectedGoal.completionPercentage;
 
-    setGoals((prev) =>
-      prev.map((goal) => {
-        if (goal.id === selectedGoal.id) {
-          const newSaved = goal.saved + amountToAdd;
-          const shouldComplete = newSaved >= goal.target && goal.saved < goal.target;
-          
-          if (shouldComplete) {
-            wasCompleted = true;
-          }
+      const response = await api.post<GoalUpdateResponseDTO>(
+        `/goals/${selectedGoal.id}/add-funds`,
+        { amount: amountToAdd }
+      );
 
-          return { 
-            ...goal, 
-            saved: newSaved,
-            status: shouldComplete ? 'completed' : goal.status,
-            completedAt: shouldComplete ? new Date().toISOString() : goal.completedAt,
-          };
+      const { updatedGoal, missionCompletion } = response.data;
+
+      // Atualizar a meta localmente
+      setGoals((prev) =>
+        prev.map((goal) => goal.id === selectedGoal.id ? updatedGoal : goal)
+      );
+
+      setAddFundsModalOpen(false);
+      resetForm();
+
+      // Verificar se completou a meta (de não 100% para 100%)
+      const justCompleted = previousCompletion !== '100%' && updatedGoal.completionPercentage === '100%';
+
+      if (justCompleted) {
+        setCelebrationModalOpen(true);
+        addToast("🎉 Parabéns! Você concluiu sua meta!", "success");
+      } else {
+        addToast("Valor adicionado com sucesso!", "success");
+      }
+
+      // Verificar se houve level up ou badge desbloqueado
+      if (missionCompletion) {
+        if (missionCompletion.didLevelUp) {
+          setLevelUpInfo(missionCompletion);
+          setLevelUpModalOpen(true);
+        } else if (missionCompletion.unlockedBadge) {
+          addToast(
+            `🎖️ Badge desbloqueado: ${missionCompletion.unlockedBadge.title}!`,
+            "success"
+          );
         }
-        return goal;
-      })
-    );
-
-    setAddFundsModalOpen(false);
-    resetForm();
-    
-    if (wasCompleted) {
-      setCelebrationModalOpen(true);
-      addToast("🎉 Parabéns! Você concluiu sua meta!", "success");
-    } else {
-      addToast("Valor adicionado com sucesso!", "success");
+      }
+    } catch (error) {
+      console.error('Erro ao adicionar fundos:', error);
+      addToast("Erro ao adicionar fundos. Tente novamente.", "error");
     }
   };
 
-  const openAddFundsModal = (goal: Goal) => {
+  const openAddFundsModal = (goal: GoalDTO) => {
     setSelectedGoal(goal);
     setAddFundsModalOpen(true);
   };
 
-  const openEditModal = (goal: Goal) => {
+  const openEditModal = (goal: GoalDTO) => {
     setSelectedGoal(goal);
     setIsEditModalOpen(true);
   };
 
-  const openConfirmDeleteModal = (goal: Goal) => {
+  const openConfirmDeleteModal = (goal: GoalDTO) => {
     setSelectedGoal(goal);
     setConfirmDeleteModalOpen(true);
   };
@@ -269,29 +250,23 @@ export const GoalsPage: React.FC = () => {
   const getFilterLabel = (filter: FilterType) => {
     switch (filter) {
       case 'all': return 'Todas';
-      case 'active': return 'Em Andamento';
-      case 'completed': return 'Concluídas';
-      case 'archived': return 'Histórico';
+      case 'IN_PROGRESS': return 'Em Andamento';
+      case 'COMPLETED': return 'Concluídas';
       default: return 'Todas';
     }
   };
 
   const getEmptyStateMessage = (filter: FilterType) => {
     switch (filter) {
-      case 'active':
+      case 'IN_PROGRESS':
         return {
           title: 'Nenhuma meta em andamento',
           description: 'Que tal criar uma nova meta financeira para começar a economizar?'
         };
-      case 'completed':
+      case 'COMPLETED':
         return {
           title: 'Nenhuma meta concluída ainda',
           description: 'Continue trabalhando em suas metas ativas para vê-las aqui!'
-        };
-      case 'archived':
-        return {
-          title: 'Nenhuma meta no histórico',
-          description: 'Metas antigas e arquivadas aparecerão aqui.'
         };
       default:
         return {
@@ -302,6 +277,21 @@ export const GoalsPage: React.FC = () => {
   };
 
   const emptyState = getEmptyStateMessage(activeFilter);
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <S.PageContainer>
+        <S.Header>
+          <SectionTitle>Minhas Metas Financeiras</SectionTitle>
+        </S.Header>
+        <S.EmptyState>
+          <span className="emoji">⏳</span>
+          <h3>Carregando suas metas...</h3>
+        </S.EmptyState>
+      </S.PageContainer>
+    );
+  }
 
   return (
     <S.PageContainer>
@@ -315,7 +305,7 @@ export const GoalsPage: React.FC = () => {
           <S.ModalDescription>
             Defina uma meta financeira e comece a economizar para alcançá-la!
           </S.ModalDescription>
-          
+
           <S.FormContainer onSubmit={handleCreateGoal}>
             <S.InputGroup>
               <S.Label htmlFor="goalName">Nome da Meta</S.Label>
@@ -334,7 +324,7 @@ export const GoalsPage: React.FC = () => {
               <S.Input
                 id="goalTarget"
                 type="number"
-                placeholder="Ex: 5000,00"
+                placeholder="Ex: 5000.00"
                 value={goalTarget}
                 onChange={(e) => setGoalTarget(e.target.value)}
                 min="0"
@@ -369,7 +359,7 @@ export const GoalsPage: React.FC = () => {
           <S.ModalDescription>
             Edite as informações da sua meta financeira.
           </S.ModalDescription>
-          
+
           <S.FormContainer onSubmit={handleUpdateGoal}>
             <S.InputGroup>
               <S.Label htmlFor="editGoalName">Nome da Meta</S.Label>
@@ -421,7 +411,7 @@ export const GoalsPage: React.FC = () => {
       >
         <S.ModalContent>
           <p>
-            Você tem certeza que deseja excluir a meta "<strong>{selectedGoal?.name}</strong>"?
+            Você tem certeza que deseja excluir a meta &quot;<strong>{selectedGoal?.name}</strong>&quot;?
           </p>
           <S.ModalDescription>
             Esta ação não pode ser desfeita e todo o progresso será perdido.
@@ -449,20 +439,20 @@ export const GoalsPage: React.FC = () => {
       <Modal
         isOpen={isAddFundsModalOpen}
         onClose={() => setAddFundsModalOpen(false)}
-        title={`Adicionar Dinheiro`}
+        title="Adicionar Dinheiro"
       >
         <S.ModalContent>
           <S.ModalDescription>
-            Adicione dinheiro à meta "<strong>{selectedGoal?.name}</strong>".
+            Adicione dinheiro à meta &quot;<strong>{selectedGoal?.name}</strong>&quot;.
           </S.ModalDescription>
-          
+
           <S.FormContainer onSubmit={handleAddFunds}>
             <S.InputGroup>
               <S.Label htmlFor="fundsAmount">Valor a Adicionar (R$)</S.Label>
               <S.Input
                 id="fundsAmount"
                 type="number"
-                placeholder="Ex: 100,00"
+                placeholder="Ex: 100.00"
                 value={fundsToAdd}
                 onChange={(e) => setFundsToAdd(e.target.value)}
                 min="0"
@@ -505,6 +495,39 @@ export const GoalsPage: React.FC = () => {
         </S.CelebrationContainer>
       </Modal>
 
+      {/* Modal de Level Up */}
+      <Modal
+        isOpen={isLevelUpModalOpen}
+        onClose={() => setLevelUpModalOpen(false)}
+        title=""
+      >
+        <S.CelebrationContainer>
+          <S.LottieContainer>
+            🎊
+          </S.LottieContainer>
+          <h2>SUBIU DE NÍVEL!</h2>
+          <p>Você chegou ao <strong>Nível {levelUpInfo?.level}</strong>!</p>
+          <p>Total de FinPoints: <strong>{levelUpInfo?.totalFinPoints}</strong></p>
+
+          {levelUpInfo?.unlockedBadge && (
+            <div style={{ marginTop: '20px', padding: '15px', background: '#f8f9fa', borderRadius: '8px' }}>
+              <div style={{ fontSize: '48px', marginBottom: '10px' }}>
+                {levelUpInfo.unlockedBadge.icon}
+              </div>
+              <h3>Badge Desbloqueado!</h3>
+              <p><strong>{levelUpInfo.unlockedBadge.title}</strong></p>
+              <p style={{ fontSize: '14px', color: '#666' }}>
+                {levelUpInfo.unlockedBadge.description}
+              </p>
+            </div>
+          )}
+
+          <Button onClick={() => setLevelUpModalOpen(false)} style={{ marginTop: '20px' }}>
+            Continuar
+          </Button>
+        </S.CelebrationContainer>
+      </Modal>
+
       {/* Conteúdo da Página */}
       <S.Header>
         <SectionTitle>Minhas Metas Financeiras</SectionTitle>
@@ -538,7 +561,7 @@ export const GoalsPage: React.FC = () => {
       {/* Filtros */}
       <S.FilterSection>
         <S.FilterTabs>
-          {(['all', 'active', 'completed', 'archived'] as FilterType[]).map((filter) => (
+          {(['all', 'IN_PROGRESS', 'COMPLETED'] as FilterType[]).map((filter) => (
             <S.FilterTab
               key={filter}
               $active={activeFilter === filter}
@@ -548,7 +571,7 @@ export const GoalsPage: React.FC = () => {
             </S.FilterTab>
           ))}
         </S.FilterTabs>
-        
+
         {filteredGoals.length > 0 && (
           <S.FilterInfo>
             <S.ResultCount>
@@ -569,7 +592,11 @@ export const GoalsPage: React.FC = () => {
           {filteredGoals.map((goal) => (
             <GoalCard
               key={goal.id}
-              {...goal}
+              id={goal.id}
+              name={goal.name}
+              target={goal.targetAmount}
+              saved={goal.currentAmount}
+              status={goal.completionPercentage === '100%' ? 'COMPLETED' : 'IN_PROGRESS'}
               onAddFunds={() => openAddFundsModal(goal)}
               onEdit={() => openEditModal(goal)}
               onDelete={() => openConfirmDeleteModal(goal)}
