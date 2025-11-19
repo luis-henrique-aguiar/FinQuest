@@ -1,4 +1,5 @@
 const lightTheme = {
+  name: 'light' as const,
   colors: {
     // Primary colors
     primary: '#007ACC', // Azul Confiança - Main UI elements, headers, navigation
@@ -84,6 +85,7 @@ const lightTheme = {
 
 const darkTheme = {
   ...lightTheme,
+  name: 'dark' as const,
   colors: {
     ...lightTheme.colors,
     // Text colors

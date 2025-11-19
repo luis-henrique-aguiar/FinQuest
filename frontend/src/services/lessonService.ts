@@ -22,12 +22,21 @@ export interface QuizQuestion {
   explanation: string;
 }
 
+export interface BadgeDTO {
+  id: number;
+  title: string;
+  description: string;
+  icon: string;
+  requiredLevel: number;
+}
+
 export interface LessonCompletionDTO {
   awardedFinPoints: number;
   totalFinPoints: number;
   level: number;
   didLevelUp: boolean;
   courseProgress: number;
+  unlockedBadge: BadgeDTO | null;
 }
 
 export const getLessonDetails = async (

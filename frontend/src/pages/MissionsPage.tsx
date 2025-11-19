@@ -1,159 +1,333 @@
-import React, { useEffect, useState } from 'react';
-import MissionCard from '../components/gamification/MissionCard';
-import ProgressBar from '../components/gamification/ProgressBar';
-import * as S from './MissionsPage.styles';
-import { getMissions, type MissionProgressDTO } from '../services/missionService';
-import { useToast } from '../hooks/useToast';
-import { Spinner } from './RegisterPage.styles';
+import React, { useEffect, useState } from "react";
+import styled from "styled-components";
+import { Target, Award, TrendingUp } from "react-feather";
+import { MissionCard } from "../components/gamification/MissionCard";
+import {
+  getMissionsForUser,
+  MissionCategory,
+  MissionStatus,
+  type MissionProgressDTO,
+} from "../services/missionService";
+import { useToast } from "../hooks/useToast";
 
-type MissionCategory = string;
+const PageContainer = styled.div`
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: ${({ theme }) => theme.spacing.xl};
+`;
+
+const Header = styled.div`
+  margin-bottom: ${({ theme }) => theme.spacing.xxl};
+`;
+
+const Title = styled.h1`
+  font-size: 2rem;
+  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  color: ${({ theme }) => theme.colors.textDark};
+  margin: 0 0 ${({ theme }) => theme.spacing.sm};
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.sm};
+
+  svg {
+    color: ${({ theme }) => theme.colors.primary};
+  }
+`;
+
+const Subtitle = styled.p`
+  font-size: 1.125rem;
+  color: ${({ theme }) => theme.colors.textMedium};
+  margin: 0;
+`;
+
+const StatsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: ${({ theme }) => theme.spacing.lg};
+  margin-bottom: ${({ theme }) => theme.spacing.xxl};
+`;
+
+const StatCard = styled.div`
+  background: ${({ theme }) => theme.colors.white};
+  border-radius: ${({ theme }) => theme.borderRadius.large};
+  padding: ${({ theme }) => theme.spacing.lg};
+  box-shadow: ${({ theme }) => theme.shadows.small};
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.md};
+`;
+
+const StatIconContainer = styled.div<{ color: string }>`
+  width: 56px;
+  height: 56px;
+  border-radius: ${({ theme }) => theme.borderRadius.medium};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: ${({ color }) => `${color}22`};
+
+  svg {
+    width: 28px;
+    height: 28px;
+    color: ${({ color }) => color};
+  }
+`;
+
+const StatContent = styled.div`
+  flex: 1;
+`;
+
+const StatLabel = styled.div`
+  font-size: 0.875rem;
+  color: ${({ theme }) => theme.colors.textMedium};
+  margin-bottom: ${({ theme }) => theme.spacing.xs};
+`;
+
+const StatValue = styled.div`
+  font-size: 1.75rem;
+  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  color: ${({ theme }) => theme.colors.textDark};
+`;
+
+const FilterTabs = styled.div`
+  display: flex;
+  gap: ${({ theme }) => theme.spacing.sm};
+  margin-bottom: ${({ theme }) => theme.spacing.xl};
+  overflow-x: auto;
+  padding-bottom: ${({ theme }) => theme.spacing.xs};
+
+  &::-webkit-scrollbar {
+    height: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: ${({ theme }) => theme.colors.border};
+    border-radius: ${({ theme }) => theme.borderRadius.small};
+  }
+`;
+
+const FilterTab = styled.button<{ active: boolean }>`
+  padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.lg};
+  border: 2px solid
+    ${({ active, theme }) =>
+      active ? theme.colors.primary : theme.colors.border};
+  background: ${({ active, theme }) =>
+    active ? theme.colors.primary : theme.colors.white};
+  color: ${({ active, theme }) =>
+    active ? theme.colors.white : theme.colors.textMedium};
+  border-radius: ${({ theme }) => theme.borderRadius.pill};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+
+  &:hover {
+    border-color: ${({ theme }) => theme.colors.primary};
+    transform: translateY(-2px);
+  }
+`;
+
+const MissionsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: ${({ theme }) => theme.spacing.lg};
+`;
+
+const EmptyState = styled.div`
+  text-align: center;
+  padding: ${({ theme }) => theme.spacing.xxl};
+  color: ${({ theme }) => theme.colors.textMedium};
+
+  svg {
+    width: 64px;
+    height: 64px;
+    margin-bottom: ${({ theme }) => theme.spacing.md};
+    opacity: 0.5;
+  }
+
+  h3 {
+    margin: 0 0 ${({ theme }) => theme.spacing.sm};
+    color: ${({ theme }) => theme.colors.textDark};
+  }
+`;
+
+const LoadingContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: ${({ theme }) => theme.spacing.xxl};
+  gap: ${({ theme }) => theme.spacing.md};
+
+  .spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid ${({ theme }) => theme.colors.backgroundAlt};
+    border-top-color: ${({ theme }) => theme.colors.primary};
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+`;
+
+type FilterType = "ALL" | MissionStatus | MissionCategory;
 
 export const MissionsPage: React.FC = () => {
-  const [activeCategory, setActiveCategory] = useState<MissionCategory>('all');
-  const [allMissions, setAllMissions] = useState<MissionProgressDTO[]>([]);
+  const [missions, setMissions] = useState<MissionProgressDTO[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeFilter, setActiveFilter] = useState<FilterType>("ALL");
   const { addToast } = useToast();
 
   useEffect(() => {
-    const fetchMissions = async () => {
-      try {
-        setIsLoading(true);
-        const data = await getMissions();
-        setAllMissions(data);
-      } catch (error) {
-        addToast("Erro ao carregar suas missões.", "error");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchMissions();
-  }, [addToast]);
+    loadMissions();
+  }, []);
 
-  const filteredMissions = activeCategory === 'all'
-    ? allMissions
-    : allMissions.filter(mission => mission.category.toLowerCase() === activeCategory);
-
-  const categoryLabels = {
-    all: 'Todas',
-    LEARNING: 'Aprendizado',
-    BUDGET: 'Orçamento',
-    GOALS: 'Metas',
+  const loadMissions = async () => {
+    try {
+      setIsLoading(true);
+      const data = await getMissionsForUser();
+      setMissions(data);
+    } catch (error) {
+      console.error("Erro ao carregar missões:", error);
+      addToast("Erro ao carregar missões. Tente novamente.", "error");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  // Estatísticas calculadas
-  const completedMissions = allMissions.filter(m => m.status === 'COMPLETED').length;
-  const inProgressMissions = allMissions.filter(m => m.status === 'IN_PROGRESS' && m.currentCount > 0).length;
-  const notStartedMissions = allMissions.filter(m => m.status === 'NOT_STARTED').length;
+  const filteredMissions = missions.filter((mission) => {
+    if (activeFilter === "ALL") return true;
+    if (
+      activeFilter === MissionStatus.COMPLETED ||
+      activeFilter === MissionStatus.IN_PROGRESS ||
+      activeFilter === MissionStatus.NOT_STARTED
+    ) {
+      return mission.status === activeFilter;
+    }
+    return mission.category === activeFilter;
+  });
+
+  const stats = {
+    total: missions.length,
+    completed: missions.filter((m) => m.status === MissionStatus.COMPLETED)
+      .length,
+    inProgress: missions.filter((m) => m.status === MissionStatus.IN_PROGRESS)
+      .length,
+  };
 
   if (isLoading) {
     return (
-      <S.PageContainer>
-        <S.PageHeader>
-          <S.PageTitle>Missões Financeiras</S.PageTitle>
-        </S.PageHeader>
-        <p style={{ textAlign: 'center' }}>Carregando suas missões...</p>
-        <Spinner />
-      </S.PageContainer>
+      <PageContainer>
+        <LoadingContainer>
+          <div className="spinner" />
+          <p>Carregando missões...</p>
+        </LoadingContainer>
+      </PageContainer>
     );
   }
 
   return (
-    <S.PageContainer>
-      <S.PageHeader>
-        <S.PageTitle>Missões Financeiras</S.PageTitle>
-        <S.PageDescription>
-          Complete missões para ganhar recompensas e melhorar suas finanças
-        </S.PageDescription>
-      </S.PageHeader>
+    <PageContainer>
+      <Header>
+        <Title>
+          <Target size={32} />
+          Missões
+        </Title>
+        <Subtitle>
+          Complete desafios e ganhe recompensas para acelerar seu aprendizado!
+        </Subtitle>
+      </Header>
 
-      {/* Stats agora são calculados */}
-      <S.StatsContainer>
-        <S.StatCard>
-          <div className="stat-value">{completedMissions}</div>
-          <div className="stat-label">Concluídas</div>
-        </S.StatCard>
-        <S.StatCard>
-          <div className="stat-value">{inProgressMissions}</div>
-          <div className="stat-label">Em Progresso</div>
-        </S.StatCard>
-        <S.StatCard>
-          <div className="stat-value">{notStartedMissions}</div>
-          <div className="stat-label">Não Iniciadas</div>
-        </S.StatCard>
-        <S.StatCard>
-          <div className="stat-value">{allMissions.length}</div>
-          <div className="stat-label">Total</div>
-        </S.StatCard>
-      </S.StatsContainer>
+      <StatsGrid>
+        <StatCard>
+          <StatIconContainer color="#007ACC">
+            <Target />
+          </StatIconContainer>
+          <StatContent>
+            <StatLabel>Total de Missões</StatLabel>
+            <StatValue>{stats.total}</StatValue>
+          </StatContent>
+        </StatCard>
 
-      {/* Progresso Geral */}
-      <S.ProgressSection>
-        <S.ProgressHeader>
-          <S.ProgressTitle>Seu Progresso Geral</S.ProgressTitle>
-          <S.ProgressStats>
-            {completedMissions}/{allMissions.length} missões
-          </S.ProgressStats>
-        </S.ProgressHeader>
-        <ProgressBar
-          progress={(completedMissions / allMissions.length) * 100}
-          variant="xp"
-          height={12}
-        />
-      </S.ProgressSection>
+        <StatCard>
+          <StatIconContainer color="#28A745">
+            <Award />
+          </StatIconContainer>
+          <StatContent>
+            <StatLabel>Concluídas</StatLabel>
+            <StatValue>{stats.completed}</StatValue>
+          </StatContent>
+        </StatCard>
 
-      {/* Filtros */}
-      <S.FilterTabs>
-        <S.FilterTab
-            key="all"
-            $active={activeCategory === 'all'}
-            onClick={() => setActiveCategory('all')}
-          >
-            Todas
-        </S.FilterTab>
-        {/* Mapeia as categorias únicas das missões */}
-        {[...new Set(allMissions.map(m => m.category))].map((category) => (
-          <S.FilterTab
-            key={category}
-            $active={activeCategory === category.toLowerCase()}
-            onClick={() => setActiveCategory(category.toLowerCase())}
-          >
-            {/* Usa o label ou o próprio nome da categoria */}
-            {categoryLabels[category as keyof typeof categoryLabels] || category}
-          </S.FilterTab>
-        ))}
-      </S.FilterTabs>
+        <StatCard>
+          <StatIconContainer color="#FFA500">
+            <TrendingUp />
+          </StatIconContainer>
+          <StatContent>
+            <StatLabel>Em Progresso</StatLabel>
+            <StatValue>{stats.inProgress}</StatValue>
+          </StatContent>
+        </StatCard>
+      </StatsGrid>
 
-      <S.MissionsGrid>
-        {filteredMissions.length > 0 ? (
-          filteredMissions.map((mission) => {
-            const progressPercent = (mission.currentCount / mission.targetCount) * 100;
-            const icon = mission.category === 'LEARNING' ? '📚' : (mission.category === 'BUDGET' ? '📊' : '🎯');
-            const timeEstimate = "5 min";
+      <FilterTabs>
+        <FilterTab
+          active={activeFilter === "ALL"}
+          onClick={() => setActiveFilter("ALL")}
+        >
+          Todas
+        </FilterTab>
+        <FilterTab
+          active={activeFilter === MissionStatus.IN_PROGRESS}
+          onClick={() => setActiveFilter(MissionStatus.IN_PROGRESS)}
+        >
+          Em Progresso
+        </FilterTab>
+        <FilterTab
+          active={activeFilter === MissionStatus.COMPLETED}
+          onClick={() => setActiveFilter(MissionStatus.COMPLETED)}
+        >
+          Concluídas
+        </FilterTab>
+        <FilterTab
+          active={activeFilter === MissionCategory.LEARNING}
+          onClick={() => setActiveFilter(MissionCategory.LEARNING)}
+        >
+          Aprendizado
+        </FilterTab>
+        <FilterTab
+          active={activeFilter === MissionCategory.BUDGET}
+          onClick={() => setActiveFilter(MissionCategory.BUDGET)}
+        >
+          Orçamento
+        </FilterTab>
+        <FilterTab
+          active={activeFilter === MissionCategory.GOALS}
+          onClick={() => setActiveFilter(MissionCategory.GOALS)}
+        >
+          Metas
+        </FilterTab>
+      </FilterTabs>
 
-            return (
-              <MissionCard
-                key={mission.id}
-                title={mission.title}
-                description={mission.description}
-                icon={icon}
-                progress={progressPercent}
-                reward={{ finPoints: mission.rewardFinPoints }}
-                timeEstimate={timeEstimate}
-                completed={mission.status === 'COMPLETED'}
-                locked={false}
-                onClick={() => console.log(`Mission ${mission.id} clicked`)}
-              />
-            );
-          })
-        ) : (
-          <S.EmptyState>
-            <span className="emoji">🎯</span>
-            <h3>Nenhuma missão encontrada</h3>
-            <p>Não há missões disponíveis nesta categoria no momento.</p>
-          </S.EmptyState>
-        )}
-      </S.MissionsGrid>
-    </S.PageContainer>
+      {filteredMissions.length > 0 ? (
+        <MissionsGrid>
+          {filteredMissions.map((mission) => (
+            <MissionCard key={mission.id} mission={mission} />
+          ))}
+        </MissionsGrid>
+      ) : (
+        <EmptyState>
+          <Target />
+          <h3>Nenhuma missão encontrada</h3>
+          <p>Ajuste os filtros ou complete missões para desbloquear novas!</p>
+        </EmptyState>
+      )}
+    </PageContainer>
   );
 };
 

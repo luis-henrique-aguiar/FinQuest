@@ -1,11 +1,11 @@
 package br.edu.ifsp.prsi.finquest.utils;
 
-public class LevelingUtil {
+public class LevelingSystem {
 
     private static final double BASE_XP = 100.0;
     private static final double EXPONENT = 1.15;
 
-    private LevelingUtil() {}
+    private LevelingSystem() {}
 
     /**
      * Calcula o total de FinPoints necessários para ATINGIR (ter como piso) um determinado nível.
