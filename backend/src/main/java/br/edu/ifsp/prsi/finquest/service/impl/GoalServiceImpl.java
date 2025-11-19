@@ -2,17 +2,14 @@ package br.edu.ifsp.prsi.finquest.service.impl;
 
 import br.edu.ifsp.prsi.finquest.dto.*;
 import br.edu.ifsp.prsi.finquest.events.GoalCompletedEvent;
-import br.edu.ifsp.prsi.finquest.events.LessonCompletedEvent;
 import br.edu.ifsp.prsi.finquest.exception.BusinessException;
 import br.edu.ifsp.prsi.finquest.model.*;
 import br.edu.ifsp.prsi.finquest.repository.GoalRepository;
-import br.edu.ifsp.prsi.finquest.repository.UserRepository;
 import br.edu.ifsp.prsi.finquest.service.GoalService;
 import br.edu.ifsp.prsi.finquest.model.enums.GoalStatus;
 import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 
@@ -27,19 +24,13 @@ public class GoalServiceImpl implements GoalService {
     private static final Logger logger = LoggerFactory.getLogger(GoalServiceImpl.class);
 
     private final GoalRepository goalRepository;
-    private final UserRepository userRepository;
-    private final ApplicationEventPublisher eventPublisher;
     private final MissionServiceImpl missionService;
 
     public GoalServiceImpl(
             GoalRepository goalRepository,
-            UserRepository userRepository,
-            ApplicationEventPublisher eventPublisher,
             MissionServiceImpl missionService
     ) {
         this.goalRepository = goalRepository;
-        this.userRepository = userRepository;
-        this.eventPublisher = eventPublisher;
         this.missionService = missionService;
     }
 
@@ -83,29 +74,10 @@ public class GoalServiceImpl implements GoalService {
 
         determineGoalStatus(goal);
 
-        /*if (goal.getTargetAmount().compareTo(goal.getCurrentAmount()) > 0) {
-            if (goal.getStatus().equals(GoalStatus.COMPLETED)) {
-                goal.setStatus(GoalStatus.IN_PROGRESS);
-            }
-        } else {
-            if (!goal.getStatus().equals(GoalStatus.COMPLETED)) {
-                goal.setStatus(GoalStatus.COMPLETED);
-            }
-        }*/
-
         Goal updatedGoalEntity = goalRepository.save(goal);
         GoalCompletionDTO completionDto = handleGoalCompletionEvent(updatedGoalEntity, oldStatus);
 
         GoalDTO updatedGoalDto = GoalDTO.fromEntity(updatedGoalEntity);
-        /*GoalCompletionDTO completionDto = null;
-
-        boolean justCompleted = updatedGoalEntity.getStatus().equals(GoalStatus.COMPLETED)
-                && !oldStatus.equals(GoalStatus.COMPLETED);
-
-        if (justCompleted) {
-            GoalCompletedEvent event = new GoalCompletedEvent(this, userId, goalId);
-            completionDto = missionService.handleGoalCompleted(event);
-        }*/
 
         return new GoalUpdateResponseDTO(updatedGoalDto, completionDto);
     }
@@ -128,28 +100,11 @@ public class GoalServiceImpl implements GoalService {
 
         goal.setCurrentAmount(goal.getCurrentAmount().add(amount));
 
-        /*if (goal.getCurrentAmount().compareTo(goal.getTargetAmount()) >= 0) {
-            goal.setStatus(GoalStatus.COMPLETED);
-        } else {
-            goal.setStatus(GoalStatus.IN_PROGRESS);
-        }*/
-
         determineGoalStatus(goal);
 
         Goal updatedGoalEntity = goalRepository.save(goal);
         GoalCompletionDTO completionDto = handleGoalCompletionEvent(updatedGoalEntity, oldStatus);
         GoalDTO updatedGoalDto = GoalDTO.fromEntity(updatedGoalEntity);
-
-        /*GoalCompletionDTO completionDto = null;
-
-        boolean justCompleted = updatedGoalEntity.getStatus().equals(GoalStatus.COMPLETED)
-                && !oldStatus.equals(GoalStatus.COMPLETED);
-
-        if (justCompleted) {
-            GoalCompletedEvent event = new GoalCompletedEvent(this, userId, goalId);
-            completionDto = missionService.handleGoalCompleted(event);
-        }*/
-
 
         return new GoalUpdateResponseDTO(updatedGoalDto, completionDto);
     }

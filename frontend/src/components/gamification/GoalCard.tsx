@@ -5,11 +5,16 @@ import Card from "../common/Card";
 import ProgressBar from "./ProgressBar";
 import Button from "../common/Button";
 
+const STATUS_LABELS: Record<'COMPLETED' | 'IN_PROGRESS', string> = {
+  COMPLETED: 'Concluída',
+  IN_PROGRESS: 'Em Andamento',
+};
+
 interface GoalCardProps {
   name: string;
   target: number;
   saved: number;
-  status: "active" | "completed" | "archived";
+  status: 'COMPLETED' | 'IN_PROGRESS';
   onAddFunds: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -157,7 +162,8 @@ export const GoalCard: React.FC<GoalCardProps> = ({
   onDelete,
 }) => {
   const progress = Math.min((saved / target) * 100, 100);
-  const isComplete = status === "completed";
+  const isComplete = status === "COMPLETED";
+  const statusDisplayLabel = STATUS_LABELS[status];
   const remaining = Math.max(target - saved, 0);
 
   const formatCurrency = (value: number) => {
@@ -184,7 +190,8 @@ export const GoalCard: React.FC<GoalCardProps> = ({
         <TitleSection>
           <GoalTitle>{name}</GoalTitle>
           <StatusBadge $isComplete={isComplete}>
-            {isComplete ? "✓ Concluída" : "● Em andamento"}
+            {isComplete ? "✓ " : "● "}
+            {statusDisplayLabel}
           </StatusBadge>
         </TitleSection>
         <ActionButtons>

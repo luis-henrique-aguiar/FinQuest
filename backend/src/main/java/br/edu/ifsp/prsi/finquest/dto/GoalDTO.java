@@ -21,7 +21,7 @@ public class GoalDTO {
 
         response.id = goal.getId();
         response.name = goal.getName();
-        response.statusLabel = goal.getStatus().getDescription();
+        response.statusLabel = goal.getStatus().name();
         response.currentAmount = goal.getCurrentAmount();
         response.targetAmount = goal.getTargetAmount();
 

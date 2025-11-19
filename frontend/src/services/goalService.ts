@@ -3,7 +3,7 @@ import api from "./api";
 export interface GoalDTO {
   id: string;
   name: string;
-  statusLabel: string;
+  statusLabel: 'IN_PROGRESS' | 'COMPLETED';
   currentAmount: number;
   targetAmount: number;
   completionPercentage: string;
