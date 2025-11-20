@@ -147,6 +147,8 @@ export const GoalsPage: React.FC = () => {
     }
 
     try {
+      const previousStatus = selectedGoal.statusLabel;
+
       const response = await api.put(`/goals/${selectedGoal.id}`, {
         name: goalName.trim(),
         targetAmount: parseFloat(goalTarget),
@@ -165,10 +167,16 @@ export const GoalsPage: React.FC = () => {
 
       setIsEditModalOpen(false);
       resetForm();
-      addToast("Meta atualizada com sucesso!", "success");
+
+      const justCompleted = previousStatus !== 'COMPLETED' && updatedGoal.statusLabel === 'COMPLETED';
+
+      if (justCompleted) {
+        setCelebrationModalOpen(true);
+      } else {
+        addToast("Meta atualizada com sucesso!", "success");
+      }
 
       if (missionCompletion) {
-
           updateUserContext({
             totalFinPoints: missionCompletion.totalFinPoints,
             level: missionCompletion.level,
@@ -184,9 +192,6 @@ export const GoalsPage: React.FC = () => {
             showLevelUp(missionCompletion.level);
           }
       }
-
-
-
     } catch (error) {
       console.error('Erro ao atualizar meta:', error);
       addToast("Erro ao atualizar meta. Tente novamente.", "error");
@@ -236,12 +241,11 @@ export const GoalsPage: React.FC = () => {
       setAddFundsModalOpen(false);
       resetForm();
 
-      // Verificar se completou a meta (de não 100% para 100%)
-      const justCompleted = previousCompletion !== '100%' && updatedGoal.completionPercentage === '100%';
+      const previousStatus = selectedGoal.statusLabel;
+      const justCompleted = previousStatus !== 'COMPLETED' && updatedGoal.statusLabel === 'COMPLETED';
 
       if (justCompleted) {
         setCelebrationModalOpen(true);
-        addToast("🎉 Parabéns! Você concluiu sua meta!", "success");
       } else {
         addToast("Valor adicionado com sucesso!", "success");
       }
