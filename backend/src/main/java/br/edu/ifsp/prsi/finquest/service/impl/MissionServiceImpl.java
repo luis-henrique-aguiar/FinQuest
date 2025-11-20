@@ -79,7 +79,7 @@ public class MissionServiceImpl implements MissionService {
 
         logger.info("Processamento de missões concluído para userId={}", userId);
     }
-    
+
     @Transactional
     public GoalCompletionDTO handleGoalCompleted(GoalCompletedEvent event) {
         String userId = event.getUserId();
@@ -92,45 +92,10 @@ public class MissionServiceImpl implements MissionService {
                 .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado: " + userId));
 
         int levelBeforeGoal = userBeforeAnything.getLevel();
-        int pointsBeforeGoal = userBeforeAnything.getTotalFinPoints();
 
-        List<Mission> relevantMissions = missionRepository.findByTriggerEventType(MissionTriggerType.GOAL_COMPLETED);
+        processRelevantMissions(userId, MissionTriggerType.GOAL_COMPLETED);
 
-        for (Mission mission : relevantMissions) {
-            try {
-                updateMissionProgress(userId, mission);
-            } catch (Exception e) {
-                logger.error("Erro ao atualizar progresso da missão {} para o usuário {}: {}",
-                        mission.getId(), userId, e.getMessage(), e);
-            }
-        }
-
-        User updatedUser = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado: " + userId));
-
-        int finalLevel = updatedUser.getLevel();
-        int finalPoints = updatedUser.getTotalFinPoints();
-
-        boolean actuallyLeveledUp = finalLevel > levelBeforeGoal;
-
-        AchievementDTO unlockedBadge = null;
-        if (actuallyLeveledUp) {
-            Optional<Achievement> badgeOpt = achievementRepository.findByRequiredLevel(finalLevel);
-
-            if (badgeOpt.isPresent()) {
-                Achievement badge = badgeOpt.get();
-                unlockedBadge = new AchievementDTO(badge);
-                logger.info("✅ Badge encontrado: {} - {}", badge.getTitle(), badge.getIcon());
-            } else {
-                logger.warn("⚠️ Nenhum badge encontrado para o nível {}", finalLevel);
-            }
-        }
-        return new GoalCompletionDTO(
-                updatedUser.getTotalFinPoints(),
-                updatedUser.getLevel(),
-                actuallyLeveledUp,
-                unlockedBadge
-        );
+        return calculateCompletionReward(userId, levelBeforeGoal);
     }
 
     /**
@@ -225,5 +190,49 @@ public class MissionServiceImpl implements MissionService {
 
         logger.info("Recompensa concedida: {} FinPoints. Level up: {}",
                 mission.getRewardFinPoints(), leveledUp);
+    }
+
+    private void processRelevantMissions(String userId, MissionTriggerType triggerType) {
+        List<Mission> relevantMissions = missionRepository.findByTriggerEventType(triggerType);
+
+        logger.debug("Encontradas {} missões relacionadas ao tipo {}", relevantMissions.size(), triggerType);
+
+        for (Mission mission : relevantMissions) {
+            try {
+                updateMissionProgress(userId, mission);
+            } catch (Exception e) {
+                logger.error("Erro ao atualizar progresso da missão {} para o usuário {}: {}",
+                        mission.getId(), userId, e.getMessage(), e);
+            }
+        }
+    }
+
+    private GoalCompletionDTO calculateCompletionReward(String userId, int levelBeforeGoal) {
+        User updatedUser = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado: " + userId));
+
+        int finalLevel = updatedUser.getLevel();
+        boolean actuallyLeveledUp = finalLevel > levelBeforeGoal;
+
+        AchievementDTO unlockedBadge = null;
+
+        if (actuallyLeveledUp) {
+            Optional<Achievement> badgeOpt = achievementRepository.findByRequiredLevel(finalLevel);
+
+            if (badgeOpt.isPresent()) {
+                Achievement badge = badgeOpt.get();
+                unlockedBadge = new AchievementDTO(badge);
+                logger.info("✅ Badge encontrado: {} - {}", badge.getTitle(), badge.getIcon());
+            } else {
+                logger.warn("⚠️ Nenhum badge encontrado para o nível {}", finalLevel);
+            }
+        }
+
+        return new GoalCompletionDTO(
+                updatedUser.getTotalFinPoints(),
+                updatedUser.getLevel(),
+                actuallyLeveledUp,
+                unlockedBadge
+        );
     }
 }
