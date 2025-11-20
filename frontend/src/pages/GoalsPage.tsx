@@ -38,6 +38,7 @@ export const GoalsPage: React.FC = () => {
   const [goalName, setGoalName] = useState("");
   const [goalTarget, setGoalTarget] = useState("");
   const [fundsToAdd, setFundsToAdd] = useState("");
+  const [currentAmountEdit, setCurrentAmountEdit] = useState("");
 
   // Carregar metas ao montar o componente
   useEffect(() => {
@@ -93,6 +94,7 @@ export const GoalsPage: React.FC = () => {
     if (selectedGoal) {
       setGoalName(selectedGoal.name);
       setGoalTarget(selectedGoal.targetAmount.toString());
+      setCurrentAmountEdit(selectedGoal.currentAmount.toString()); // NOVO
     }
   }, [selectedGoal]);
 
@@ -139,7 +141,7 @@ export const GoalsPage: React.FC = () => {
   const handleUpdateGoal = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!selectedGoal || !goalName.trim() || !goalTarget || parseFloat(goalTarget) <= 0) {
+    if (!selectedGoal || !goalName.trim() || !goalTarget || parseFloat(goalTarget) <= 0 || parseFloat(currentAmountEdit) < 0) {
       addToast("Por favor, preencha todos os campos corretamente", "error");
       return;
     }
@@ -148,6 +150,7 @@ export const GoalsPage: React.FC = () => {
       const response = await api.put(`/goals/${selectedGoal.id}`, {
         name: goalName.trim(),
         targetAmount: parseFloat(goalTarget),
+        currentAmount: parseFloat(currentAmountEdit),
       });
 
       const { updatedGoal, missionCompletion } = response.data;
@@ -165,21 +168,24 @@ export const GoalsPage: React.FC = () => {
       addToast("Meta atualizada com sucesso!", "success");
 
       if (missionCompletion) {
+
+          updateUserContext({
+            totalFinPoints: missionCompletion.totalFinPoints,
+            level: missionCompletion.level,
+          });
+
           if (missionCompletion.didLevelUp && missionCompletion.unlockedBadge) {
             showBadgeUnlocked(
               missionCompletion.unlockedBadge,
               missionCompletion.level,
-              missionCompletion.totalFinPoints
+              missionCompletion.totalFinPoints,
             );
           } else if (missionCompletion.didLevelUp) {
             showLevelUp(missionCompletion.level);
           }
       }
 
-      updateUserContext({
-        totalFinPoints: missionCompletion.totalFinPoints,
-        level: missionCompletion.level,
-      });
+
 
     } catch (error) {
       console.error('Erro ao atualizar meta:', error);
@@ -241,6 +247,11 @@ export const GoalsPage: React.FC = () => {
       }
 
       if (missionCompletion) {
+          updateUserContext({
+            totalFinPoints: missionCompletion.totalFinPoints,
+            level: missionCompletion.level,
+          });
+
           if (missionCompletion.didLevelUp && missionCompletion.unlockedBadge) {
             showBadgeUnlocked(
               missionCompletion.unlockedBadge,
@@ -251,11 +262,6 @@ export const GoalsPage: React.FC = () => {
             showLevelUp(missionCompletion.level);
           }
       }
-
-      updateUserContext({
-        totalFinPoints: missionCompletion.totalFinPoints,
-        level: missionCompletion.level,
-      });
     } catch (error) {
       console.error('Erro ao adicionar fundos:', error);
       addToast("Erro ao adicionar fundos. Tente novamente.", "error");
@@ -416,6 +422,20 @@ export const GoalsPage: React.FC = () => {
                 placeholder="Valor Alvo"
                 value={goalTarget}
                 onChange={(e) => setGoalTarget(e.target.value)}
+                min="0"
+                step="0.01"
+                required
+              />
+            </S.InputGroup>
+
+            <S.InputGroup>
+              <S.Label htmlFor="editCurrentAmount">Valor Atual (R$)</S.Label>
+              <S.Input
+                id="editCurrentAmount"
+                type="number"
+                placeholder="Valor Atual"
+                value={currentAmountEdit}
+                onChange={(e) => setCurrentAmountEdit(e.target.value)}
                 min="0"
                 step="0.01"
                 required

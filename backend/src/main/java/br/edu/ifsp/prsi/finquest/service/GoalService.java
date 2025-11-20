@@ -1,16 +1,13 @@
 package br.edu.ifsp.prsi.finquest.service;
 
-import br.edu.ifsp.prsi.finquest.dto.GoalCompletionDTO;
-import br.edu.ifsp.prsi.finquest.dto.GoalDTO;
-import br.edu.ifsp.prsi.finquest.dto.GoalUpdateResponseDTO;
-import br.edu.ifsp.prsi.finquest.dto.RegisterGoalDTO;
+import br.edu.ifsp.prsi.finquest.dto.*;
 
 import java.math.BigDecimal;
 import java.util.List;
 
 public interface GoalService {
     GoalDTO createGoal(String userId, RegisterGoalDTO request);
-    GoalUpdateResponseDTO updateGoal(String userId, String goalId, RegisterGoalDTO request);
+    GoalUpdateResponseDTO updateGoal(String userId, String goalId, UpdateGoalDTO request);
     GoalDTO findById(String userId, String goalId);
     GoalUpdateResponseDTO depositAmount(String userId, String goalId, BigDecimal amount);
     GoalDTO deleteGoal(String userId, String goalId);

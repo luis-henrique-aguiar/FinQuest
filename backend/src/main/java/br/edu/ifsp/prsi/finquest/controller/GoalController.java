@@ -1,9 +1,6 @@
 package br.edu.ifsp.prsi.finquest.controller;
 
-import br.edu.ifsp.prsi.finquest.dto.DepositDTO;
-import br.edu.ifsp.prsi.finquest.dto.GoalDTO;
-import br.edu.ifsp.prsi.finquest.dto.GoalUpdateResponseDTO;
-import br.edu.ifsp.prsi.finquest.dto.RegisterGoalDTO;
+import br.edu.ifsp.prsi.finquest.dto.*;
 import br.edu.ifsp.prsi.finquest.model.Goal;
 import br.edu.ifsp.prsi.finquest.service.GoalService;
 import jakarta.validation.Valid;
@@ -32,7 +29,7 @@ public class GoalController {
     }
 
     @PutMapping("/{goalId}")
-    public ResponseEntity<GoalUpdateResponseDTO> updateGoal(@PathVariable("goalId") String idGoal, @RequestBody @Valid RegisterGoalDTO request, @AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<GoalUpdateResponseDTO> updateGoal(@PathVariable("goalId") String idGoal, @RequestBody @Valid UpdateGoalDTO request, @AuthenticationPrincipal UserDetails userDetails) {
         String userId = userDetails.getUsername();
         GoalUpdateResponseDTO responseDto = goalService.updateGoal(userId, idGoal, request);
         return ResponseEntity.ok(responseDto);

@@ -30,6 +30,12 @@ export interface GoalUpdateResponseDTO {
   missionCompletion: GoalCompletionDTO | null;
 }
 
+export interface UpdateGoalDTO {
+  name: string;
+  targetAmount: number;
+  currentAmount: number;
+}
+
 export const getAllGoals = async (): Promise<GoalDTO[]> => {
   try {
     const response = await api.get('/goals');

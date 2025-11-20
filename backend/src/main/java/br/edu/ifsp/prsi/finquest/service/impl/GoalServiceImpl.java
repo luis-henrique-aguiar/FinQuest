@@ -64,11 +64,12 @@ public class GoalServiceImpl implements GoalService {
 
     @Override
     @Transactional
-    public GoalUpdateResponseDTO updateGoal(String userId, String goalId, RegisterGoalDTO request) {
+    public GoalUpdateResponseDTO updateGoal(String userId, String goalId, UpdateGoalDTO request) {
         Goal goal = findGoalAndValidateUser(userId, goalId);
 
         goal.setName(request.name());
         goal.setTargetAmount(request.targetAmount());
+        goal.setCurrentAmount(request.currentAmount());
 
         GoalStatus oldStatus = goal.getStatus();
 
@@ -143,7 +144,7 @@ public class GoalServiceImpl implements GoalService {
     }
 
     private void determineGoalStatus(Goal goal) {
-        if (goal.getTargetAmount().compareTo(goal.getCurrentAmount()) > 0) {
+        /*if (goal.getTargetAmount().compareTo(goal.getCurrentAmount()) > 0) {
             if (goal.getStatus().equals(GoalStatus.COMPLETED)) {
                 goal.setStatus(GoalStatus.IN_PROGRESS);
             }
@@ -151,6 +152,11 @@ public class GoalServiceImpl implements GoalService {
             if (!goal.getStatus().equals(GoalStatus.COMPLETED)) {
                 goal.setStatus(GoalStatus.COMPLETED);
             }
+        }*/
+        if (goal.getCurrentAmount().compareTo(goal.getTargetAmount()) >= 0) {
+            goal.setStatus(GoalStatus.COMPLETED);
+        } else {
+            goal.setStatus(GoalStatus.IN_PROGRESS);
         }
     }
 

@@ -79,8 +79,7 @@ public class MissionServiceImpl implements MissionService {
 
         logger.info("Processamento de missões concluído para userId={}", userId);
     }
-
-    //@EventListener
+    
     @Transactional
     public GoalCompletionDTO handleGoalCompleted(GoalCompletedEvent event) {
         String userId = event.getUserId();
@@ -95,13 +94,7 @@ public class MissionServiceImpl implements MissionService {
         int levelBeforeGoal = userBeforeAnything.getLevel();
         int pointsBeforeGoal = userBeforeAnything.getTotalFinPoints();
 
-        logger.info("📊 ANTES - Nível: {}, Pontos: {}", levelBeforeGoal, pointsBeforeGoal);
-
-        logger.info("Processando evento de conclusão de meta. UserId={}, GoalId={}", userId, goalId);
-
         List<Mission> relevantMissions = missionRepository.findByTriggerEventType(MissionTriggerType.GOAL_COMPLETED);
-
-        logger.debug("Encontradas {} missões relacionadas ao tipo LESSON_COMPLETED", relevantMissions.size());
 
         for (Mission mission : relevantMissions) {
             try {
@@ -118,17 +111,10 @@ public class MissionServiceImpl implements MissionService {
         int finalLevel = updatedUser.getLevel();
         int finalPoints = updatedUser.getTotalFinPoints();
 
-        logger.info("📊 DEPOIS - Nível: {}, Pontos: {}", finalLevel, finalPoints);
-
         boolean actuallyLeveledUp = finalLevel > levelBeforeGoal;
-
-        logger.info("🎯 Detecção de Level Up: {} → {} = {}",
-                levelBeforeGoal, finalLevel, actuallyLeveledUp);
 
         AchievementDTO unlockedBadge = null;
         if (actuallyLeveledUp) {
-            logger.info("🔍 Buscando badge para o nível final {}", finalLevel);
-
             Optional<Achievement> badgeOpt = achievementRepository.findByRequiredLevel(finalLevel);
 
             if (badgeOpt.isPresent()) {
@@ -139,9 +125,6 @@ public class MissionServiceImpl implements MissionService {
                 logger.warn("⚠️ Nenhum badge encontrado para o nível {}", finalLevel);
             }
         }
-
-        logger.info("Processamento de missões concluído para userId={}", userId);
-
         return new GoalCompletionDTO(
                 updatedUser.getTotalFinPoints(),
                 updatedUser.getLevel(),
