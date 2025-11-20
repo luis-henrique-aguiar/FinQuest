@@ -132,12 +132,12 @@ const ActionButton = styled.button<{ $variant: "primary" | "outline" }>`
         background-color: ${theme.colors.primary};
         color: white;
         border-color: ${theme.colors.primary};
-        
+
         &:hover:not(:disabled) {
           background-color: ${theme.colors.primary}dd;
           transform: translateY(-1px);
         }
-        
+
         &:active:not(:disabled) {
           transform: translateY(0);
         }
@@ -147,12 +147,12 @@ const ActionButton = styled.button<{ $variant: "primary" | "outline" }>`
         background-color: transparent;
         color: ${theme.colors.primary};
         border-color: ${theme.colors.primary};
-        
+
         &:hover:not(:disabled) {
           background-color: ${theme.colors.primary}10;
           transform: translateY(-1px);
         }
-        
+
         &:active:not(:disabled) {
           transform: translateY(0);
         }
