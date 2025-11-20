@@ -23,7 +23,7 @@ export interface QuizQuestion {
 }
 
 export interface BadgeDTO {
-  id: number;
+  id: number | string;
   title: string;
   description: string;
   icon: string;

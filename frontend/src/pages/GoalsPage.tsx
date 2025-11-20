@@ -1,7 +1,5 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { PlusCircle } from "react-feather";
 import Button from "../components/common/Button";
-import SectionTitle from "../components/common/SectionTitle";
 import { Modal } from "../components/common/Modal";
 import { useToast } from "../hooks/useToast";
 import { GoalCard } from "../components/gamification/GoalCard";
@@ -10,6 +8,7 @@ import api from "../services/api";
 import { getAllGoals, type GoalCompletionDTO, type GoalDTO, type GoalUpdateResponseDTO } from "../services/goalService";
 import { useAuth } from "../hooks/useAuth";
 import { useGamification } from "../context/GamificationContext";
+import { Award, Target, TrendingUp, CheckCircle } from "react-feather";
 
 type FilterType = 'all' | 'IN_PROGRESS' | 'COMPLETED';
 
@@ -21,7 +20,6 @@ export const GoalsPage: React.FC = () => {
   const { updateUserContext } = useAuth();
   const { showLevelUp, showBadgeUnlocked } = useGamification();
 
-
   // Estados dos modais
   const [isAddGoalModalOpen, setAddGoalModalOpen] = useState(false);
   const [isAddFundsModalOpen, setAddFundsModalOpen] = useState(false);
@@ -32,7 +30,7 @@ export const GoalsPage: React.FC = () => {
 
   // Estados para gerenciar a meta selecionada
   const [selectedGoal, setSelectedGoal] = useState<GoalDTO | null>(null);
-  const [levelUpInfo, setLevelUpInfo] = useState<GoalCompletionDTO | null>(null);
+  const [levelUpInfo] = useState<GoalCompletionDTO | null>(null);
 
   // Estados para os formulários
   const [goalName, setGoalName] = useState("");
@@ -94,7 +92,7 @@ export const GoalsPage: React.FC = () => {
     if (selectedGoal) {
       setGoalName(selectedGoal.name);
       setGoalTarget(selectedGoal.targetAmount.toString());
-      setCurrentAmountEdit(selectedGoal.currentAmount.toString()); // NOVO
+      setCurrentAmountEdit(selectedGoal.currentAmount.toString());
     }
   }, [selectedGoal]);
 
@@ -103,15 +101,6 @@ export const GoalsPage: React.FC = () => {
     setGoalTarget("");
     setFundsToAdd("");
     setSelectedGoal(null);
-  };
-
-  const formatCurrency = (value: number) => {
-    return value.toLocaleString("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
   };
 
   const handleCreateGoal = async (e: React.FormEvent) => {
@@ -224,8 +213,6 @@ export const GoalsPage: React.FC = () => {
 
     try {
       const amountToAdd = parseFloat(fundsToAdd);
-      const previousCompletion = selectedGoal.completionPercentage;
-
       const response = await api.put<GoalUpdateResponseDTO>(
         `/goals/${selectedGoal.id}/deposit`,
         { amount: amountToAdd }
@@ -233,7 +220,6 @@ export const GoalsPage: React.FC = () => {
 
       const { updatedGoal, missionCompletion } = response.data;
 
-      // Atualizar a meta localmente
       setGoals((prev) =>
         prev.map((goal) => goal.id === selectedGoal.id ? updatedGoal : goal)
       );
@@ -294,9 +280,9 @@ export const GoalsPage: React.FC = () => {
 
   const getFilterLabel = (filter: FilterType) => {
     switch (filter) {
-      case 'all': return 'Todas';
-      case 'IN_PROGRESS': return 'Em Andamento';
-      case 'COMPLETED': return 'Concluídas';
+      case 'all': return `Todas (${goals.length})`;
+      case 'IN_PROGRESS': return `Em Andamento (${stats.activeGoals})`;
+      case 'COMPLETED': return `Concluídas (${stats.completedGoals})`;
       default: return 'Todas';
     }
   };
@@ -327,20 +313,17 @@ export const GoalsPage: React.FC = () => {
   if (isLoading) {
     return (
       <S.PageContainer>
-        <S.Header>
-          <SectionTitle>Minhas Metas Financeiras</SectionTitle>
-        </S.Header>
-        <S.EmptyState>
-          <span className="emoji">⏳</span>
-          <h3>Carregando suas metas...</h3>
-        </S.EmptyState>
+        <S.LoadingContainer>
+          <div className="spinner" />
+          <p>Carregando suas metas...</p>
+        </S.LoadingContainer>
       </S.PageContainer>
     );
   }
 
   return (
     <S.PageContainer>
-      {/* Modal de Criar Meta */}
+      {/* Modais... (mantidos iguais) */}
       <Modal
         isOpen={isAddGoalModalOpen}
         onClose={() => setAddGoalModalOpen(false)}
@@ -587,65 +570,73 @@ export const GoalsPage: React.FC = () => {
         </S.CelebrationContainer>
       </Modal>
 
-      {/* Conteúdo da Página */}
       <S.Header>
-        <SectionTitle>Minhas Metas Financeiras</SectionTitle>
+        <S.Title>
+          <Award size={32} />
+          Minhas Metas Financeiras
+        </S.Title>
+        <S.Subtitle>
+          Defina objetivos, economize e conquiste suas metas financeiras!
+        </S.Subtitle>
+      </S.Header>
+
+      {/* STATS CARDS */}
+      <S.StatsGrid>
+        <S.StatCard>
+          <S.StatIcon color="#007ACC">
+            <Target size={24} />
+          </S.StatIcon>
+          <S.StatContent>
+            <S.StatValue>{goals.length}</S.StatValue>
+            <S.StatLabel>Total de Metas</S.StatLabel>
+          </S.StatContent>
+        </S.StatCard>
+
+        <S.StatCard>
+          <S.StatIcon color="#FFA500">
+            <TrendingUp size={24} />
+          </S.StatIcon>
+          <S.StatContent>
+            <S.StatValue>{stats.activeGoals}</S.StatValue>
+            <S.StatLabel>Em Andamento</S.StatLabel>
+          </S.StatContent>
+        </S.StatCard>
+
+        <S.StatCard>
+          <S.StatIcon color="#28A745">
+            <CheckCircle size={24} />
+          </S.StatIcon>
+          <S.StatContent>
+            <S.StatValue>{stats.completedGoals}</S.StatValue>
+            <S.StatLabel>Concluídas</S.StatLabel>
+          </S.StatContent>
+        </S.StatCard>
+      </S.StatsGrid>
+
+      {/* BOTÃO DE NOVA META */}
+      <S.ActionButtonContainer>
         <Button
           variant="primary"
           onClick={openAddGoalModal}
-          icon={<PlusCircle size={18} />}
         >
-          Nova Meta
+          + Nova Meta
         </Button>
-      </S.Header>
+      </S.ActionButtonContainer>
 
-      {/* Estatísticas - apenas para metas ativas */}
-      {stats.activeGoals > 0 && (
-        <S.StatsContainer>
-          <S.StatCard>
-            <div className="stat-value">{formatCurrency(stats.totalSaved)}</div>
-            <div className="stat-label">Total Economizado</div>
-          </S.StatCard>
-          <S.StatCard>
-            <div className="stat-value">{stats.activeGoals}</div>
-            <div className="stat-label">Metas Ativas</div>
-          </S.StatCard>
-          <S.StatCard>
-            <div className="stat-value">{stats.overallProgress.toFixed(0)}%</div>
-            <div className="stat-label">Progresso Geral</div>
-          </S.StatCard>
-        </S.StatsContainer>
-      )}
+      {/* FILTROS */}
+      <S.FilterTabs>
+        {(['all', 'IN_PROGRESS', 'COMPLETED'] as FilterType[]).map((filter) => (
+          <S.FilterTab
+            key={filter}
+            $active={activeFilter === filter}
+            onClick={() => setActiveFilter(filter)}
+          >
+            {getFilterLabel(filter)}
+          </S.FilterTab>
+        ))}
+      </S.FilterTabs>
 
-      {/* Filtros */}
-      <S.FilterSection>
-        <S.FilterTabs>
-          {(['all', 'IN_PROGRESS', 'COMPLETED'] as FilterType[]).map((filter) => (
-            <S.FilterTab
-              key={filter}
-              $active={activeFilter === filter}
-              onClick={() => setActiveFilter(filter)}
-            >
-              {getFilterLabel(filter)}
-            </S.FilterTab>
-          ))}
-        </S.FilterTabs>
-
-        {filteredGoals.length > 0 && (
-          <S.FilterInfo>
-            <S.ResultCount>
-              {filteredGoals.length} {filteredGoals.length === 1 ? 'meta encontrada' : 'metas encontradas'}
-            </S.ResultCount>
-            {activeFilter !== 'all' && (
-              <S.ClearFilters onClick={() => setActiveFilter('all')}>
-                Limpar filtros
-              </S.ClearFilters>
-            )}
-          </S.FilterInfo>
-        )}
-      </S.FilterSection>
-
-      {/* Grid de Metas */}
+      {/* GRID DE METAS */}
       {filteredGoals.length > 0 ? (
         <S.GoalsGrid>
           {filteredGoals.map((goal) => (
@@ -664,7 +655,7 @@ export const GoalsPage: React.FC = () => {
         </S.GoalsGrid>
       ) : (
         <S.EmptyState>
-          <span className="emoji">🎯</span>
+          <Target size={64} />
           <h3>{emptyState.title}</h3>
           <p>{emptyState.description}</p>
         </S.EmptyState>
