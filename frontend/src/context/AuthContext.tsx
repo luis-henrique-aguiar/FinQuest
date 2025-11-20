@@ -3,21 +3,16 @@ import React, {
   useState,
   type ReactNode,
   useEffect,
-  useRef,
 } from "react";
 import {
   type User as FirebaseUser,
-  createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
-  updateProfile,
-  deleteUser,
 } from "firebase/auth";
 import { auth } from "../firebase";
 import FullScreenLoader from "../components/common/FullScreenLoader";
 import api from "../services/api";
-import { calculateLevel } from "../utils/levelingSystem";
 
 export interface User {
   uid: string;
@@ -27,6 +22,7 @@ export interface User {
   totalFinPoints: number;
   budget: number | null;
   level: number;
+  role: "USER" | "ADMIN";
 }
 
 export interface AuthContextType {
@@ -51,22 +47,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const isRegistering = useRef(false);
-
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
       setFirebaseUser(fbUser);
 
       if (fbUser) {
         console.log("onAuthStateChanged: Logado - UID:", fbUser.uid);
-
-        if (isRegistering.current) {
-          console.log(
-            "AuthContext: Registro em andamento, aguardando conclusão..."
-          );
-          setIsLoading(false);
-          return;
-        }
 
         try {
           const response = await api.get(`/users/${fbUser.uid}`);
@@ -80,6 +66,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
             totalFinPoints: backendUser.totalFinPoints || 0,
             budget: backendUser.budget,
             level: backendUser.level || 1,
+            role: backendUser.role || "USER",
           };
 
           if (import.meta.env.DEV) {
@@ -93,15 +80,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           }
 
           setUser(appUser);
-          console.log(
-            "AuthContext: Usuário completo do backend carregado.",
-            appUser
-          );
+          console.log("Usuário do backend carregado:", appUser);
         } catch (error) {
-          console.warn(
-            "AuthContext: Usuário não encontrado no backend.",
-            error
-          );
+          console.error("Erro ao carregar usuário do backend:", error);
           setUser(null);
         }
       } else {
@@ -113,7 +94,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     });
 
     return () => {
-      console.log("AuthContext: Desinscrevendo listener onAuthStateChanged.");
+      console.log("Desinscrevendo listener onAuthStateChanged");
       unsubscribe();
     };
   }, []);
@@ -123,97 +104,78 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     email: string,
     password: string
   ): Promise<void> => {
-    let firebaseUser: FirebaseUser | null = null;
+    console.log("Iniciando registro...");
 
     try {
-      isRegistering.current = true;
-
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
+      const response = await api.post("/auth/register", {
+        name,
         email,
-        password
-      );
-      firebaseUser = userCredential.user;
+        password,
+      });
 
-      await updateProfile(firebaseUser, { displayName: name });
+      const { uid } = response.data;
+      console.log("Usuário criado no backend:", uid);
 
-      const registerBackendDTO = {
-        id: firebaseUser.uid,
-        email: firebaseUser.email,
-        name: name,
-      };
+      await signInWithEmailAndPassword(auth, email, password);
+      console.log("Login automático realizado!");
 
-      await api.post("/users/auth/register", registerBackendDTO);
-      const response = await api.get(`/users/${firebaseUser.uid}`);
-      const backendUser = response.data;
-
-      const userLevel = calculateLevel(backendUser.totalFinPoints);
-
-      const appUser: User = {
-        uid: firebaseUser.uid,
-        name: backendUser.name,
-        email: backendUser.email,
-        avatarUrl: backendUser.avatarUrl || null,
-        totalFinPoints: backendUser.totalFinPoints || 0,
-        budget: backendUser.budget,
-        level: userLevel,
-      };
-
-      setUser(appUser);
     } catch (error: any) {
-      console.error("Erro no fluxo de registro:", error);
-      if (firebaseUser) {
-        console.warn(
-          "Sincronização com backend falhou. Tentando reverter criação no Firebase..."
-        );
-        try {
-          await deleteUser(firebaseUser);
-          console.log("Rollback do Firebase concluído. Usuário deletado.");
-        } catch (deleteError) {
-          console.error("Erro no rollback:", deleteError);
-        }
+      console.error("❌ Erro no registro:", error);
+
+      if (error.response?.status === 409) {
+        throw new Error("Este email já está cadastrado.");
+      } else if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      } else if (error.code === "auth/email-already-in-use") {
+        throw new Error("Este email já está cadastrado.");
+      } else if (error.code === "auth/invalid-email") {
+        throw new Error("Email inválido.");
+      } else if (error.code === "auth/weak-password") {
+        throw new Error("Senha muito fraca (mínimo 6 caracteres).");
+      } else {
+        throw new Error("Erro ao criar conta. Tente novamente.");
       }
-      throw error;
-    } finally {
-      isRegistering.current = false;
     }
   };
 
   const login = async (email: string, password: string): Promise<void> => {
-    console.log("AuthContext: Tentando logar com Firebase...", { email });
+    console.log("Tentando fazer login...");
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      console.log("AuthContext: Login Firebase bem-sucedido!");
+      console.log("Login bem-sucedido!");
     } catch (error: any) {
-      console.error("Erro no login Firebase:", error);
-      throw error;
+      console.error("Erro no login:", error);
+
+      if (error.code === "auth/user-not-found") {
+        throw new Error("Usuário não encontrado.");
+      } else if (error.code === "auth/wrong-password") {
+        throw new Error("Senha incorreta.");
+      } else if (error.code === "auth/invalid-email") {
+        throw new Error("Email inválido.");
+      } else if (error.code === "auth/too-many-requests") {
+        throw new Error("Muitas tentativas. Tente novamente mais tarde.");
+      } else {
+        throw new Error("Erro ao fazer login. Tente novamente.");
+      }
     }
   };
 
   const logout = async (): Promise<void> => {
-    console.log("AuthContext: Fazendo logout com Firebase...");
+    console.log("Fazendo logout...");
     try {
       await signOut(auth);
-      console.log("AuthContext: Logout Firebase concluído.");
+      console.log("Logout concluído!");
     } catch (error: any) {
-      console.error("Erro no logout Firebase:", error);
+      console.error("Erro no logout:", error);
       throw error;
     }
   };
 
   const updateUserContext = (updatedData: Partial<User>) => {
-    setUser(prevUser => {
+    setUser((prevUser) => {
       if (!prevUser) return null;
-
       const newUser = { ...prevUser, ...updatedData };
-      
-      try {
-        localStorage.setItem('finquest_user', JSON.stringify(newUser));
-      } catch (e) {
-        console.warn("Falha ao atualizar usuário no localStorage", e);
-      }
-
-      console.log("AuthContext: updateUserContext foi chamado.", newUser);
+      console.log("Usuário atualizado:", newUser);
       return newUser;
     });
   };
@@ -226,7 +188,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     register,
     login,
     logout,
-    updateUserContext
+    updateUserContext,
   };
 
   if (isLoading) {

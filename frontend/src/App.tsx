@@ -23,6 +23,7 @@ import { ToastProvider } from "./context/ToastContext";
 import { AuthProvider } from "./context/AuthContext";
 import LoginPage from "./pages/LoginPage";
 import { ProtectedRoute } from "./layout/ProtectedRoute";
+import { AdminRoute } from "./layout/AdminRoute"; 
 import HomePage from "./pages/HomePage";
 import { PublicOnlyRoute } from "./layout/PublicOnlyRoute";
 import AppLayout from "./components/layout/AppLayout";
@@ -35,6 +36,7 @@ import BudgetPage from "./pages/BudgetPage";
 import GoalsPage from "./pages/GoalsPage";
 import InvestmentSimulatorPage from "./pages/InvestmentSimulatorPage";
 import ReportsPage from "./pages/ReportsPage";
+import AdminDashboardPage from "./pages/AdminDashboardPage";
 import { GamificationProvider } from "./context/GamificationContext";
 
 const AppRoutes = () => {
@@ -60,6 +62,7 @@ const AppRoutes = () => {
 
   return (
     <Routes>
+      {/* Rotas Públicas */}
       <Route element={<AuthLayout />}>
         <Route element={<PublicOnlyRoute />}>
           <Route path="/" element={<LandingPage />} />
@@ -69,18 +72,26 @@ const AppRoutes = () => {
         </Route>
       </Route>
 
+      {/* Rotas Protegidas (Usuários Autenticados) */}
       <Route element={<ProtectedRoute />}>
         <Route element={<AppLayout />}>
           <Route path="/home" element={<HomePage />} />
           <Route path="/learn" element={<LearnHubPage />} />
           <Route path="/learn/:courseId" element={<CourseDetailsPage />} />
+          <Route path="/learn/:courseId/:lessonId" element={<LessonPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/missions" element={<MissionsPage />} />
           <Route path="/budget" element={<BudgetPage />} />
           <Route path="/goals" element={<GoalsPage />} />
           <Route path="/simulator" element={<InvestmentSimulatorPage />} />
           <Route path="/reports" element={<ReportsPage />} />
-          <Route path="/learn/:courseId/:lessonId" element={<LessonPage />} />
+        </Route>
+      </Route>
+
+      {/* Rotas de Admin (Apenas ADMIN) */}
+      <Route element={<AdminRoute />}>
+        <Route element={<AppLayout />}>
+          <Route path="/admin" element={<AdminDashboardPage />} />
         </Route>
       </Route>
 
