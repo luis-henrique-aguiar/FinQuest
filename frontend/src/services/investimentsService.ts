@@ -54,7 +54,7 @@ export const fetchInvestmentRates = async (): Promise<InvestmentRatesResponse> =
       {
         id: 'poupanca',
         name: 'Poupança',
-        rate: (selic * 0.70) / 100, // 70% da Selic
+        rate: (selic * 0.70) / 100, 
         description: `Rendimento de 70% da Selic (${(selic * 0.70).toFixed(2)}% a.a.)`,
         category: 'poupanca',
         risk: 'baixo',
@@ -65,7 +65,7 @@ export const fetchInvestmentRates = async (): Promise<InvestmentRatesResponse> =
       {
         id: 'cdb_100',
         name: 'CDB (100% CDI)',
-        rate: cdi / 100, // 100% do CDI
+        rate: cdi / 100,
         description: `Certificado de Depósito Bancário - ${cdi.toFixed(2)}% a.a.`,
         recommended: true,
         category: 'renda_fixa',
@@ -77,7 +77,7 @@ export const fetchInvestmentRates = async (): Promise<InvestmentRatesResponse> =
       {
         id: 'cdb_110',
         name: 'CDB (110% CDI)',
-        rate: (cdi * 1.10) / 100, // 110% do CDI
+        rate: (cdi * 1.10) / 100, 
         description: `CDB com rentabilidade acima do mercado - ${(cdi * 1.10).toFixed(2)}% a.a.`,
         category: 'renda_fixa',
         risk: 'baixo',
@@ -110,7 +110,7 @@ export const fetchInvestmentRates = async (): Promise<InvestmentRatesResponse> =
       {
         id: 'lci_lca',
         name: 'LCI/LCA (95% CDI)',
-        rate: (cdi * 0.95) / 100, // 95% do CDI
+        rate: (cdi * 0.95) / 100, 
         description: `Isento de IR - ${(cdi * 0.95).toFixed(2)}% a.a.`,
         category: 'renda_fixa',
         risk: 'baixo',
@@ -121,7 +121,7 @@ export const fetchInvestmentRates = async (): Promise<InvestmentRatesResponse> =
       {
         id: 'cdb_85',
         name: 'CDB (85% CDI)',
-        rate: (cdi * 0.85) / 100, // 85% do CDI
+        rate: (cdi * 0.85) / 100, 
         description: `CDB com liquidez diária - ${(cdi * 0.85).toFixed(2)}% a.a.`,
         category: 'renda_fixa',
         risk: 'baixo',
@@ -284,7 +284,7 @@ export const formatRate = (rate: number): string => {
 };
 
 const CACHE_KEY = 'finquest_investment_rates';
-const CACHE_DURATION = 60 * 60 * 1000 * 24 * 7; // 1 semana
+const CACHE_DURATION = 60 * 60 * 1000 * 24 * 7; 
 
 export const getCachedRates = (): InvestmentRatesResponse | null => {
   try {

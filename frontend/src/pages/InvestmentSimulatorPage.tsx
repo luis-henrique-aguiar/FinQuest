@@ -14,6 +14,7 @@ import {
 import { TrendingUp, RefreshCw, AlertCircle } from "lucide-react";
 import Button from "../components/common/Button";
 import { useToast } from "../hooks/useToast";
+
 import {
   fetchInvestmentRates,
   calculateInvestment,
@@ -24,7 +25,7 @@ import {
   type InvestmentRatesResponse,
 } from "../services/investimentsService";
 
-// --- Styled Components ---
+
 
 const PageContainer = styled.div`
   max-width: 1400px;
@@ -444,7 +445,6 @@ const LoadingOverlay = styled.div`
   }
 `;
 
-// --- Interfaces ---
 
 interface SimulationResult {
   totalInvested: number;
@@ -457,7 +457,7 @@ interface SimulationResult {
   }>;
 }
 
-// --- Componente Principal ---
+
 
 export const InvestmentSimulatorPage: React.FC = () => {
   const [initialValue, setInitialValue] = useState("");
@@ -472,13 +472,12 @@ export const InvestmentSimulatorPage: React.FC = () => {
   const theme = useTheme();
   const { addToast } = useToast();
 
-  // ✅ Carrega taxas ao montar o componente
   useEffect(() => {
     loadInvestmentRates();
   }, []);
 
   const loadInvestmentRates = async () => {
-    // ✅ Tenta buscar do cache primeiro
+
     const cached = getCachedRates();
     if (cached) {
       setRatesData(cached);
@@ -487,14 +486,13 @@ export const InvestmentSimulatorPage: React.FC = () => {
       return;
     }
 
-    // ✅ Se não tem cache, busca da API
+
     setIsLoading(true);
     try {
       const data = await fetchInvestmentRates();
       setRatesData(data);
       setInvestmentOptions(data.rates);
-      
-      // ✅ Salva no cache
+     
       setCachedRates(data);
       
       if (data.source === 'fallback') {
