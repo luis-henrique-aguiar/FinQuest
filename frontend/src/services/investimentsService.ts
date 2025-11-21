@@ -19,6 +19,7 @@ export interface InvestmentRatesResponse {
     selic: number;
     cdi: number;
     ipca: number;
+    tr: number;
   };
 }
 
@@ -26,6 +27,34 @@ interface BrasilAPITaxa {
   nome: string;
   valor: number;
 }
+
+const fetchBcbSgsRate = async (sgsCode: number): Promise<number | undefined> => {
+  const url = `https://api.bcb.gov.br/dados/serie/bcdata.sgs.${sgsCode}/dados?formato=json`;
+  
+  try {
+  
+    const response = await axios.get<{ data: string; valor: string }[]>(url, {
+      params: {
+       
+        dataInicial: '01/11/2025', 
+        dataFinal: new Date().toLocaleDateString('pt-BR'), 
+      },
+      timeout: 5000,
+    });
+
+    const dados = response.data;
+    if (dados.length === 0) return undefined;
+
+  
+    const ultimoValor = parseFloat(dados[dados.length - 1].valor.replace(',', '.'));
+    console.log(`🏦 BCB SGS ${sgsCode}: ${ultimoValor}`);
+    
+    return ultimoValor;
+  } catch (error) {
+    console.error(`❌ Erro ao buscar BCB SGS ${sgsCode}:`, error);
+    return undefined; 
+  }
+};
 
 
 export const fetchInvestmentRates = async (): Promise<InvestmentRatesResponse> => {
@@ -45,17 +74,22 @@ export const fetchInvestmentRates = async (): Promise<InvestmentRatesResponse> =
     const selic = taxas.find(t => t.nome === 'Selic')?.valor || 11.25;
     const cdi = taxas.find(t => t.nome === 'CDI')?.valor || 10.75;
     const ipca = taxas.find(t => t.nome === 'IPCA')?.valor || 4.68;
-
+   const rendimentoPoupançaAnual = selic <= 8.5 ? (selic * 0.70) : 6.0
     console.log('💰 Taxas extraídas:', { selic, cdi, ipca });
+
+    //A API retorna o valor por dia, mas para a conta funcionar precisamos pelo ano inteiro.
+    const tr = await fetchBcbSgsRate(226) || 0;
+        console.log('📊 Taxa TR:', tr);
 
     
     const rates: InvestmentOption[] = [
      
       {
+       
         id: 'poupanca',
-        name: 'Poupança',
-        rate: (selic * 0.70) / 100, 
-        description: `Rendimento de 70% da Selic (${(selic * 0.70).toFixed(2)}% a.a.)`,
+        name: 'Poupança',       
+        rate: (rendimentoPoupançaAnual + tr) / 100, 
+        description: `Rendimento de ${rendimentoPoupançaAnual.toFixed(2)}% (70% Selic ou 0.5% a.m.) + TR (${tr.toFixed(2)}% a.a.)`,
         category: 'poupanca',
         risk: 'baixo',
         liquidity: 'diaria',
@@ -133,7 +167,7 @@ export const fetchInvestmentRates = async (): Promise<InvestmentRatesResponse> =
       rates,
       lastUpdate: new Date().toISOString(),
       source: 'brasilapi',
-      rawData: { selic, cdi, ipca },
+      rawData: { selic, cdi, ipca, tr },
     };
   } catch (error) {
     console.error('❌ Erro ao buscar taxas da BrasilAPI:', error);
@@ -148,6 +182,7 @@ const getFallbackRates = (): InvestmentRatesResponse => {
   const selic = 11.25;
   const cdi = 10.75;
   const ipca = 4.5;
+  const tr = 2.0;
 
   return {
     rates: [
@@ -218,7 +253,7 @@ const getFallbackRates = (): InvestmentRatesResponse => {
     ],
     lastUpdate: new Date().toISOString(),
     source: 'fallback',
-    rawData: { selic, cdi, ipca },
+    rawData: { selic, cdi, ipca, tr },
   };
 };
 
