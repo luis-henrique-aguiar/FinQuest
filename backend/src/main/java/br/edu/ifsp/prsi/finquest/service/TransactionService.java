@@ -1,6 +1,8 @@
 package br.edu.ifsp.prsi.finquest.service;
 
 import br.edu.ifsp.prsi.finquest.dto.TransactionDTO;
+import br.edu.ifsp.prsi.finquest.dto.TransactionTypeSumDTO;
+import br.edu.ifsp.prsi.finquest.model.enums.TransactionType;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -10,4 +12,6 @@ public interface TransactionService {
     List<TransactionDTO> getTransactionsByPeriod(String userId,LocalDate startDate,LocalDate endDate);
 
     List<TransactionDTO> getAllTransactions(String userId);
+
+    TransactionTypeSumDTO getSumByTypeAndPeriod(String userId, TransactionType type, LocalDate startDate, LocalDate endDate);
 }
