@@ -1,5 +1,6 @@
 package br.edu.ifsp.prsi.finquest.service;
 
+import br.edu.ifsp.prsi.finquest.dto.ExpensesReportDTO;
 import br.edu.ifsp.prsi.finquest.dto.TransactionDTO;
 import br.edu.ifsp.prsi.finquest.dto.TransactionTypeSumDTO;
 import br.edu.ifsp.prsi.finquest.model.enums.TransactionType;
@@ -14,4 +15,6 @@ public interface TransactionService {
     List<TransactionDTO> getAllTransactions(String userId);
 
     TransactionTypeSumDTO getSumByTypeAndPeriod(String userId, TransactionType type, LocalDate startDate, LocalDate endDate);
+
+    ExpensesReportDTO getAllExpensesByPeriodGroupedByType(String userId, LocalDate startDate, LocalDate endDate);
 }

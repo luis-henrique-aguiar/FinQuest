@@ -1,5 +1,7 @@
 package br.edu.ifsp.prsi.finquest.service.impl;
 
+import br.edu.ifsp.prsi.finquest.dto.ExpenseInfoDTO;
+import br.edu.ifsp.prsi.finquest.dto.ExpensesReportDTO;
 import br.edu.ifsp.prsi.finquest.dto.TransactionDTO;
 import br.edu.ifsp.prsi.finquest.dto.TransactionTypeSumDTO;
 import br.edu.ifsp.prsi.finquest.model.Transaction;
@@ -10,6 +12,8 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 @Service
@@ -51,6 +55,24 @@ public class TransactionServiceImpl implements TransactionService {
                     userId, type, startDate, endDate
                 ) : BigDecimal.ZERO;
         return new TransactionTypeSumDTO(total);
+    }
+
+    @Override
+    public ExpensesReportDTO getAllExpensesByPeriodGroupedByType(String userId, LocalDate startDate, LocalDate endDate) {
+        List<ExpenseInfoDTO> expenses = new ArrayList<>();
+        List<String> categories = transactionRepository.findAllCategoriesByUserIdAndDateBetweenAndType(userId,TransactionType.EXPENSE,startDate,endDate);
+        BigDecimal total_amount = transactionRepository.sumByUserIdAndTypeAndDateBetween(userId, TransactionType.EXPENSE, startDate, endDate);
+        BigDecimal amount;
+        long count;
+        BigDecimal percentage;
+        for(String category : categories){
+            amount = transactionRepository.sumByUserIdAndTypeAndDateBetweenAndCategory(userId,TransactionType.EXPENSE,startDate,endDate,category);
+            count = transactionRepository.countByUserIdAndTypeAndDateBetweenAndCategory(userId,TransactionType.EXPENSE,startDate,endDate,category);
+            percentage = amount.divide(total_amount).multiply(BigDecimal.valueOf(100));
+            expenses.add(new ExpenseInfoDTO(category,amount, percentage, count));
+        }
+        expenses.sort(Collections.reverseOrder());
+        return new ExpensesReportDTO(expenses);
     }
 
     private TransactionDTO toDTO(Transaction transaction) {
