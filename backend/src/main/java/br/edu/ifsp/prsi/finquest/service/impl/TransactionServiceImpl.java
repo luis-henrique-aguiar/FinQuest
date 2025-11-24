@@ -1,9 +1,6 @@
 package br.edu.ifsp.prsi.finquest.service.impl;
 
-import br.edu.ifsp.prsi.finquest.dto.ExpenseInfoDTO;
-import br.edu.ifsp.prsi.finquest.dto.ExpensesReportDTO;
-import br.edu.ifsp.prsi.finquest.dto.TransactionDTO;
-import br.edu.ifsp.prsi.finquest.dto.TransactionTypeSumDTO;
+import br.edu.ifsp.prsi.finquest.dto.*;
 import br.edu.ifsp.prsi.finquest.model.Transaction;
 import br.edu.ifsp.prsi.finquest.model.enums.TransactionType;
 import br.edu.ifsp.prsi.finquest.repository.TransactionRepository;
@@ -73,6 +70,29 @@ public class TransactionServiceImpl implements TransactionService {
         }
         expenses.sort(Collections.reverseOrder());
         return new ExpensesReportDTO(expenses);
+    }
+
+    @Override
+    public YearlyReportDTO getYearlyReport(String userId, int year) {
+        List<MonthlyReportDTO> reports = new ArrayList<>();
+        BigDecimal receitas;
+        BigDecimal despesas;
+        long transactionCount;
+        LocalDate startDate;
+        LocalDate endDate;
+        for(int i=0; i<MonthlyReportDTO.months.length; i++){
+            startDate = LocalDate.of(year, (i+1), 1);
+            endDate = LocalDate.of(year, (i+1), 31);
+            transactionCount = transactionRepository.countByUserIdAndTypeAndDateBetween(userId,startDate,endDate);
+            if(transactionCount>0){
+                receitas = transactionRepository.sumByUserIdAndTypeAndDateBetween(userId,TransactionType.INCOME,startDate,endDate);
+                despesas = transactionRepository.sumByUserIdAndTypeAndDateBetween(userId,TransactionType.EXPENSE,startDate,endDate);
+                reports.add(new MonthlyReportDTO(MonthlyReportDTO.months[i],receitas,despesas,receitas.subtract(despesas),transactionCount));
+            }else{
+                reports.add(new MonthlyReportDTO(MonthlyReportDTO.months[i],BigDecimal.ZERO,BigDecimal.ZERO,BigDecimal.ZERO,transactionCount));
+            }
+        }
+        return new YearlyReportDTO(reports);
     }
 
     private TransactionDTO toDTO(Transaction transaction) {

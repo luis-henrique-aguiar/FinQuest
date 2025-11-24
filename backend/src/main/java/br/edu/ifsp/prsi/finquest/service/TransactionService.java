@@ -3,6 +3,7 @@ package br.edu.ifsp.prsi.finquest.service;
 import br.edu.ifsp.prsi.finquest.dto.ExpensesReportDTO;
 import br.edu.ifsp.prsi.finquest.dto.TransactionDTO;
 import br.edu.ifsp.prsi.finquest.dto.TransactionTypeSumDTO;
+import br.edu.ifsp.prsi.finquest.dto.YearlyReportDTO;
 import br.edu.ifsp.prsi.finquest.model.enums.TransactionType;
 
 import java.time.LocalDate;
@@ -17,4 +18,6 @@ public interface TransactionService {
     TransactionTypeSumDTO getSumByTypeAndPeriod(String userId, TransactionType type, LocalDate startDate, LocalDate endDate);
 
     ExpensesReportDTO getAllExpensesByPeriodGroupedByType(String userId, LocalDate startDate, LocalDate endDate);
+
+    YearlyReportDTO getYearlyReport(String userId, int year);
 }

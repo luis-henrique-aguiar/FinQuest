@@ -45,7 +45,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
         SELECT SUM(t.amount) FROM Transaction t
         WHERE t.userId = :userId
         AND t.date BETWEEN :startDate AND :endDate
-        AND t.type = 'EXPENSE'
+        AND t.type = :type
         AND t.category = :category
         GROUP BY t.category
     """)
@@ -61,7 +61,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
         SELECT COUNT(t) FROM Transaction t
         WHERE t.userId = :userId
         AND t.date BETWEEN :startDate AND :endDate
-        AND t.type = 'EXPENSE'
+        AND t.type = :type
         AND t.category = :category
         GROUP BY t.category
     """)
@@ -71,5 +71,16 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate,
             @Param("category") String category
+    );
+
+    @Query("""
+        SELECT COUNT(t) FROM Transaction t
+        WHERE t.userId = :userId
+        AND t.date BETWEEN :startDate AND :endDate
+    """)
+    long countByUserIdAndTypeAndDateBetween(
+            @Param("userId") String userId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
     );
 }

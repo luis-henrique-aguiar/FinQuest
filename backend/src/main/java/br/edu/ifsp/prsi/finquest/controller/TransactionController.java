@@ -3,6 +3,7 @@ package br.edu.ifsp.prsi.finquest.controller;
 import br.edu.ifsp.prsi.finquest.dto.ExpensesReportDTO;
 import br.edu.ifsp.prsi.finquest.dto.TransactionDTO;
 import br.edu.ifsp.prsi.finquest.dto.TransactionTypeSumDTO;
+import br.edu.ifsp.prsi.finquest.dto.YearlyReportDTO;
 import br.edu.ifsp.prsi.finquest.model.enums.TransactionType;
 import br.edu.ifsp.prsi.finquest.service.TransactionService;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -63,5 +64,15 @@ public class TransactionController {
         String userId = userDetails.getUsername();
 
         return ResponseEntity.ok(transactionService.getAllExpensesByPeriodGroupedByType(userId,startDate,endDate));
+    }
+
+    @GetMapping("/yearly")
+    public ResponseEntity<YearlyReportDTO> getYearlyReport(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestParam int year
+    ){
+        String userId = userDetails.getUsername();
+
+        return ResponseEntity.ok(transactionService.getYearlyReport(userId,year));
     }
 }
