@@ -1,6 +1,10 @@
 package br.edu.ifsp.prsi.finquest.service.impl;
 
+import br.edu.ifsp.prsi.finquest.dto.UpdateUserEmailDTO;
+import br.edu.ifsp.prsi.finquest.dto.UpdateUserNameDTO;
+import br.edu.ifsp.prsi.finquest.dto.UpdateUserPasswordDTO;
 import br.edu.ifsp.prsi.finquest.dto.UserDTO;
+import br.edu.ifsp.prsi.finquest.exception.BusinessException;
 import br.edu.ifsp.prsi.finquest.model.Achievement;
 import br.edu.ifsp.prsi.finquest.model.User;
 import br.edu.ifsp.prsi.finquest.model.UserAchievement;
@@ -10,6 +14,9 @@ import br.edu.ifsp.prsi.finquest.repository.UserAchievementRepository;
 import br.edu.ifsp.prsi.finquest.repository.UserRepository;
 import br.edu.ifsp.prsi.finquest.service.UserService;
 import br.edu.ifsp.prsi.finquest.utils.LevelingSystem;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseAuthException;
+import com.google.firebase.auth.UserRecord;
 import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,6 +49,70 @@ public class UserServiceImpl implements UserService {
     public UserDTO findUserById(String id){
         User user = userRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado para o ID: " + id));
         return UserDTO.convertToDTO(user);
+    }
+
+    @Transactional
+    public UserDTO updateEmail(String userId, UpdateUserEmailDTO request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado."));
+
+        String newEmail = request.email();
+
+        if (!user.getEmail().equals(newEmail) && userRepository.existsByEmail(newEmail)) {
+            throw new BusinessException("Este email já está cadastrado no sistema.");
+        }
+
+        try {
+            UserRecord.UpdateRequest firebaseRequest = new UserRecord.UpdateRequest(userId)
+                    .setEmail(newEmail)
+                    .setEmailVerified(false);
+
+            FirebaseAuth.getInstance().updateUser(firebaseRequest);
+
+            user.setEmail(newEmail);
+            User updatedUserEntity = userRepository.save(user);
+
+            return UserDTO.convertToDTO(updatedUserEntity);
+
+        } catch (FirebaseAuthException e) {
+            if (e.getErrorCode().equals("email-already-exists")) {
+                throw new BusinessException("Este email já está cadastrado no sistema.");
+            }
+
+            logger.error("Erro ao atualizar e-mail no Firebase para usuário {}: {}", userId, e.getMessage());
+            throw new RuntimeException("Erro interno ao atualizar e-mail.", e);
+        }
+    }
+
+    @Override
+    public UserDTO updateName(String userId, UpdateUserNameDTO request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado."));
+
+        user.setName(request.name());
+
+        return UserDTO.convertToDTO(userRepository.save(user));
+    }
+
+    @Override
+    public void updatePassword(String userId, UpdateUserPasswordDTO request) {
+        if (!request.newPassword().equals(request.confirmationPassword())) {
+            throw new BusinessException("A nova senha e a confirmação não coincidem.");
+        }
+
+        try {
+            UserRecord.UpdateRequest firebaseRequest = new UserRecord.UpdateRequest(userId)
+                    .setPassword(request.newPassword());
+
+            FirebaseAuth.getInstance().updateUser(firebaseRequest);
+            FirebaseAuth.getInstance().revokeRefreshTokens(userId);
+
+            logger.info("Senha e tokens do usuário {} atualizados e revogados via Fluxo Híbrido.", userId);
+
+        } catch (FirebaseAuthException e) {
+            logger.error("Erro ao atualizar senha via Admin SDK para usuário {}: {}", userId, e.getMessage());
+            throw new RuntimeException("Erro interno ao atualizar senha.");
+        }
     }
 
     @Transactional
