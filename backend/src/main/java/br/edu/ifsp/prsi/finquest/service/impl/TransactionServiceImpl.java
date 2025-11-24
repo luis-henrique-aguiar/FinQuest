@@ -83,7 +83,7 @@ public class TransactionServiceImpl implements TransactionService {
         for(int i=0; i<MonthlyReportDTO.months.length; i++){
             startDate = LocalDate.of(year, (i+1), 1);
             endDate = LocalDate.of(year, (i+1), 31);
-            transactionCount = transactionRepository.countByUserIdAndTypeAndDateBetween(userId,startDate,endDate);
+            transactionCount = transactionRepository.countByUserIdAndDateBetween(userId,startDate,endDate);
             if(transactionCount>0){
                 receitas = transactionRepository.sumByUserIdAndTypeAndDateBetween(userId,TransactionType.INCOME,startDate,endDate);
                 despesas = transactionRepository.sumByUserIdAndTypeAndDateBetween(userId,TransactionType.EXPENSE,startDate,endDate);
@@ -93,6 +93,18 @@ public class TransactionServiceImpl implements TransactionService {
             }
         }
         return new YearlyReportDTO(reports);
+    }
+
+    @Override
+    public DailyExpensesReportDTO getDailyExpensesByPeriod(String userId, LocalDate startDate, LocalDate endDate) {
+        List<DailyExpenseDTO> dailyExpenses = new ArrayList<>();
+        List<LocalDate> dates = transactionRepository.findDistinctDatesByUseridAndDateBetweenAndType(userId,startDate,endDate, TransactionType.EXPENSE);
+        for(LocalDate date : dates){
+            dailyExpenses.add(new DailyExpenseDTO(Integer.toString(date.getDayOfMonth()),
+                    transactionRepository.sumByUserIdAndTypeAndDateBetween(userId,TransactionType.EXPENSE,date,date),
+                    transactionRepository.countByUserIdAndTypeAndDateBetween(userId,TransactionType.EXPENSE,date,date)));
+        }
+        return new DailyExpensesReportDTO(dailyExpenses);
     }
 
     private TransactionDTO toDTO(Transaction transaction) {

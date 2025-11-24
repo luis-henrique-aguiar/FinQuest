@@ -1,9 +1,6 @@
 package br.edu.ifsp.prsi.finquest.controller;
 
-import br.edu.ifsp.prsi.finquest.dto.ExpensesReportDTO;
-import br.edu.ifsp.prsi.finquest.dto.TransactionDTO;
-import br.edu.ifsp.prsi.finquest.dto.TransactionTypeSumDTO;
-import br.edu.ifsp.prsi.finquest.dto.YearlyReportDTO;
+import br.edu.ifsp.prsi.finquest.dto.*;
 import br.edu.ifsp.prsi.finquest.model.enums.TransactionType;
 import br.edu.ifsp.prsi.finquest.service.TransactionService;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -74,5 +71,16 @@ public class TransactionController {
         String userId = userDetails.getUsername();
 
         return ResponseEntity.ok(transactionService.getYearlyReport(userId,year));
+    }
+
+    @GetMapping("/daily")
+    public ResponseEntity<DailyExpensesReportDTO> getDailyExpensesInMonth(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
+    ){
+        String userId = userDetails.getUsername();
+
+        return ResponseEntity.ok(transactionService.getDailyExpensesByPeriod(userId,startDate,endDate));
     }
 }

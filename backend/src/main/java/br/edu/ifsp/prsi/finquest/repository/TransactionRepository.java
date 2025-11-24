@@ -78,8 +78,34 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
         WHERE t.userId = :userId
         AND t.date BETWEEN :startDate AND :endDate
     """)
+    long countByUserIdAndDateBetween(
+            @Param("userId") String userId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+    );
+
+    @Query("""
+        SELECT DISTINCT t.date FROM Transaction t
+        WHERE t.userId = :userId
+        AND t.date BETWEEN :startDate AND :endDate
+        AND t.type = :type
+    """)
+    List<LocalDate> findDistinctDatesByUseridAndDateBetweenAndType(
+            @Param("userId") String userId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate,
+            @Param("type") TransactionType type
+    );
+
+    @Query("""
+        SELECT COUNT(t) FROM Transaction t
+        WHERE t.userId = :userId
+        AND t.date BETWEEN :startDate AND :endDate
+        AND t.type = :type
+    """)
     long countByUserIdAndTypeAndDateBetween(
             @Param("userId") String userId,
+            @Param("type") TransactionType type,
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate
     );
