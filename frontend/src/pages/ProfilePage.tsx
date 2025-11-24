@@ -71,6 +71,20 @@ export const ProfilePage: React.FC = () => {
     console.log("Salvando email:", newEmail);
   };
 
+    const formatRegistrationDate = (dateString: string | undefined): string => {
+      if (!dateString) return "N/A";
+
+      try {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return "Data inválida";
+        return date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+
+      } catch (error) {
+        console.error("Erro ao formatar data de registro:", error);
+        return "N/A";
+      }
+    };
+
   return (
     <S.PageContainer>
       <PasswordChangeModal
@@ -181,7 +195,7 @@ export const ProfilePage: React.FC = () => {
         
         <S.SettingItem>
           <S.SettingLabel>Membro desde</S.SettingLabel>
-          <span>Janeiro 2024</span>
+          <span>{formatRegistrationDate(user.registrationDate)}</span>
         </S.SettingItem>
         
         <S.SettingItem>

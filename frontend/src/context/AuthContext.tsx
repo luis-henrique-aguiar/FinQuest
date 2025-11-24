@@ -18,6 +18,7 @@ export interface User {
   uid: string;
   name: string;
   email: string | null;
+  registrationDate: string;
   avatarUrl: string | null;
   totalFinPoints: number;
   budget: number | null;
@@ -62,6 +63,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
             uid: fbUser.uid,
             name: backendUser.name,
             email: backendUser.email,
+            registrationDate: backendUser.registrationDate,
             avatarUrl: backendUser.avatarUrl || null,
             totalFinPoints: backendUser.totalFinPoints || 0,
             budget: backendUser.budget,

@@ -4,12 +4,14 @@ import br.edu.ifsp.prsi.finquest.model.User;
 import br.edu.ifsp.prsi.finquest.model.enums.UserRole;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 public record UserDTO(
         String id,
         String name,
         String email,
+        LocalDateTime registrationDate,
         Integer totalFinPoints,
         BigDecimal budget,
         String avatarUrl,
@@ -29,6 +31,7 @@ public record UserDTO(
         user.setId(userDTO.id());
         user.setName(userDTO.name());
         user.setEmail(userDTO.email());
+        user.setRegistrationDate(userDTO.registrationDate());
         user.setTotalFinPoints(Optional.ofNullable(userDTO.totalFinPoints()).orElse(0));
         user.setBudget(userDTO.budget() != null ? userDTO.budget() : BigDecimal.ZERO);
         user.setAvatarUrl(userDTO.avatarUrl() != null ? userDTO.avatarUrl() : DEFAULT_AVATAR_URL);
@@ -47,6 +50,7 @@ public record UserDTO(
                 user.getId(),
                 user.getName(),
                 user.getEmail(),
+                user.getRegistrationDate(),
                 user.getTotalFinPoints(),
                 user.getBudget(),
                 user.getAvatarUrl(),
