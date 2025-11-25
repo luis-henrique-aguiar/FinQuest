@@ -34,19 +34,11 @@ export interface UpdateTransactionDTO {
   notes?: string;
 }
 
-export interface CategorySummary {
-  category: string;
-  amount: number;
-  percentage: number;
-  count: number;
-}
-
 export interface FinancialOverview {
   totalIncome: number;
   totalExpense: number;
   balance: number;
   savingsRate: number;
-  expensesByCategory: CategorySummary[];
   recentTransactions: Transaction[];
 }
 

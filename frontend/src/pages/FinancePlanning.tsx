@@ -328,8 +328,12 @@ export const FinancePlanningPage: React.FC = () => {
       setEditingTransaction(null);
       addToast("Transação atualizada com sucesso!", "success");
     } catch (error) {
-      console.error("Erro ao atualizar transação:", error);
-      addToast("Erro ao atualizar transação. Tente novamente.", "error");
+      if (error?.response?.data?.details) {
+        addToast(`${error.response.data.details[0]}`, "error");
+      } else {
+        addToast(`Erro ao atualizar transação. Por favor, tente novamente.`, "error");
+        console.log(error);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -395,15 +399,7 @@ export const FinancePlanningPage: React.FC = () => {
     setSelectedMonth(newMonth);
   };
 
-  // ============================================================================
-  // COMPUTED VALUES
-  // ============================================================================
-
   const isCurrentMonth = selectedMonth === getCurrentMonthKey();
-
-  // ============================================================================
-  // RENDER
-  // ============================================================================
 
   return (
     <S.PageContainer>

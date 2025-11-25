@@ -27,7 +27,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, String
             TransactionType type
     );
 
-    @Query("SELECT SUM(t.amount) FROM Transaction t " +
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t " +
             "WHERE t.userId = :userId AND t.type = :type " +
             "AND t.date BETWEEN :startDate AND :endDate")
     BigDecimal sumByUserIdAndTypeAndDateBetween(
@@ -37,7 +37,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, String
             @Param("endDate") LocalDate endDate
     );
 
-    @Query("SELECT t.category, SUM(t.amount) FROM Transaction t " +
+    @Query("SELECT t.category, COALESCE(SUM(t.amount), 0) FROM Transaction t " +
             "WHERE t.userId = :userId AND t.type = 'EXPENSE' " +
             "AND t.date BETWEEN :startDate AND :endDate " +
             "GROUP BY t.category")

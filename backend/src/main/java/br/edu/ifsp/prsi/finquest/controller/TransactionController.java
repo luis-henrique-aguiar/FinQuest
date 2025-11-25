@@ -5,6 +5,7 @@ import br.edu.ifsp.prsi.finquest.dto.FinancialOverviewDTO;
 import br.edu.ifsp.prsi.finquest.dto.TransactionDTO;
 import br.edu.ifsp.prsi.finquest.dto.UpdateTransactionDTO;
 import br.edu.ifsp.prsi.finquest.service.TransactionService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
@@ -40,7 +41,7 @@ public class TransactionController {
     public ResponseEntity<TransactionDTO> updateTransaction(
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable String id,
-            @RequestBody UpdateTransactionDTO dto
+            @Valid @RequestBody UpdateTransactionDTO dto
     ) {
         String userId = userDetails.getUsername();
         TransactionDTO updated = transactionService.updateTransaction(userId, id, dto);

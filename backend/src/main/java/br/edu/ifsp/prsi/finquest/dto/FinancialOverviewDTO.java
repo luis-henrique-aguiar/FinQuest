@@ -8,6 +8,5 @@ public record FinancialOverviewDTO(
         BigDecimal totalExpense,
         BigDecimal balance,
         BigDecimal savingsRate,
-        List<CategorySummaryDTO> expensesByCategory,
         List<TransactionDTO> recentTransactions
 ) {}

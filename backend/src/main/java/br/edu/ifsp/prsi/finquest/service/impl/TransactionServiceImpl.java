@@ -38,7 +38,7 @@ public class TransactionServiceImpl implements TransactionService {
 
         Transaction saved = transactionRepository.save(transaction);
 
-        return toDTO(saved);
+        return TransactionDTO.fromEntity(saved);
     }
 
     @Transactional
@@ -63,7 +63,7 @@ public class TransactionServiceImpl implements TransactionService {
         transaction.setNotes(dto.notes());
 
         Transaction updated = transactionRepository.save(transaction);
-        return toDTO(updated);
+        return TransactionDTO.fromEntity(updated);
     }
 
     @Transactional
@@ -83,7 +83,7 @@ public class TransactionServiceImpl implements TransactionService {
     public List<TransactionDTO> getAllTransactions(String userId) {
         return transactionRepository.findByUserIdOrderByDateDesc(userId)
                 .stream()
-                .map(this::toDTO)
+                .map(TransactionDTO::fromEntity)
                 .toList();
     }
 
@@ -96,7 +96,7 @@ public class TransactionServiceImpl implements TransactionService {
         return transactionRepository
                 .findByUserIdAndDateBetweenOrderByDateDesc(userId, startDate, endDate)
                 .stream()
-                .map(this::toDTO)
+                .map(TransactionDTO::fromEntity)
                 .toList();
     }
 
@@ -107,18 +107,10 @@ public class TransactionServiceImpl implements TransactionService {
             LocalDate endDate
     ) {
         BigDecimal totalIncome = transactionRepository
-                .sumByUserIdAndTypeAndDateBetween(
-                        userId, TransactionType.INCOME, startDate, endDate
-                ) != null ? transactionRepository.sumByUserIdAndTypeAndDateBetween(
-                userId, TransactionType.INCOME, startDate, endDate
-        ) : BigDecimal.ZERO;
+                .sumByUserIdAndTypeAndDateBetween(userId, TransactionType.INCOME, startDate, endDate);
 
         BigDecimal totalExpense = transactionRepository
-                .sumByUserIdAndTypeAndDateBetween(
-                        userId, TransactionType.EXPENSE, startDate, endDate
-                ) != null ? transactionRepository.sumByUserIdAndTypeAndDateBetween(
-                userId, TransactionType.EXPENSE, startDate, endDate
-        ) : BigDecimal.ZERO;
+                .sumByUserIdAndTypeAndDateBetween(userId, TransactionType.EXPENSE, startDate, endDate);
 
         BigDecimal balance = totalIncome.subtract(totalExpense);
 
@@ -127,35 +119,11 @@ public class TransactionServiceImpl implements TransactionService {
                 .multiply(BigDecimal.valueOf(100))
                 : BigDecimal.ZERO;
 
-        List<Object[]> categoryData = transactionRepository
-                .findExpensesByCategory(userId, startDate, endDate);
-
-        List<CategorySummaryDTO> expensesByCategory = categoryData.stream()
-                .map(data -> {
-                    String category = (String) data[0];
-                    BigDecimal amount = (BigDecimal) data[1];
-                    BigDecimal percentage = totalExpense.compareTo(BigDecimal.ZERO) > 0
-                            ? amount.divide(totalExpense, 4, RoundingMode.HALF_UP)
-                            .multiply(BigDecimal.valueOf(100))
-                            : BigDecimal.ZERO;
-
-                    int count = (int) transactionRepository
-                            .findByUserIdAndDateBetweenOrderByDateDesc(
-                                    userId, startDate, endDate
-                            )
-                            .stream()
-                            .filter(t -> t.getCategory().equals(category))
-                            .count();
-
-                    return new CategorySummaryDTO(category, amount, percentage, count);
-                })
-                .toList();
-
         List<TransactionDTO> recentTransactions = transactionRepository
                 .findByUserIdAndDateBetweenOrderByDateDesc(userId, startDate, endDate)
                 .stream()
                 .limit(10)
-                .map(this::toDTO)
+                .map(TransactionDTO::fromEntity)
                 .toList();
 
         return new FinancialOverviewDTO(
@@ -163,20 +131,7 @@ public class TransactionServiceImpl implements TransactionService {
                 totalExpense,
                 balance,
                 savingsRate,
-                expensesByCategory,
                 recentTransactions
-        );
-    }
-
-    private TransactionDTO toDTO(Transaction transaction) {
-        return new TransactionDTO(
-                transaction.getId(),
-                transaction.getType().toString(),
-                transaction.getAmount(),
-                transaction.getDescription(),
-                transaction.getCategory(),
-                transaction.getDate().toString(),
-                transaction.getNotes()
         );
     }
 }
