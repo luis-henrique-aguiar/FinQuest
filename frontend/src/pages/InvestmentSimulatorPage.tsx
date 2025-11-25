@@ -1,279 +1,64 @@
 import React, { useState, useEffect } from "react";
-import styled, { useTheme } from "styled-components";
-import { motion } from "framer-motion";
+import { useTheme } from "styled-components";
 import {
   XAxis,
   YAxis,
   Tooltip,
   ResponsiveContainer,
-  LineChart,
-  Line,
+  AreaChart,
+  Area,
   CartesianGrid,
-  Legend,
 } from "recharts";
-import { TrendingUp, RefreshCw } from "react-feather";
-import Card from "../components/common/Card";
+import {
+  TrendingUp,
+  RefreshCw,
+  Clock,
+  Calculator,
+  BarChart3,
+} from "lucide-react";
 import Button from "../components/common/Button";
-import SectionTitle from "../components/common/SectionTitle";
 import { useToast } from "../hooks/useToast";
+import {
+  fetchInvestmentRates,
+  calculateInvestment,
+  formatRate,
+  getCachedRates,
+  setCachedRates,
+  type InvestmentOption,
+  type InvestmentRatesResponse,
+} from "../services/investimentsService";
 
-// --- Styled Components ---
-
-const PageContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.xl};
-`;
-
-const SimulatorGrid = styled.div`
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: ${({ theme }) => theme.spacing.xl};
-
-  @media (max-width: 968px) {
-    grid-template-columns: 1fr;
-  }
-`;
-
-const FormContainer = styled(Card)`
-  padding: ${({ theme }) => theme.spacing.xl};
-  display: flex;
-  flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.lg};
-  height: fit-content;
-`;
-
-const ResultContainer = styled(Card)`
-  padding: ${({ theme }) => theme.spacing.xl};
-  display: flex;
-  flex-direction: column;
-  min-height: 400px;
-`;
-
-const InputGroup = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.xs};
-
-  label {
-    font-weight: ${({ theme }) => theme.typography.fontWeight.semiBold};
-    font-size: 0.9rem;
-    color: ${({ theme }) => theme.colors.textDark};
-  }
-`;
-
-const Input = styled.input`
-  width: 100%;
-  padding: 0.75rem 1rem;
-  border-radius: ${({ theme }) => theme.borderRadius.medium};
-  border: 2px solid ${({ theme }) => theme.colors.textMedium}33;
-  font-size: 1rem;
-  transition: all 0.3s ease;
-  background-color: ${({ theme }) => theme.colors.white};
-  color: ${({ theme }) => theme.colors.textDark};
-
-  &:focus {
-    outline: none;
-    border-color: ${({ theme }) => theme.colors.primary};
-    box-shadow: 0 0 0 4px ${({ theme }) => theme.colors.primary}22;
-  }
-
-  &[type="number"] {
-    &::-webkit-outer-spin-button,
-    &::-webkit-inner-spin-button {
-      -webkit-appearance: none;
-      margin: 0;
-    }
-  }
-`;
-
-const InvestmentOption = styled.label<{ $selected: boolean }>`
-  display: flex;
-  align-items: center;
-  gap: ${({ theme }) => theme.spacing.md};
-  padding: ${({ theme }) => theme.spacing.md};
-  border-radius: ${({ theme }) => theme.borderRadius.medium};
-  border: 2px solid
-    ${({ $selected, theme }) =>
-      $selected ? theme.colors.primary : `${theme.colors.textMedium}33`};
-  background: ${({ $selected, theme }) =>
-    $selected ? `${theme.colors.primary}11` : theme.colors.white};
-  cursor: pointer;
-  transition: all 0.2s ease;
-  position: relative;
-
-  &:hover {
-    border-color: ${({ theme }) => theme.colors.primary};
-    background: ${({ theme }) => `${theme.colors.primary}11`};
-  }
-
-  input {
-    cursor: pointer;
-  }
-`;
-
-const InvestmentInfo = styled.div`
-  flex: 1;
-
-  .name {
-    font-weight: ${({ theme }) => theme.typography.fontWeight.semiBold};
-    color: ${({ theme }) => theme.colors.textDark};
-    margin-bottom: 4px;
-  }
-
-  .rate {
-    font-size: 0.85rem;
-    color: ${({ theme }) => theme.colors.textMedium};
-  }
-
-  .badge {
-    display: inline-block;
-    font-size: 0.7rem;
-    background: ${({ theme }) => theme.colors.secondary};
-    color: white;
-    padding: 2px 6px;
-    border-radius: ${({ theme }) => theme.borderRadius.pill};
-    margin-left: 6px;
-    font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
-  }
-`;
-
-const ResultHeader = styled.div`
-  text-align: center;
-  margin-bottom: ${({ theme }) => theme.spacing.xl};
-
-  .period-label {
-    font-size: 0.95rem;
-    color: ${({ theme }) => theme.colors.textMedium};
-    margin-bottom: ${({ theme }) => theme.spacing.sm};
-  }
-
-  .final-value {
-    font-size: 2.5rem;
-    font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
-    color: ${({ theme }) => theme.colors.secondary};
-    margin: 0;
-    line-height: 1;
-  }
-
-  .investment-name {
-    font-size: 0.9rem;
-    color: ${({ theme }) => theme.colors.textMedium};
-    margin-top: ${({ theme }) => theme.spacing.sm};
-  }
-`;
-
-const StatsGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: ${({ theme }) => theme.spacing.md};
-  margin-bottom: ${({ theme }) => theme.spacing.xl};
-`;
-
-const StatItem = styled.div`
-  padding: ${({ theme }) => theme.spacing.md};
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: ${({ theme }) => theme.borderRadius.medium};
-
-  .label {
-    font-size: 0.8rem;
-    color: ${({ theme }) => theme.colors.textMedium};
-    margin-bottom: 4px;
-  }
-
-  .value {
-    font-size: 1.1rem;
-    font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
-    color: ${({ theme }) => theme.colors.textDark};
-  }
-`;
-
-const EmptyState = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  gap: ${({ theme }) => theme.spacing.md};
-  color: ${({ theme }) => theme.colors.textMedium};
-  text-align: center;
-
-  .icon {
-    font-size: 3rem;
-    opacity: 0.5;
-  }
-
-  p {
-    margin: 0;
-    max-width: 300px;
-  }
-`;
-
-const InsightCard = styled(motion.div)`
-  padding: ${({ theme }) => theme.spacing.xl};
-  border-radius: ${({ theme }) => theme.borderRadius.large};
-  background: linear-gradient(
-    135deg,
-    ${({ theme }) => theme.colors.primary}11 0%,
-    ${({ theme }) => theme.colors.secondary}11 100%
-  );
-  border-left: 4px solid ${({ theme }) => theme.colors.secondary};
-
-  h3 {
-    margin: 0 0 ${({ theme }) => theme.spacing.md} 0;
-    color: ${({ theme }) => theme.colors.secondary};
-    font-size: 1.1rem;
-    display: flex;
-    align-items: center;
-    gap: ${({ theme }) => theme.spacing.sm};
-  }
-
-  p {
-    margin: 0;
-    line-height: 1.6;
-    color: ${({ theme }) => theme.colors.textDark};
-  }
-
-  strong {
-    color: ${({ theme }) => theme.colors.secondary};
-  }
-`;
-
-const LoadingOverlay = styled.div`
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: ${({ theme }) => theme.colors.white}99;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: ${({ theme }) => theme.borderRadius.large};
-  z-index: 10;
-`;
-
-const UpdateBadge = styled.div`
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.75rem;
-  color: ${({ theme }) => theme.colors.textMedium};
-  padding: 4px 8px;
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: ${({ theme }) => theme.borderRadius.pill};
-  margin-top: ${({ theme }) => theme.spacing.sm};
-`;
-
-// --- Interfaces ---
-
-interface InvestmentOption {
-  id: string;
-  name: string;
-  rate: number;
-  description?: string;
-  recommended?: boolean;
-}
+import {
+  PageContainer,
+  Header,
+  Title,
+  Subtitle,
+  HeroSection,
+  HeroHeader,
+  HeroContent,
+  UpdateBadge,
+  MarketStatsGrid,
+  MarketStatCard,
+  SimulatorGrid,
+  FormContainer,
+  FormTitle,
+  ResultContainer,
+  InputGroup,
+  Label,
+  Input,
+  InvestmentSelectWrapper,
+  ResultHeader,
+  StatsGrid,
+  StatItem,
+  ChartSection,
+  ChartHeader,
+  ChartLegendCustom,
+  LegendItem,
+  EmptyState,
+  InsightCard,
+  LoadingOverlay,
+} from "./InvestmentSimulatorPage.styles";
+import InvestmentSelect from "../components/gamification/InvestmentSelect";
 
 interface SimulationResult {
   totalInvested: number;
@@ -286,79 +71,121 @@ interface SimulationResult {
   }>;
 }
 
-// --- Mock da API ---
-// TODO: Substituir por chamada real à API
-const fetchInvestmentRates = async (): Promise<InvestmentOption[]> => {
-  // Simula delay de API
-  await new Promise((resolve) => setTimeout(resolve, 1000));
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: Array<{
+    value: number;
+    dataKey: string;
+    color: string;
+  }>;
+  label?: string | number;
+}
 
-  // Simula resposta da API com taxas atualizadas
-  return [
-    {
-      id: "poupanca",
-      name: "Poupança",
-      rate: 0.0617,
-      description: "Rendimento de 70% da Selic + TR",
-    },
-    {
-      id: "cdb",
-      name: "CDB (100% CDI)",
-      rate: 0.1075,
-      description: "Certificado de Depósito Bancário",
-      recommended: true,
-    },
-    {
-      id: "selic",
-      name: "Tesouro Selic",
-      rate: 0.1125,
-      description: "Título público atrelado à taxa Selic",
-    },
-    {
-      id: "ipca",
-      name: "Tesouro IPCA+",
-      rate: 0.118,
-      description: "Título protegido da inflação",
-    },
-  ];
+const CustomTooltip: React.FC<CustomTooltipProps> = ({
+  active,
+  payload,
+  label,
+}) => {
+  const theme = useTheme();
+
+  if (!active || !payload || payload.length === 0) return null;
+
+  const formatCurrency = (value: number) =>
+    value.toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+
+  return (
+    <div
+      style={{
+        background: theme.colors.white,
+        border: `1px solid ${theme.colors.border}`,
+        borderRadius: theme.borderRadius.medium,
+        padding: theme.spacing.md,
+        boxShadow: theme.shadows.medium,
+      }}
+    >
+      <p
+        style={{
+          margin: 0,
+          marginBottom: theme.spacing.sm,
+          fontWeight: theme.typography.fontWeight.semiBold,
+          color: theme.colors.textDark,
+          fontFamily: theme.typography.fontFamily.body,
+          fontSize: "0.875rem",
+        }}
+      >
+        Mês {label}
+      </p>
+      {payload.map((entry, index) => (
+        <p
+          key={index}
+          style={{
+            margin: 0,
+            marginTop: index > 0 ? theme.spacing.xs : 0,
+            color: entry.color,
+            fontFamily: theme.typography.fontFamily.body,
+            fontSize: "0.875rem",
+            display: "flex",
+            justifyContent: "space-between",
+            gap: theme.spacing.md,
+          }}
+        >
+          <span>{entry.dataKey === "invested" ? "Investido:" : "Total:"}</span>
+          <strong>{formatCurrency(entry.value)}</strong>
+        </p>
+      ))}
+    </div>
+  );
 };
-
-// --- Componente Principal ---
 
 export const InvestmentSimulatorPage: React.FC = () => {
   const [initialValue, setInitialValue] = useState("");
   const [monthlyValue, setMonthlyValue] = useState("");
   const [period, setPeriod] = useState("5");
-  const [type, setType] = useState("cdb");
+  const [type, setType] = useState("cdb_100");
   const [result, setResult] = useState<SimulationResult | null>(null);
-  const [investmentOptions, setInvestmentOptions] = useState<
-    InvestmentOption[]
-  >([]);
+  const [investmentOptions, setInvestmentOptions] = useState<InvestmentOption[]>(
+    []
+  );
+  const [ratesData, setRatesData] = useState<InvestmentRatesResponse | null>(
+    null
+  );
   const [isLoading, setIsLoading] = useState(false);
-  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
 
   const theme = useTheme();
   const { addToast } = useToast();
 
-  // Carrega taxas ao montar o componente
   useEffect(() => {
     loadInvestmentRates();
   }, []);
 
   const loadInvestmentRates = async () => {
+    const cached = getCachedRates();
+    if (cached) {
+      setRatesData(cached);
+      setInvestmentOptions(cached.rates);
+      console.log("✅ Usando taxas do cache");
+      return;
+    }
+
     setIsLoading(true);
     try {
-      const rates = await fetchInvestmentRates();
-      setInvestmentOptions(rates);
-      setLastUpdate(new Date());
-      addToast("Taxas atualizadas com sucesso!", "success");
+      const data = await fetchInvestmentRates();
+      setRatesData(data);
+      setInvestmentOptions(data.rates);
+      setCachedRates(data);
+
+      if (data.source === "fallback") {
+        addToast("Usando taxas padrão (API offline)", "info");
+      } else {
+        addToast("Taxas atualizadas com sucesso!", "success");
+      }
     } catch (error) {
       addToast("Erro ao carregar taxas. Usando valores padrão.", "error");
-      // Fallback para taxas padrão
-      setInvestmentOptions([
-        { id: "poupanca", name: "Poupança", rate: 0.06 },
-        { id: "cdb", name: "CDB (100% CDI)", rate: 0.1, recommended: true },
-        { id: "selic", name: "Tesouro Selic", rate: 0.105 },
-      ]);
     } finally {
       setIsLoading(false);
     }
@@ -368,88 +195,156 @@ export const InvestmentSimulatorPage: React.FC = () => {
     const P = parseFloat(initialValue) || 0;
     const PMT = parseFloat(monthlyValue) || 0;
     const years = parseInt(period) || 1;
-    const n = years * 12;
 
-    const selectedInvestment = investmentOptions.find((opt) => opt.id === type);
-    if (!selectedInvestment) return;
-
-    const r = selectedInvestment.rate / 12;
-
-    // Calcula valor final
-    const finalAmount =
-      P * Math.pow(1 + r, n) + PMT * ((Math.pow(1 + r, n) - 1) / r);
-    const totalInvested = P + PMT * n;
-    const totalInterest = finalAmount - totalInvested;
-
-    // Gera dados mensais para o gráfico
-    const monthlyData = [];
-    for (let month = 0; month <= n; month++) {
-      const invested = P + PMT * month;
-      const total =
-        P * Math.pow(1 + r, month) +
-        (month > 0 ? PMT * ((Math.pow(1 + r, month) - 1) / r) : 0);
-      monthlyData.push({ month, invested, total });
+    if (P === 0 && PMT === 0) {
+      addToast("Informe um valor inicial ou aporte mensal", "error");
+      return;
     }
 
-    setResult({ totalInvested, totalInterest, finalAmount, monthlyData });
+    if (years < 1) {
+      addToast("O período deve ser de pelo menos 1 ano", "error");
+      return;
+    }
+
+    const selectedInvestment = investmentOptions.find((opt) => opt.id === type);
+    if (!selectedInvestment) {
+      addToast("Selecione um tipo de investimento", "error");
+      return;
+    }
+
+    const calculatedResult = calculateInvestment(
+      P,
+      PMT,
+      years,
+      selectedInvestment.rate
+    );
+    setResult(calculatedResult);
     addToast("Simulação calculada!", "success");
   };
 
   const formatCurrency = (value: number) =>
-    value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+    value.toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+
+  const formatLastUpdate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleString("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
 
   const selectedInvestment = investmentOptions.find((opt) => opt.id === type);
 
   return (
     <PageContainer>
-      <div>
-        <SectionTitle>Simulador de Investimentos</SectionTitle>
-        <p>
-          Veja como seu dinheiro pode crescer com o poder dos juros compostos!
-        </p>
-        {lastUpdate && (
-          <UpdateBadge>
-            <RefreshCw size={12} />
-            Atualizado em {lastUpdate.toLocaleTimeString("pt-BR")}
-          </UpdateBadge>
-        )}
-      </div>
+      {/* Hero Section com Header + Market Stats */}
+      <HeroSection>
+        <HeroHeader>
+          <HeroContent>
+            <Header>
+              <Title>
+                <TrendingUp size={32} />
+                Simulador de Investimentos
+              </Title>
+              <Subtitle>
+                Veja como seu dinheiro pode crescer com o poder dos juros
+                compostos! Compare diferentes tipos de investimento e planeje
+                seu futuro financeiro.
+              </Subtitle>
+            </Header>
+          </HeroContent>
 
+          {ratesData && (
+            <UpdateBadge>
+              <Clock size={14} />
+              Atualizado em {formatLastUpdate(ratesData.lastUpdate)}
+            </UpdateBadge>
+          )}
+        </HeroHeader>
+
+        {/* Market Stats Grid */}
+        {ratesData?.rawData && (
+          <MarketStatsGrid>
+            <MarketStatCard>
+              <div className="rate-name">Selic</div>
+              <div className="rate-value">
+                {ratesData.rawData.selic.toFixed(2)}%
+              </div>
+            </MarketStatCard>
+            <MarketStatCard>
+              <div className="rate-name">CDI</div>
+              <div className="rate-value">
+                {ratesData.rawData.cdi.toFixed(2)}%
+              </div>
+            </MarketStatCard>
+            <MarketStatCard>
+              <div className="rate-name">IPCA</div>
+              <div className="rate-value">
+                {ratesData.rawData.ipca.toFixed(2)}%
+              </div>
+            </MarketStatCard>
+            <MarketStatCard>
+              <div className="rate-name">TR</div>
+              <div className="rate-value">
+                {ratesData.rawData.tr.toFixed(2)}%
+              </div>
+            </MarketStatCard>
+          </MarketStatsGrid>
+        )}
+      </HeroSection>
+
+      {/* Simulator Grid */}
       <SimulatorGrid>
-        <FormContainer variant="elevated">
+        {/* Form */}
+        <FormContainer>
           {isLoading && (
             <LoadingOverlay>
-              <RefreshCw
-                size={32}
-                style={{ animation: "spin 1s linear infinite" }}
-              />
+              <RefreshCw size={32} className="spinner" />
+              <p>Carregando taxas atualizadas...</p>
             </LoadingOverlay>
           )}
 
+          <FormTitle>
+            <Calculator size={20} />
+            Configure sua Simulação
+          </FormTitle>
+
           <InputGroup>
-            <label htmlFor="initialValue">Valor Inicial (R$)</label>
+            <Label htmlFor="initialValue">Valor Inicial (R$)</Label>
             <Input
               id="initialValue"
               type="number"
-              placeholder="Ex: 1000"
+              placeholder="Ex: 1.000"
               value={initialValue}
               onChange={(e) => setInitialValue(e.target.value)}
+              min="0"
+              step="100"
             />
           </InputGroup>
 
           <InputGroup>
-            <label htmlFor="monthlyValue">Aporte Mensal (R$)</label>
+            <Label htmlFor="monthlyValue">Aporte Mensal (R$)</Label>
             <Input
               id="monthlyValue"
               type="number"
               placeholder="Ex: 200"
               value={monthlyValue}
               onChange={(e) => setMonthlyValue(e.target.value)}
+              min="0"
+              step="50"
             />
           </InputGroup>
 
           <InputGroup>
-            <label htmlFor="period">Período (Anos)</label>
+            <Label htmlFor="period">Período (Anos)</Label>
             <Input
               id="period"
               type="number"
@@ -462,47 +357,25 @@ export const InvestmentSimulatorPage: React.FC = () => {
           </InputGroup>
 
           <InputGroup>
-            <label>Tipo de Investimento</label>
-            <div
-              style={{ display: "flex", flexDirection: "column", gap: "8px" }}
-            >
-              {investmentOptions.map((opt) => (
-                <InvestmentOption key={opt.id} $selected={type === opt.id}>
-                  <input
-                    type="radio"
-                    name="investmentType"
-                    value={opt.id}
-                    checked={type === opt.id}
-                    onChange={() => setType(opt.id)}
-                  />
-                  <InvestmentInfo>
-                    <div className="name">
-                      {opt.name}
-                      {opt.recommended && (
-                        <span className="badge">Recomendado</span>
-                      )}
-                    </div>
-                    <div className="rate">
-                      {(opt.rate * 100).toFixed(2)}% ao ano
-                    </div>
-                  </InvestmentInfo>
-                </InvestmentOption>
-              ))}
-            </div>
+            <Label>Tipo de Investimento</Label>
+            <InvestmentSelectWrapper>
+              <InvestmentSelect
+                options={investmentOptions}
+                value={type}
+                onChange={setType}
+                formatRate={formatRate}
+              />
+            </InvestmentSelectWrapper>
           </InputGroup>
 
-          <Button
-            variant="primary"
-            size="large"
-            onClick={handleSimulate}
-            fullWidth
-            icon={<TrendingUp size={18} />}
-          >
+          <Button variant="primary" size="large" onClick={handleSimulate} fullWidth>
+            <TrendingUp size={18} style={{ marginRight: "8px" }} />
             Simular Investimento
           </Button>
         </FormContainer>
 
-        <ResultContainer variant="elevated">
+        {/* Results */}
+        <ResultContainer>
           {result ? (
             <>
               <ResultHeader>
@@ -527,71 +400,124 @@ export const InvestmentSimulatorPage: React.FC = () => {
                 </StatItem>
                 <StatItem>
                   <div className="label">Juros Ganhos</div>
-                  <div
-                    className="value"
-                    style={{ color: theme.colors.secondary }}
-                  >
-                    {formatCurrency(result.totalInterest)}
+                  <div className="value" style={{ color: theme.colors.success }}>
+                    +{formatCurrency(result.totalInterest)}
                   </div>
                 </StatItem>
               </StatsGrid>
 
-              <ResponsiveContainer width="100%" height={200}>
-                <LineChart data={result.monthlyData}>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke={theme.colors.textMedium + "33"}
-                  />
-                  <XAxis
-                    dataKey="month"
-                    label={{
-                      value: "Meses",
-                      position: "insideBottom",
-                      offset: -5,
-                    }}
-                    tick={{ fontSize: 12 }}
-                  />
-                  <YAxis
-                    tickFormatter={(value) =>
-                      `R$ ${(value / 1000).toFixed(0)}k`
-                    }
-                    tick={{ fontSize: 12 }}
-                  />
-                  <Tooltip
-                    formatter={(value: number) => formatCurrency(value)}
-                    labelFormatter={(label) => `Mês ${label}`}
-                  />
-                  <Legend />
-                  <Line
-                    type="monotone"
-                    dataKey="invested"
-                    stroke={theme.colors.primary}
-                    name="Investido"
-                    strokeWidth={2}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="total"
-                    stroke={theme.colors.secondary}
-                    name="Total"
-                    strokeWidth={2}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+              <ChartSection>
+                <ChartHeader>
+                  <h4>
+                    <BarChart3 size={18} />
+                    Evolução do Patrimônio
+                  </h4>
+                  <ChartLegendCustom>
+                    <LegendItem $color={theme.colors.primary}>
+                      Investido
+                    </LegendItem>
+                    <LegendItem $color={theme.colors.success}>Total</LegendItem>
+                  </ChartLegendCustom>
+                </ChartHeader>
+
+                <ResponsiveContainer width="100%" height={200}>
+                  <AreaChart data={result.monthlyData}>
+                    <defs>
+                      <linearGradient
+                        id="colorInvested"
+                        x1="0"
+                        y1="0"
+                        x2="0"
+                        y2="1"
+                      >
+                        <stop
+                          offset="5%"
+                          stopColor={theme.colors.primary}
+                          stopOpacity={0.3}
+                        />
+                        <stop
+                          offset="95%"
+                          stopColor={theme.colors.primary}
+                          stopOpacity={0}
+                        />
+                      </linearGradient>
+                      <linearGradient
+                        id="colorTotal"
+                        x1="0"
+                        y1="0"
+                        x2="0"
+                        y2="1"
+                      >
+                        <stop
+                          offset="5%"
+                          stopColor={theme.colors.success}
+                          stopOpacity={0.3}
+                        />
+                        <stop
+                          offset="95%"
+                          stopColor={theme.colors.success}
+                          stopOpacity={0}
+                        />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke={theme.colors.border}
+                      vertical={false}
+                    />
+                    <XAxis
+                      dataKey="month"
+                      tick={{ fontSize: 11, fill: theme.colors.textMedium }}
+                      axisLine={{ stroke: theme.colors.border }}
+                      tickLine={false}
+                      interval="preserveStartEnd"
+                    />
+                    <YAxis
+                      tickFormatter={(value) =>
+                        `R$ ${(value / 1000).toFixed(0)}k`
+                      }
+                      tick={{ fontSize: 11, fill: theme.colors.textMedium }}
+                      axisLine={false}
+                      tickLine={false}
+                      width={65}
+                    />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Area
+                      type="monotone"
+                      dataKey="invested"
+                      stroke={theme.colors.primary}
+                      fill="url(#colorInvested)"
+                      strokeWidth={2}
+                      name="Investido"
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="total"
+                      stroke={theme.colors.success}
+                      fill="url(#colorTotal)"
+                      strokeWidth={2}
+                      name="Total"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </ChartSection>
             </>
           ) : (
             <EmptyState>
               <div className="icon">📊</div>
+              <h3>Comece a Simular!</h3>
               <p>
                 Preencha os dados ao lado e clique em "Simular Investimento"
-                para ver como seu dinheiro pode crescer!
+                para visualizar como seu dinheiro pode crescer ao longo do
+                tempo.
               </p>
             </EmptyState>
           )}
         </ResultContainer>
       </SimulatorGrid>
 
-      {result && (
+      {/* Insight Card */}
+      {result && selectedInvestment && (
         <InsightCard
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -605,8 +531,7 @@ export const InvestmentSimulatorPage: React.FC = () => {
             <strong>{formatCurrency(result.totalInterest)}</strong> em
             rendimentos. Isso representa um retorno de{" "}
             <strong>
-              {((result.totalInterest / result.totalInvested) * 100).toFixed(1)}
-              %
+              {((result.totalInterest / result.totalInvested) * 100).toFixed(1)}%
             </strong>{" "}
             sobre o valor investido! É o seu dinheiro trabalhando para você! 🚀
           </p>

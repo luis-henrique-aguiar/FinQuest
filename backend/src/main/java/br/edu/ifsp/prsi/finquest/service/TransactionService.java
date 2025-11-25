@@ -19,4 +19,16 @@ public interface TransactionService {
     YearlyReportDTO getYearlyReport(String userId, int year);
 
     DailyExpensesReportDTO getDailyExpensesByPeriod(String userId, LocalDate startDate, LocalDate endDate);
+
+    TransactionDTO createTransaction(String userId, CreateTransactionDTO dto);
+
+    TransactionDTO updateTransaction(String userId, String transactionId, UpdateTransactionDTO dto);
+
+    void deleteTransaction(String userId, String transactionId);
+    
+    FinancialOverviewDTO getFinancialOverview(
+            String userId,
+            LocalDate startDate,
+            LocalDate endDate
+    );
 }

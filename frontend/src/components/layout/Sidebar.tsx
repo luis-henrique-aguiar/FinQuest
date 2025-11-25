@@ -10,12 +10,12 @@ import {
   Home,
   Target,
   BookOpen,
-  DollarSign,
   Award,
   TrendingUp,
   FileText,
   User,
   Shield,
+  Wallet,
 } from "lucide-react";
 import { useThemeToggle } from "../../context/ThemeContext";
 import ProgressBar from "../gamification/ProgressBar";
@@ -374,9 +374,9 @@ export const Sidebar: React.FC = () => {
             <BookOpen />
             <span>Aprenda</span>
           </NavItem>
-          <NavItem to="/budget" onClick={() => setIsOpen(false)}>
-            <DollarSign />
-            <span>Orçamento</span>
+          <NavItem to="/planning" onClick={() => setIsOpen(false)}>
+            <Wallet />
+            <span>Planejamento</span>
           </NavItem>
           <NavItem to="/goals" onClick={() => setIsOpen(false)}>
             <Award />

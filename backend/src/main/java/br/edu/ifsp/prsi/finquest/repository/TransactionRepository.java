@@ -12,13 +12,13 @@ import java.time.LocalDate;
 import java.util.List;
 
 @Repository
-public interface TransactionRepository extends JpaRepository<Transaction, Long> {
+public interface TransactionRepository extends JpaRepository<Transaction, String> {
 
     List<Transaction> findByUserIdAndDateBetweenOrderByDateDesc(String userId, LocalDate startDate, LocalDate endDate);
 
     List<Transaction> findByUserIdOrderByDateDesc(String userId);
 
-    @Query("SELECT SUM(t.amount) FROM Transaction t " +
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t " +
             "WHERE t.userId = :userId AND t.type = :type " +
             "AND t.date BETWEEN :startDate AND :endDate")
     BigDecimal sumByUserIdAndTypeAndDateBetween(
@@ -79,6 +79,16 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
         AND t.date BETWEEN :startDate AND :endDate
     """)
     long countByUserIdAndDateBetween(
+            @Param("userId") String userId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+    );
+
+    @Query("SELECT t.category, COALESCE(SUM(t.amount), 0) FROM Transaction t " +
+            "WHERE t.userId = :userId AND t.type = 'EXPENSE' " +
+            "AND t.date BETWEEN :startDate AND :endDate " +
+            "GROUP BY t.category")
+    List<Object[]> findExpensesByCategory(
             @Param("userId") String userId,
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate
