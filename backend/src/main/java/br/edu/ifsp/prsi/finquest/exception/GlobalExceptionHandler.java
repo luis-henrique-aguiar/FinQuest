@@ -21,7 +21,7 @@ public class GlobalExceptionHandler {
         List<String> fieldErrors = ex.getBindingResult()
                 .getFieldErrors()
                 .stream()
-                .map(error -> error.getField() + ": " + error.getDefaultMessage())
+                .map(error -> error.getDefaultMessage())
                 .toList();
 
         var errorResponse = ErrorResponseDTO.validation(

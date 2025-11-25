@@ -106,10 +106,10 @@ export const GoalsPage: React.FC = () => {
   const handleCreateGoal = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!goalName.trim() || !goalTarget || parseFloat(goalTarget) <= 0) {
+    /*if (!goalName.trim() || !goalTarget || parseFloat(goalTarget) <= 0) {
       addToast("Por favor, preencha todos os campos corretamente", "error");
       return;
-    }
+    }*/
 
     try {
       const response = await api.post('/goals', {
@@ -122,18 +122,22 @@ export const GoalsPage: React.FC = () => {
       resetForm();
       addToast("Nova meta criada com sucesso!", "success");
     } catch (error) {
-      console.error('Erro ao criar meta:', error);
-      addToast("Erro ao criar meta. Tente novamente.", "error");
+        if (error?.response?.data?.details) {
+            addToast(`${error.response.data.details[0]}`, "error");
+        } else {
+            console.error('Erro ao criar meta:', error);
+            addToast("Erro ao criar meta. Tente novamente.", "error");
+        }
     }
   };
 
   const handleUpdateGoal = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!selectedGoal || !goalName.trim() || !goalTarget || parseFloat(goalTarget) <= 0 || parseFloat(currentAmountEdit) < 0) {
+    /*if (!selectedGoal || !goalName.trim() || !goalTarget || parseFloat(goalTarget) <= 0 || parseFloat(currentAmountEdit) < 0) {
       addToast("Por favor, preencha todos os campos corretamente", "error");
       return;
-    }
+    }*/
 
     try {
       const previousStatus = selectedGoal.statusLabel;
@@ -182,8 +186,12 @@ export const GoalsPage: React.FC = () => {
           }
       }
     } catch (error) {
-      console.error('Erro ao atualizar meta:', error);
-      addToast("Erro ao atualizar meta. Tente novamente.", "error");
+        if (error?.response?.data?.details) {
+            addToast(`${error.response.data.details[0]}`, "error");
+        } else {
+            console.error('Erro ao atualizar meta:', error);
+            addToast("Erro ao atualizar meta. Tente novamente.", "error");
+        }
     }
   };
 
@@ -253,8 +261,11 @@ export const GoalsPage: React.FC = () => {
           }
       }
     } catch (error) {
-      console.error('Erro ao adicionar fundos:', error);
-      addToast("Erro ao adicionar fundos. Tente novamente.", "error");
+        if (error?.response?.data?.details) {
+            addToast(`${error.response.data.details[0]}`, "error");
+        } else {
+            addToast("Erro ao adicionar fundos. Tente novamente.", "error");
+        }
     }
   };
 
