@@ -12,7 +12,8 @@ import java.time.LocalDate;
 import java.util.List;
 
 @Repository
-public interface TransactionRepository extends JpaRepository<Transaction, Long> {
+public interface TransactionRepository extends JpaRepository<Transaction, String> {
+
     List<Transaction> findByUserIdOrderByDateDesc(String userId);
 
     List<Transaction> findByUserIdAndDateBetweenOrderByDateDesc(

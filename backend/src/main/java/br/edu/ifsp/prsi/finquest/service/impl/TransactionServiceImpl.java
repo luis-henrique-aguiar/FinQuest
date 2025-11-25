@@ -7,8 +7,6 @@ import br.edu.ifsp.prsi.finquest.model.enums.TransactionType;
 import br.edu.ifsp.prsi.finquest.repository.TransactionRepository;
 import br.edu.ifsp.prsi.finquest.service.TransactionService;
 import jakarta.persistence.EntityNotFoundException;
-import org.antlr.v4.runtime.misc.LogManager;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,7 +48,7 @@ public class TransactionServiceImpl implements TransactionService {
             String transactionId,
             UpdateTransactionDTO dto
     ) {
-        Transaction transaction = transactionRepository.findById(Long.valueOf(transactionId))
+        Transaction transaction = transactionRepository.findById(transactionId)
                 .orElseThrow(() -> new EntityNotFoundException("Transaction not found"));
 
         if (!transaction.getUserId().equals(userId)) {
@@ -71,7 +69,7 @@ public class TransactionServiceImpl implements TransactionService {
     @Transactional
     @Override
     public void deleteTransaction(String userId, String transactionId) {
-        Transaction transaction = transactionRepository.findById(Long.valueOf(transactionId))
+        Transaction transaction = transactionRepository.findById(transactionId)
                 .orElseThrow(() -> new EntityNotFoundException("Transaction not found"));
 
         if (!transaction.getUserId().equals(userId)) {
