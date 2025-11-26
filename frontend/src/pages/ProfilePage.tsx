@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { Lock } from "react-feather";
 import { useAuth } from "../hooks/useAuth";
+import { useToast } from "../hooks/useToast";
+import api from "../services/api";
 import Button from "../components/common/Button";
 import FinPoints from "../components/gamification/FinPoints";
 import Badge from "../components/gamification/Badge";
@@ -44,8 +46,9 @@ const achievements = [
 ];
 
 export const ProfilePage: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, updateUserContext } = useAuth();
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const { addToast } = useToast();
 
   if (!user) {
     return <div>Carregando perfil...</div>;
@@ -54,6 +57,20 @@ export const ProfilePage: React.FC = () => {
   const progressPercent = calculateLevelProgress(user.totalFinPoints);
   const finPointsForNextLevel = getFinPointsForLevel(user.level + 1);
   const tooltipMessage = `${user.totalFinPoints.toLocaleString()} / ${finPointsForNextLevel.toLocaleString()} FinPoints`;
+
+  const formatRegistrationDate = (dateString: string | undefined): string => {
+    if (!dateString) return "N/A";
+
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return "Data inválida";
+      return date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+
+    } catch (error) {
+      console.error("Erro ao formatar data de registro:", error);
+      return "N/A";
+    }
+  };
 
   const handleSaveAvatar = async (newAvatarUrl: string, file?: File) => {
     if (file) {
@@ -64,26 +81,55 @@ export const ProfilePage: React.FC = () => {
   };
 
   const handleSaveName = async (newName: string) => {
-    console.log("Salvando nome:", newName);
+    if (newName.trim() === user!.name) return;
+
+    try {
+      const response = await api.put("/users/name", {
+        name: newName.trim(),
+      });
+
+      const updatedUserDto = response.data;
+
+      updateUserContext(updatedUserDto);
+      addToast("Nome atualizado com sucesso!", "success");
+
+    } catch (error) {
+      if (error?.response?.data?.details) {
+          addToast(`${error.response.data.details[0]}`, "error");
+      } else {
+          console.log(error);
+          addToast("Erro ao atualizar nome. Tente novamente.", "error");
+      }
+    }
   };
 
   const handleSaveEmail = async (newEmail: string) => {
-    console.log("Salvando email:", newEmail);
+    if (newEmail.trim() === user!.email) return;
+
+    try {
+      const response = await api.put("/users/email", {
+        email: newEmail.trim(),
+      });
+
+      const updatedUserDto = response.data;
+
+      await logout();
+      
+      addToast("E-mail atualizado com sucesso! Por segurança, você foi desconectado e deve fazer login novamente com seu novo e-mail.", "success");
+    } catch (error: any) {
+        console.error("Erro no updateEmail:", error);
+
+        let errorMessage = "Erro ao atualizar email. Tente novamente.";
+
+        if (error?.response?.data?.message) {
+          errorMessage = error.response.data.message;
+        } else if (error?.response?.data?.details) {
+          errorMessage = error.response.data.details[0];
+        }
+
+        addToast(errorMessage, "error");
+    }
   };
-
-    const formatRegistrationDate = (dateString: string | undefined): string => {
-      if (!dateString) return "N/A";
-
-      try {
-        const date = new Date(dateString);
-        if (isNaN(date.getTime())) return "Data inválida";
-        return date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
-
-      } catch (error) {
-        console.error("Erro ao formatar data de registro:", error);
-        return "N/A";
-      }
-    };
 
   return (
     <S.PageContainer>

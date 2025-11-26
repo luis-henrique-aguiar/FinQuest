@@ -106,10 +106,10 @@ export const GoalsPage: React.FC = () => {
   const handleCreateGoal = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    /*if (!goalName.trim() || !goalTarget || parseFloat(goalTarget) <= 0) {
+    if (!goalName.trim() || !goalTarget || parseFloat(goalTarget) <= 0) {
       addToast("Por favor, preencha todos os campos corretamente", "error");
       return;
-    }*/
+    }
 
     try {
       const response = await api.post('/goals', {
@@ -134,10 +134,10 @@ export const GoalsPage: React.FC = () => {
   const handleUpdateGoal = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    /*if (!selectedGoal || !goalName.trim() || !goalTarget || parseFloat(goalTarget) <= 0 || parseFloat(currentAmountEdit) < 0) {
+    if (!selectedGoal || !goalName.trim() || !goalTarget || parseFloat(goalTarget) <= 0 || parseFloat(currentAmountEdit) < 0) {
       addToast("Por favor, preencha todos os campos corretamente", "error");
       return;
-    }*/
+    }
 
     try {
       const previousStatus = selectedGoal.statusLabel;

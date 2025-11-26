@@ -13,10 +13,10 @@ public record UpdateGoalDTO (
         String name,
 
         @NotNull(message = "O valor alvo é obrigatório.")
-        @DecimalMin(value = "0.01", inclusive = true, message = "O Valor alvo deve ser maior que zero.")
+        @DecimalMin(value = "0.01", inclusive = true, message = "O valor alvo deve ser maior que zero.")
         BigDecimal targetAmount,
 
         @NotNull(message = "O valor atual é obrigatório.")
-        @DecimalMin(value = "0.00", inclusive = true, message = "O Valor atual deve ser maior ou igual a zero.")
+        @DecimalMin(value = "0.00", inclusive = true, message = "O valor atual deve ser maior ou igual a zero.")
         BigDecimal currentAmount
 ) {}
