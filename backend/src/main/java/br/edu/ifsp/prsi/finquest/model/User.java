@@ -1,5 +1,6 @@
 package br.edu.ifsp.prsi.finquest.model;
 
+import br.edu.ifsp.prsi.finquest.model.enums.UserRole;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.util.Objects;
@@ -28,6 +29,10 @@ public class User {
 
     @Column(name = "level", nullable = false)
     private Integer level;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private UserRole role = UserRole.USER;
 
     public User() {}
 
@@ -75,6 +80,14 @@ public class User {
         this.level = level;
     }
 
+    public UserRole getRole() {
+        return role;
+    }
+
+    public void setRole(UserRole role) {
+        this.role = role;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;
@@ -97,6 +110,7 @@ public class User {
                 ", budget=" + budget +
                 ", avatarUrl='" + avatarUrl + '\'' +
                 ", level=" + level +
+                ", role=" + role +
                 '}';
     }
 }

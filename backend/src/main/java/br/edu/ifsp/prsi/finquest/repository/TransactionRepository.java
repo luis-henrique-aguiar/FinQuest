@@ -1,9 +1,123 @@
 package br.edu.ifsp.prsi.finquest.repository;
 
 import br.edu.ifsp.prsi.finquest.model.Transaction;
+import br.edu.ifsp.prsi.finquest.model.enums.TransactionType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
+
 @Repository
-public interface TransactionRepository extends JpaRepository<Transaction, Long> {
+public interface TransactionRepository extends JpaRepository<Transaction, String> {
+
+    List<Transaction> findByUserIdAndDateBetweenOrderByDateDesc(String userId, LocalDate startDate, LocalDate endDate);
+
+    List<Transaction> findByUserIdOrderByDateDesc(String userId);
+
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t " +
+            "WHERE t.userId = :userId AND t.type = :type " +
+            "AND t.date BETWEEN :startDate AND :endDate")
+    BigDecimal sumByUserIdAndTypeAndDateBetween(
+            @Param("userId") String userId,
+            @Param("type") TransactionType type,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+    );
+
+    @Query("""
+            SELECT DISTINCT t.category FROM Transaction t
+            WHERE t.userId = :userId
+            AND t.type = :type
+            AND t.date BETWEEN :startDate AND :endDate
+            """)
+    List<String> findDistinctCategoriesByUserIdAndTypeAndDateBetween(
+            @Param("userId") String userId,
+            @Param("type") TransactionType type,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+    );
+
+    @Query("""
+        SELECT SUM(t.amount) FROM Transaction t
+        WHERE t.userId = :userId
+        AND t.date BETWEEN :startDate AND :endDate
+        AND t.type = :type
+        AND t.category = :category
+        GROUP BY t.category
+    """)
+    BigDecimal sumByUserIdAndTypeAndDateBetweenAndCategory(
+            @Param("userId") String userId,
+            @Param("type") TransactionType type,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate,
+            @Param("category") String category
+    );
+
+    @Query("""
+        SELECT COUNT(t) FROM Transaction t
+        WHERE t.userId = :userId
+        AND t.date BETWEEN :startDate AND :endDate
+        AND t.type = :type
+        AND t.category = :category
+        GROUP BY t.category
+    """)
+    long countByUserIdAndTypeAndDateBetweenAndCategory(
+            @Param("userId") String userId,
+            @Param("type") TransactionType type,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate,
+            @Param("category") String category
+    );
+
+    @Query("""
+        SELECT COUNT(t) FROM Transaction t
+        WHERE t.userId = :userId
+        AND t.date BETWEEN :startDate AND :endDate
+    """)
+    long countByUserIdAndDateBetween(
+            @Param("userId") String userId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+    );
+
+    @Query("SELECT t.category, COALESCE(SUM(t.amount), 0) FROM Transaction t " +
+            "WHERE t.userId = :userId AND t.type = 'EXPENSE' " +
+            "AND t.date BETWEEN :startDate AND :endDate " +
+            "GROUP BY t.category")
+    List<Object[]> findExpensesByCategory(
+            @Param("userId") String userId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+    );
+
+    @Query("""
+            SELECT DISTINCT t.date FROM Transaction t
+            WHERE t.userId = :userId
+            AND t.type = :type
+            AND t.date BETWEEN :startDate AND :endDate
+            ORDER BY t.date ASC
+            """)
+    List<LocalDate> findDistinctDatesByUserIdAndTypeAndDateBetween(
+            @Param("userId") String userId,
+            @Param("type") TransactionType type,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+    );
+
+    @Query("""
+        SELECT COUNT(t) FROM Transaction t
+        WHERE t.userId = :userId
+        AND t.date BETWEEN :startDate AND :endDate
+        AND t.type = :type
+    """)
+    long countByUserIdAndTypeAndDateBetween(
+            @Param("userId") String userId,
+            @Param("type") TransactionType type,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+    );
 }
