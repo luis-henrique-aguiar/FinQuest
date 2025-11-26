@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.List;
 
 import java.util.ArrayList;
@@ -116,28 +117,37 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
-    public ExpensesReportDTO getAllExpensesByPeriodGroupedByType(String userId, LocalDate startDate, LocalDate endDate) {
+    public ExpensesReportDTO getAllExpensesByPeriodGroupedByType(
+            String userId,
+            LocalDate startDate,
+            LocalDate endDate
+    ) {
         List<ExpenseInfoDTO> expenses = new ArrayList<>();
 
         List<String> categories = transactionRepository
-                .findAllCategoriesByUserIdAndDateBetweenAndType(userId,TransactionType.EXPENSE,startDate,endDate);
+                .findDistinctCategoriesByUserIdAndTypeAndDateBetween(
+                        userId, TransactionType.EXPENSE, startDate, endDate);
 
-        BigDecimal total_amount = transactionRepository
+        BigDecimal totalAmount = transactionRepository
                 .sumByUserIdAndTypeAndDateBetween(userId, TransactionType.EXPENSE, startDate, endDate);
 
-        BigDecimal amount;
-        long count;
-        BigDecimal percentage;
+        if (totalAmount == null || totalAmount.compareTo(BigDecimal.ZERO) == 0) {
+            return new ExpensesReportDTO(expenses);
+        }
 
-        for (String category : categories){
-            amount = transactionRepository
-                    .sumByUserIdAndTypeAndDateBetweenAndCategory(userId,TransactionType.EXPENSE,startDate,endDate,category);
+        for (String category : categories) {
+            BigDecimal amount = transactionRepository
+                    .sumByUserIdAndTypeAndDateBetweenAndCategory(
+                            userId, TransactionType.EXPENSE, startDate, endDate, category);
 
-            count = transactionRepository
-                    .countByUserIdAndTypeAndDateBetweenAndCategory(userId,TransactionType.EXPENSE,startDate,endDate,category);
+            long count = transactionRepository
+                    .countByUserIdAndTypeAndDateBetweenAndCategory(
+                            userId, TransactionType.EXPENSE, startDate, endDate, category);
 
-            percentage = amount.divide(total_amount).multiply(BigDecimal.valueOf(100));
-            expenses.add(new ExpenseInfoDTO(category,amount, percentage, count));
+            BigDecimal percentage = amount.divide(totalAmount, 4, RoundingMode.HALF_UP)
+                    .multiply(BigDecimal.valueOf(100));
+
+            expenses.add(new ExpenseInfoDTO(category, amount, percentage, count));
         }
 
         expenses.sort(Collections.reverseOrder());
@@ -147,34 +157,64 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     public YearlyReportDTO getYearlyReport(String userId, int year) {
         List<MonthlyReportDTO> reports = new ArrayList<>();
-        BigDecimal receitas;
-        BigDecimal despesas;
-        long transactionCount;
-        LocalDate startDate;
-        LocalDate endDate;
-        for(int i=0; i<MonthlyReportDTO.months.length; i++){
-            startDate = LocalDate.of(year, (i+1), 1);
-            endDate = LocalDate.of(year, (i+1), 31);
-            transactionCount = transactionRepository.countByUserIdAndDateBetween(userId,startDate,endDate);
-            if(transactionCount>0){
-                receitas = transactionRepository.sumByUserIdAndTypeAndDateBetween(userId,TransactionType.INCOME,startDate,endDate);
-                despesas = transactionRepository.sumByUserIdAndTypeAndDateBetween(userId,TransactionType.EXPENSE,startDate,endDate);
-                reports.add(new MonthlyReportDTO(MonthlyReportDTO.months[i],receitas,despesas,receitas.subtract(despesas),transactionCount));
-            }else{
-                reports.add(new MonthlyReportDTO(MonthlyReportDTO.months[i],BigDecimal.ZERO,BigDecimal.ZERO,BigDecimal.ZERO,transactionCount));
+
+        for (int month = 1; month <= 12; month++) {
+            YearMonth yearMonth = YearMonth.of(year, month);
+            LocalDate startDate = yearMonth.atDay(1);
+            LocalDate endDate = yearMonth.atEndOfMonth();
+
+            long transactionCount = transactionRepository
+                    .countByUserIdAndDateBetween(userId, startDate, endDate);
+
+            BigDecimal receitas;
+            BigDecimal despesas;
+
+            if (transactionCount > 0) {
+                receitas = transactionRepository
+                        .sumByUserIdAndTypeAndDateBetween(userId, TransactionType.INCOME, startDate, endDate);
+                despesas = transactionRepository
+                        .sumByUserIdAndTypeAndDateBetween(userId, TransactionType.EXPENSE, startDate, endDate);
+            } else {
+                receitas = BigDecimal.ZERO;
+                despesas = BigDecimal.ZERO;
             }
+
+            reports.add(new MonthlyReportDTO(
+                    MonthlyReportDTO.months[month - 1],
+                    receitas,
+                    despesas,
+                    receitas.subtract(despesas),
+                    transactionCount
+            ));
         }
+
         return new YearlyReportDTO(reports);
     }
 
     @Override
-    public DailyExpensesReportDTO getDailyExpensesByPeriod(String userId, LocalDate startDate, LocalDate endDate) {
+    public DailyExpensesReportDTO getDailyExpensesByPeriod(
+            String userId,
+            LocalDate startDate,
+            LocalDate endDate
+    ) {
         List<DailyExpenseDTO> dailyExpenses = new ArrayList<>();
-        List<LocalDate> dates = transactionRepository.findDistinctDatesByUseridAndDateBetweenAndType(userId,startDate,endDate, TransactionType.EXPENSE);
-        for(LocalDate date : dates){
-            dailyExpenses.add(new DailyExpenseDTO(Integer.toString(date.getDayOfMonth()),
-                    transactionRepository.sumByUserIdAndTypeAndDateBetween(userId,TransactionType.EXPENSE,date,date),
-                    transactionRepository.countByUserIdAndTypeAndDateBetween(userId,TransactionType.EXPENSE,date,date)));
+
+        List<LocalDate> dates = transactionRepository
+                .findDistinctDatesByUserIdAndTypeAndDateBetween(
+                        userId, TransactionType.EXPENSE, startDate, endDate);
+
+        for (LocalDate date : dates) {
+            BigDecimal value = transactionRepository
+                    .sumByUserIdAndTypeAndDateBetween(userId, TransactionType.EXPENSE, date, date);
+
+            long count = transactionRepository
+                    .countByUserIdAndTypeAndDateBetween(userId, TransactionType.EXPENSE, date, date);
+
+            dailyExpenses.add(new DailyExpenseDTO(
+                    String.valueOf(date.getDayOfMonth()),
+                    value != null ? value : BigDecimal.ZERO,
+                    count
+            ));
         }
         return new DailyExpensesReportDTO(dailyExpenses);
     }

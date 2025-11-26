@@ -1,826 +1,663 @@
-import React, { useState, useMemo } from "react";
-import styled, { useTheme } from "styled-components";
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useTheme } from 'styled-components';
 import {
   PieChart,
   Pie,
   Cell,
   ResponsiveContainer,
-  Legend,
-  LineChart,
-  Line,
   XAxis,
   YAxis,
   Tooltip,
   CartesianGrid,
   BarChart,
   Bar,
-} from "recharts";
+  Legend,
+  AreaChart,
+  Area,
+} from 'recharts';
 import {
-  Calendar,
+  BarChart3,
   TrendingUp,
   TrendingDown,
-  AlertCircle,
+  DollarSign,
+  Percent,
   ChevronLeft,
   ChevronRight,
-} from "react-feather";
-import Card from "../components/common/Card";
-import SectionTitle from "../components/common/SectionTitle";
+  AlertCircle,
+  Lightbulb,
+} from 'lucide-react';
+import { useToast } from '../hooks/useToast';
+import {
+  type YearlyReportDTO,
+  type ExpensesReportDTO,
+  type DailyExpensesReportDTO,
+  getYearlyReport,
+  getExpensesByCategory,
+  getDailyExpenses,
+  getSumByType,
+  formatCurrency,
+  getMonthRange,
+  MONTH_NAMES,
+  CHART_COLORS,
+} from '../services/reportsService';
+import * as S from './ReportsPage.styles ';
 
-// --- Styled Components ---
+type PeriodType = 'month' | 'year';
 
-const PageContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.xl};
-`;
+interface ChartData {
+  yearlyData: YearlyReportDTO | null;
+  categoryData: ExpensesReportDTO | null;
+  dailyData: DailyExpensesReportDTO | null;
+  totalIncome: number;
+  totalExpense: number;
+  previousIncome: number;
+  previousExpense: number;
+}
 
-const FilterSection = styled(Card)`
-  padding: ${({ theme }) => theme.spacing.lg};
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: ${({ theme }) => theme.spacing.md};
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: Array<{ value: number; name: string; color: string }>;
+  label?: string;
+}
 
-  @media (max-width: 768px) {
-    flex-direction: column;
-    align-items: stretch;
-  }
-`;
+const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label }) => {
+  const theme = useTheme();
 
-const PeriodSelector = styled.div`
-  display: flex;
-  align-items: center;
-  gap: ${({ theme }) => theme.spacing.md};
-`;
+  if (!active || !payload) return null;
 
-const PeriodButton = styled.button`
-  background: none;
-  border: none;
-  padding: ${({ theme }) => theme.spacing.sm};
-  cursor: pointer;
-  color: ${({ theme }) => theme.colors.primary};
-  border-radius: ${({ theme }) => theme.borderRadius.medium};
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-
-  &:hover {
-    background-color: ${({ theme }) => theme.colors.primary}11;
-  }
-`;
-
-const PeriodDisplay = styled.div`
-  font-size: 1.1rem;
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semiBold};
-  color: ${({ theme }) => theme.colors.textDark};
-  min-width: 200px;
-  text-align: center;
-  text-transform: capitalize;
-`;
-
-const FilterTabs = styled.div`
-  display: flex;
-  gap: ${({ theme }) => theme.spacing.sm};
-  background: ${({ theme }) => theme.colors.background};
-  padding: 4px;
-  border-radius: ${({ theme }) => theme.borderRadius.medium};
-`;
-
-const FilterTab = styled.button<{ $active: boolean }>`
-  padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.lg}`};
-  background-color: ${({ $active, theme }) =>
-    $active ? theme.colors.white : "transparent"};
-  color: ${({ theme }) => theme.colors.textDark};
-  border: none;
-  border-radius: ${({ theme }) => theme.borderRadius.small};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-size: 0.9rem;
-
-  &:hover {
-    background-color: ${({ $active, theme }) =>
-      $active ? theme.colors.white : `${theme.colors.white}88`};
-  }
-`;
-
-const SummaryGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: ${({ theme }) => theme.spacing.lg};
-`;
-
-const SummaryCard = styled(Card)<{ $color?: string; $highlight?: boolean }>`
-  padding: ${({ theme }) => theme.spacing.lg};
-  border-left: 4px solid
-    ${({ $color, theme }) => $color || theme.colors.primary};
-  position: relative;
-  overflow: hidden;
-  transition: all 0.2s ease;
-
-  ${({ $highlight, theme }) =>
-    $highlight &&
-    `
-    background: linear-gradient(135deg, ${theme.colors.accent}11 0%, ${theme.colors.accent}22 100%);
-  `}
-
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: ${({ theme }) => theme.shadows.medium};
-  }
-
-  .header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: ${({ theme }) => theme.spacing.sm};
-  }
-
-  h3 {
-    margin: 0;
-    color: ${({ theme }) => theme.colors.textMedium};
-    font-size: 0.9rem;
-    font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  }
-
-  .icon {
-    opacity: 0.5;
-  }
-
-  .value {
-    font-size: 1.75rem;
-    font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
-    color: ${({ $color, theme }) => $color || theme.colors.textDark};
-    margin: ${({ theme }) => theme.spacing.sm} 0;
-  }
-
-  .comparison {
-    font-size: 0.85rem;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-
-    &.positive {
-      color: ${({ theme }) => theme.colors.secondary};
-    }
-
-    &.negative {
-      color: ${({ theme }) => theme.colors.error};
-    }
-  }
-`;
-
-const ChartsContainer = styled.div`
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: ${({ theme }) => theme.spacing.xl};
-`;
-
-const ChartCard = styled(Card)`
-  padding: ${({ theme }) => theme.spacing.xl};
-
-  .chart-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: ${({ theme }) => theme.spacing.lg};
-
-    h3 {
-      margin: 0;
-      font-size: 1.1rem;
-      color: ${({ theme }) => theme.colors.textDark};
-    }
-
-    .subtitle {
-      font-size: 0.85rem;
-      color: ${({ theme }) => theme.colors.textMedium};
-    }
-  }
-`;
-
-const TwoColumnCharts = styled.div`
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: ${({ theme }) => theme.spacing.xl};
-
-  @media (max-width: 968px) {
-    grid-template-columns: 1fr;
-  }
-`;
-
-const InsightsSection = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.md};
-`;
-
-const InsightCard = styled(Card)<{ $type: "success" | "warning" | "info" }>`
-  padding: ${({ theme }) => theme.spacing.lg};
-  display: flex;
-  gap: ${({ theme }) => theme.spacing.md};
-  align-items: flex-start;
-  border-left: 4px solid
-    ${({ $type, theme }) => {
-      switch ($type) {
-        case "success":
-          return theme.colors.secondary;
-        case "warning":
-          return theme.colors.warning;
-        case "info":
-          return theme.colors.primary;
-        default:
-          return theme.colors.primary;
-      }
-    }};
-  background: ${({ $type, theme }) => {
-    switch ($type) {
-      case "success":
-        return `${theme.colors.secondary}11`;
-      case "warning":
-        return `${theme.colors.warning}11`;
-      case "info":
-        return `${theme.colors.primary}11`;
-      default:
-        return theme.colors.white;
-    }
-  }};
-
-  .icon {
-    flex-shrink: 0;
-  }
-
-  .content {
-    flex: 1;
-
-    h4 {
-      margin: 0 0 ${({ theme }) => theme.spacing.xs} 0;
-      font-size: 1rem;
-      color: ${({ theme }) => theme.colors.textDark};
-    }
-
-    p {
-      margin: 0;
-      line-height: 1.6;
-      color: ${({ theme }) => theme.colors.textDark};
-      font-size: 0.95rem;
-    }
-
-    strong {
-      color: ${({ $type, theme }) => {
-        switch ($type) {
-          case "success":
-            return theme.colors.secondary;
-          case "warning":
-            return theme.colors.warning;
-          case "info":
-            return theme.colors.primary;
-          default:
-            return theme.colors.textDark;
-        }
-      }};
-    }
-  }
-`;
-
-const CategoryList = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.md};
-  margin-top: ${({ theme }) => theme.spacing.md};
-`;
-
-const CategoryItem = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: ${({ theme }) => theme.spacing.sm};
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: ${({ theme }) => theme.borderRadius.medium};
-
-  .category-info {
-    display: flex;
-    align-items: center;
-    gap: ${({ theme }) => theme.spacing.sm};
-
-    .color-dot {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-    }
-
-    .name {
-      font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-    }
-  }
-
-  .value {
-    font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
-    color: ${({ theme }) => theme.colors.textDark};
-  }
-`;
-
-const EmptyState = styled.div`
-  text-align: center;
-  padding: ${({ theme }) => theme.spacing.xxl};
-  color: ${({ theme }) => theme.colors.textMedium};
-
-  .icon {
-    font-size: 3rem;
-    margin-bottom: ${({ theme }) => theme.spacing.md};
-  }
-
-  p {
-    margin: 0;
-    font-size: 1.1rem;
-  }
-`;
-
-// --- Mock Data ---
-
-const COLORS = [
-  "#007ACC",
-  "#28A745",
-  "#FFCC00",
-  "#FD7E14",
-  "#DC3545",
-  "#6C757D",
-];
-
-const mockMonthlyData = [
-  { month: "Jan", receitas: 3200, despesas: 1800 },
-  { month: "Fev", receitas: 3100, despesas: 1950 },
-  { month: "Mar", receitas: 3250, despesas: 2100 },
-  { month: "Abr", receitas: 3300, despesas: 1850 },
-  { month: "Mai", receitas: 3200, despesas: 2200 },
-  { month: "Jun", receitas: 3400, despesas: 2050 },
-  { month: "Jul", receitas: 3200, despesas: 1800 },
-  { month: "Ago", receitas: 3250, despesas: 2021 },
-  { month: "Set", receitas: 3300, despesas: 2140 },
-  { month: "Out", receitas: 3500, despesas: 1950 },
-  { month: "Nov", receitas: 3400, despesas: 2100 },
-  { month: "Dez", receitas: 3600, despesas: 2300 },
-];
-
-const mockExpensesByCategory = [
-  { name: "Alimentação", value: 680 },
-  { name: "Moradia", value: 1200 },
-  { name: "Transporte", value: 250 },
-  { name: "Lazer", value: 180 },
-  { name: "Saúde", value: 150 },
-  { name: "Outros", value: 240 },
-];
-
-const mockDailyExpenses = [
-  { day: "1", value: 45 },
-  { day: "5", value: 120 },
-  { day: "8", value: 80 },
-  { day: "10", value: 200 },
-  { day: "12", value: 95 },
-  { day: "15", value: 150 },
-  { day: "18", value: 70 },
-  { day: "20", value: 180 },
-  { day: "22", value: 60 },
-  { day: "25", value: 300 },
-  { day: "28", value: 110 },
-];
-
-type PeriodType = "month" | "quarter" | "year" | "custom";
-
-const formatCurrency = (value: number) =>
-  value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  return (
+    <div
+      style={{
+        background: theme.colors.white,
+        border: `1px solid ${theme.colors.border}`,
+        borderRadius: theme.borderRadius.medium,
+        padding: theme.spacing.md,
+        boxShadow: theme.shadows.medium,
+      }}
+    >
+      <p style={{ margin: 0, fontWeight: 600, marginBottom: 8 }}>{label}</p>
+      {payload.map((entry, index) => (
+        <p key={index} style={{ margin: 0, color: entry.color }}>
+          {entry.name}: {formatCurrency(entry.value)}
+        </p>
+      ))}
+    </div>
+  );
+};
 
 export const ReportsPage: React.FC = () => {
   const theme = useTheme();
-  const [periodType, setPeriodType] = useState<PeriodType>("month");
-  const [currentMonth, setCurrentMonth] = useState(11); // Dezembro (0-indexed)
-  const [currentYear] = useState(2024);
+  const { addToast } = useToast();
 
-  const navigateMonth = (direction: "prev" | "next") => {
-    setCurrentMonth((prev) => {
-      if (direction === "prev") {
-        return prev === 0 ? 11 : prev - 1;
+  // State
+  const [periodType, setPeriodType] = useState<PeriodType>('month');
+  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
+  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
+  const [isLoading, setIsLoading] = useState(true);
+  const [chartData, setChartData] = useState<ChartData>({
+    yearlyData: null,
+    categoryData: null,
+    dailyData: null,
+    totalIncome: 0,
+    totalExpense: 0,
+    previousIncome: 0,
+    previousExpense: 0,
+  });
+
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
+
+    try {
+      // Busca dados anuais
+      const yearlyData = await getYearlyReport(currentYear);
+
+      // Range do mês atual
+      const { startDate, endDate } = getMonthRange(currentYear, currentMonth);
+
+      // Range do mês anterior
+      const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+      const prevYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+      const { startDate: prevStartDate, endDate: prevEndDate } = getMonthRange(prevYear, prevMonth);
+
+      const [categoryData, dailyData, incomeSum, expenseSum, prevIncomeSum, prevExpenseSum] =
+        await Promise.all([
+          getExpensesByCategory(startDate, endDate),
+          getDailyExpenses(startDate, endDate),
+          getSumByType('INCOME', startDate, endDate),
+          getSumByType('EXPENSE', startDate, endDate),
+          getSumByType('INCOME', prevStartDate, prevEndDate),
+          getSumByType('EXPENSE', prevStartDate, prevEndDate),
+        ]);
+
+      setChartData({
+        yearlyData,
+        categoryData,
+        dailyData,
+        totalIncome: incomeSum.total,
+        totalExpense: expenseSum.total,
+        previousIncome: prevIncomeSum.total,
+        previousExpense: prevExpenseSum.total,
+      });
+    } catch (error) {
+      console.error('Erro ao carregar dados:', error);
+      addToast('Erro ao carregar relatórios', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentMonth, currentYear, addToast]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const navigateMonth = (direction: 'prev' | 'next') => {
+    if (direction === 'prev') {
+      if (currentMonth === 0) {
+        setCurrentMonth(11);
+        setCurrentYear((prev) => prev - 1);
       } else {
-        return prev === 11 ? 0 : prev + 1;
+        setCurrentMonth((prev) => prev - 1);
       }
-    });
-  };
-
-  const getPeriodLabel = () => {
-    const monthNames = [
-      "Janeiro",
-      "Fevereiro",
-      "Março",
-      "Abril",
-      "Maio",
-      "Junho",
-      "Julho",
-      "Agosto",
-      "Setembro",
-      "Outubro",
-      "Novembro",
-      "Dezembro",
-    ];
-
-    switch (periodType) {
-      case "month":
-        return `${monthNames[currentMonth]} ${currentYear}`;
-      case "quarter":
-        return `Q${Math.floor(currentMonth / 3) + 1} ${currentYear}`;
-      case "year":
-        return `Ano ${currentYear}`;
-      default:
-        return `${monthNames[currentMonth]} ${currentYear}`;
+    } else {
+      if (currentMonth === 11) {
+        setCurrentMonth(0);
+        setCurrentYear((prev) => prev + 1);
+      } else {
+        setCurrentMonth((prev) => prev + 1);
+      }
     }
   };
 
-  const currentData = useMemo(() => {
-    const data = mockMonthlyData[currentMonth];
-    const previousData =
-      mockMonthlyData[currentMonth === 0 ? 11 : currentMonth - 1];
+  const navigateYear = (direction: 'prev' | 'next') => {
+    setCurrentYear((prev) => (direction === 'prev' ? prev - 1 : prev + 1));
+  };
 
-    const receitas = data.receitas;
-    const despesas = data.despesas;
-    const saldo = receitas - despesas;
-    const economizado = saldo;
+  const periodLabel = useMemo(() => {
+    if (periodType === 'year') {
+      return `Ano ${currentYear}`;
+    }
+    return `${MONTH_NAMES[currentMonth]} ${currentYear}`;
+  }, [periodType, currentMonth, currentYear]);
 
-    // Comparações com mês anterior
-    const receitasChange =
-      ((receitas - previousData.receitas) / previousData.receitas) * 100;
-    const despesasChange =
-      ((despesas - previousData.despesas) / previousData.despesas) * 100;
+  const saldo = chartData.totalIncome - chartData.totalExpense;
+  const savingsRate =
+    chartData.totalIncome > 0
+      ? ((saldo / chartData.totalIncome) * 100).toFixed(1)
+      : '0.0';
 
-    return {
-      receitas,
-      despesas,
-      saldo,
-      economizado,
-      receitasChange,
-      despesasChange,
-    };
-  }, [currentMonth]);
+  const incomeChange =
+    chartData.previousIncome > 0
+      ? ((chartData.totalIncome - chartData.previousIncome) / chartData.previousIncome) * 100
+      : 0;
 
-  const hasData = mockMonthlyData.length > 0;
+  const expenseChange =
+    chartData.previousExpense > 0
+      ? ((chartData.totalExpense - chartData.previousExpense) / chartData.previousExpense) * 100
+      : 0;
+
+  // Dados formatados para os gráficos
+  const yearlyChartData = useMemo(() => {
+    if (!chartData.yearlyData) return [];
+    return chartData.yearlyData.reports.map((report) => ({
+      month: report.month,
+      receitas: report.receitas,
+      despesas: report.despesas,
+      saldo: report.saldo,
+    }));
+  }, [chartData.yearlyData]);
+
+  const categoryChartData = useMemo(() => {
+    if (!chartData.categoryData) return [];
+    return chartData.categoryData.expenses.map((expense) => ({
+      name: expense.category,
+      value: expense.amount,
+      percentage: expense.percentage,
+      count: expense.count,
+    }));
+  }, [chartData.categoryData]);
+
+  const dailyChartData = useMemo(() => {
+    if (!chartData.dailyData) return [];
+    return chartData.dailyData.expenses.map((expense) => ({
+      day: expense.day,
+      value: expense.value,
+      count: expense.count,
+    }));
+  }, [chartData.dailyData]);
+
+  const insights = useMemo(() => {
+    const items: Array<{
+      type: 'success' | 'warning' | 'info';
+      title: string;
+      text: string;
+    }> = [];
+
+    if (saldo > 0) {
+      items.push({
+        type: 'success',
+        title: 'Economia no Caminho Certo! 🎉',
+        text: `Você economizou ${formatCurrency(saldo)} este mês, representando ${savingsRate}% da sua renda. Continue assim!`,
+      });
+    } else if (saldo < 0) {
+      items.push({
+        type: 'warning',
+        title: 'Atenção ao Saldo Negativo',
+        text: `Suas despesas superaram suas receitas em ${formatCurrency(Math.abs(saldo))}. Considere revisar seus gastos.`,
+      });
+    }
+
+    if (categoryChartData.length > 0) {
+      const topCategory = categoryChartData[0];
+      if (topCategory.percentage > 40) {
+        items.push({
+          type: 'warning',
+          title: `Gastos Concentrados em ${topCategory.name}`,
+          text: `Essa categoria representa ${topCategory.percentage.toFixed(1)}% das despesas. Considere diversificar ou reduzir.`,
+        });
+      }
+    }
+
+    if (expenseChange < -10) {
+      items.push({
+        type: 'success',
+        title: 'Redução nas Despesas',
+        text: `Suas despesas diminuíram ${Math.abs(expenseChange).toFixed(1)}% comparado ao mês anterior. Ótimo trabalho!`,
+      });
+    } else if (expenseChange > 20) {
+      items.push({
+        type: 'info',
+        title: 'Aumento nas Despesas',
+        text: `Suas despesas aumentaram ${expenseChange.toFixed(1)}% em relação ao mês anterior. Fique atento aos gastos.`,
+      });
+    }
+
+    return items;
+  }, [saldo, savingsRate, categoryChartData, expenseChange]);
+
+  const hasData =
+    chartData.yearlyData &&
+    chartData.yearlyData.reports.some((r) => r.transactionCount > 0);
 
   return (
-    <PageContainer>
-      <div>
-        <SectionTitle>Relatórios Financeiros</SectionTitle>
-        <p>
-          Análise detalhada dos seus hábitos financeiros e insights
-          personalizados.
-        </p>
-      </div>
+    <S.PageContainer>
+      {/* Hero Section */}
+      <S.HeroSection>
+        <S.HeroHeader>
+          <S.HeroContent>
+            <S.Title>
+              <BarChart3 size={32} />
+              Relatórios Financeiros
+            </S.Title>
+            <S.Subtitle>
+              Análise detalhada dos seus hábitos financeiros e insights
+              personalizados.
+            </S.Subtitle>
+          </S.HeroContent>
 
-      <FilterSection variant="elevated">
-        <PeriodSelector>
-          <PeriodButton onClick={() => navigateMonth("prev")}>
-            <ChevronLeft size={20} />
-          </PeriodButton>
-          <PeriodDisplay>{getPeriodLabel()}</PeriodDisplay>
-          <PeriodButton onClick={() => navigateMonth("next")}>
-            <ChevronRight size={20} />
-          </PeriodButton>
-        </PeriodSelector>
+          <S.ControlsContainer>
+            <S.MonthSelector>
+              <S.MonthButton
+                onClick={() =>
+                  periodType === 'year' ? navigateYear('prev') : navigateMonth('prev')
+                }
+              >
+                <ChevronLeft size={20} />
+              </S.MonthButton>
+              <S.MonthDisplay>{periodLabel}</S.MonthDisplay>
+              <S.MonthButton
+                onClick={() =>
+                  periodType === 'year' ? navigateYear('next') : navigateMonth('next')
+                }
+              >
+                <ChevronRight size={20} />
+              </S.MonthButton>
+            </S.MonthSelector>
 
-        <FilterTabs>
-          <FilterTab
-            $active={periodType === "month"}
-            onClick={() => setPeriodType("month")}
-          >
-            Mensal
-          </FilterTab>
-          <FilterTab
-            $active={periodType === "quarter"}
-            onClick={() => setPeriodType("quarter")}
-          >
-            Trimestral
-          </FilterTab>
-          <FilterTab
-            $active={periodType === "year"}
-            onClick={() => setPeriodType("year")}
-          >
-            Anual
-          </FilterTab>
-        </FilterTabs>
-      </FilterSection>
+            <S.FilterTabs>
+              <S.FilterTab
+                $active={periodType === 'month'}
+                onClick={() => setPeriodType('month')}
+              >
+                Mensal
+              </S.FilterTab>
+              <S.FilterTab
+                $active={periodType === 'year'}
+                onClick={() => setPeriodType('year')}
+              >
+                Anual
+              </S.FilterTab>
+            </S.FilterTabs>
+          </S.ControlsContainer>
+        </S.HeroHeader>
 
-      {!hasData ? (
-        <EmptyState>
+        {/* Stats Grid */}
+        {!isLoading && (
+          <S.StatsGrid>
+            <S.StatCard
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+            >
+              <S.StatIcon $color="#28A745">
+                <TrendingUp />
+              </S.StatIcon>
+              <S.StatContent>
+                <S.StatValue $color="#28A745">
+                  {formatCurrency(chartData.totalIncome)}
+                </S.StatValue>
+                <S.StatLabel>Receitas</S.StatLabel>
+                {incomeChange !== 0 && (
+                  <S.StatChange $positive={incomeChange >= 0}>
+                    {incomeChange >= 0 ? <TrendingUp /> : <TrendingDown />}
+                    {Math.abs(incomeChange).toFixed(1)}% vs mês anterior
+                  </S.StatChange>
+                )}
+              </S.StatContent>
+            </S.StatCard>
+
+            <S.StatCard
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              <S.StatIcon $color="#DC3545">
+                <TrendingDown />
+              </S.StatIcon>
+              <S.StatContent>
+                <S.StatValue $color="#DC3545">
+                  {formatCurrency(chartData.totalExpense)}
+                </S.StatValue>
+                <S.StatLabel>Despesas</S.StatLabel>
+                {expenseChange !== 0 && (
+                  <S.StatChange $positive={expenseChange <= 0}>
+                    {expenseChange <= 0 ? <TrendingDown /> : <TrendingUp />}
+                    {Math.abs(expenseChange).toFixed(1)}% vs mês anterior
+                  </S.StatChange>
+                )}
+              </S.StatContent>
+            </S.StatCard>
+
+            <S.StatCard
+              $highlight={saldo > 0}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <S.StatIcon $color={saldo >= 0 ? '#28A745' : '#DC3545'}>
+                <DollarSign />
+              </S.StatIcon>
+              <S.StatContent>
+                <S.StatValue $color={saldo >= 0 ? '#28A745' : '#DC3545'}>
+                  {formatCurrency(saldo)}
+                </S.StatValue>
+                <S.StatLabel>Saldo do Período</S.StatLabel>
+              </S.StatContent>
+            </S.StatCard>
+
+            <S.StatCard
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+            >
+              <S.StatIcon $color="#007ACC">
+                <Percent />
+              </S.StatIcon>
+              <S.StatContent>
+                <S.StatValue>{savingsRate}%</S.StatValue>
+                <S.StatLabel>Taxa de Economia</S.StatLabel>
+              </S.StatContent>
+            </S.StatCard>
+          </S.StatsGrid>
+        )}
+      </S.HeroSection>
+
+      {/* Loading State */}
+      {isLoading ? (
+        <S.LoadingContainer>
+          <div className="spinner" />
+          <p>Carregando relatórios...</p>
+        </S.LoadingContainer>
+      ) : !hasData ? (
+        <S.EmptyState>
           <div className="icon">📊</div>
-          <p>Nenhum dado disponível para o período selecionado.</p>
-        </EmptyState>
+          <h3>Nenhum dado disponível</h3>
+          <p>
+            Registre suas transações para visualizar relatórios e insights
+            personalizados sobre suas finanças.
+          </p>
+        </S.EmptyState>
       ) : (
         <>
-          <SummaryGrid>
-            <SummaryCard $color={theme.colors.secondary}>
-              <div className="header">
-                <h3>Receitas</h3>
-                <TrendingUp
-                  className="icon"
-                  size={20}
-                  color={theme.colors.secondary}
-                />
-              </div>
-              <div className="value">
-                {formatCurrency(currentData.receitas)}
-              </div>
-              <div
-                className={`comparison ${
-                  currentData.receitasChange >= 0 ? "positive" : "negative"
-                }`}
-              >
-                {currentData.receitasChange >= 0 ? (
-                  <TrendingUp size={14} />
-                ) : (
-                  <TrendingDown size={14} />
-                )}
-                {Math.abs(currentData.receitasChange).toFixed(1)}% vs mês
-                anterior
-              </div>
-            </SummaryCard>
-
-            <SummaryCard $color={theme.colors.error}>
-              <div className="header">
-                <h3>Despesas</h3>
-                <TrendingDown
-                  className="icon"
-                  size={20}
-                  color={theme.colors.error}
-                />
-              </div>
-              <div className="value">
-                {formatCurrency(currentData.despesas)}
-              </div>
-              <div
-                className={`comparison ${
-                  currentData.despesasChange <= 0 ? "positive" : "negative"
-                }`}
-              >
-                {currentData.despesasChange <= 0 ? (
-                  <TrendingDown size={14} />
-                ) : (
-                  <TrendingUp size={14} />
-                )}
-                {Math.abs(currentData.despesasChange).toFixed(1)}% vs mês
-                anterior
-              </div>
-            </SummaryCard>
-
-            <SummaryCard $color={theme.colors.primary}>
-              <div className="header">
-                <h3>Saldo do Período</h3>
-                <Calendar
-                  className="icon"
-                  size={20}
-                  color={theme.colors.primary}
-                />
-              </div>
-              <div className="value">{formatCurrency(currentData.saldo)}</div>
-              <div className="comparison positive">
-                Taxa de economia:{" "}
-                {((currentData.saldo / currentData.receitas) * 100).toFixed(1)}%
-              </div>
-            </SummaryCard>
-
-            <SummaryCard $color={theme.colors.accent} $highlight>
-              <div className="header">
-                <h3>Total Economizado</h3>
-                <TrendingUp
-                  className="icon"
-                  size={20}
-                  color={theme.colors.accent}
-                />
-              </div>
-              <div className="value" style={{ color: theme.colors.accent }}>
-                {formatCurrency(currentData.economizado)}
-              </div>
-              <div className="comparison positive">Continue assim! 🎯</div>
-            </SummaryCard>
-          </SummaryGrid>
-
-          <ChartsContainer>
-            <ChartCard variant="elevated">
-              <div className="chart-header">
+          {/* Charts */}
+          <S.ChartsGrid>
+            {/* Evolução Anual */}
+            <S.ChartCard
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              <S.ChartHeader>
                 <div>
-                  <h3>Evolução ao Longo do Ano</h3>
-                  <div className="subtitle">
+                  <S.ChartTitle>Evolução ao Longo do Ano</S.ChartTitle>
+                  <S.ChartSubtitle>
                     Comparação entre receitas e despesas mensais
-                  </div>
+                  </S.ChartSubtitle>
                 </div>
-              </div>
+              </S.ChartHeader>
               <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={mockMonthlyData}>
+                <AreaChart data={yearlyChartData}>
+                  <defs>
+                    <linearGradient id="colorReceitas" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#28A745" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#28A745" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="colorDespesas" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#DC3545" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#DC3545" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
                   <CartesianGrid
                     strokeDasharray="3 3"
-                    stroke={theme.colors.textMedium + "33"}
+                    stroke={theme.colors.textMedium + '33'}
+                    vertical={false}
                   />
                   <XAxis
                     dataKey="month"
                     stroke={theme.colors.textMedium}
                     tick={{ fontSize: 12 }}
+                    tickLine={false}
                   />
                   <YAxis
                     stroke={theme.colors.textMedium}
-                    tickFormatter={(value) =>
-                      `R$ ${(value / 1000).toFixed(0)}k`
-                    }
-                    tick={{ fontSize: 12 }}
+                    tickFormatter={(value) => `R$ ${(value / 1000).toFixed(0)}k`}
+                    tick={{ fontSize: 11 }}
+                    tickLine={false}
+                    axisLine={false}
                   />
-                  <Tooltip
-                    formatter={(value: number) => formatCurrency(value)}
-                    contentStyle={{
-                      backgroundColor: theme.colors.white,
-                      border: `1px solid ${theme.colors.primary}`,
-                      borderRadius: "8px",
-                    }}
-                  />
+                  <Tooltip content={<CustomTooltip />} />
                   <Legend />
-                  <Line
+                  <Area
                     type="monotone"
                     dataKey="receitas"
-                    stroke={theme.colors.secondary}
-                    strokeWidth={3}
+                    stroke="#28A745"
+                    strokeWidth={2}
+                    fill="url(#colorReceitas)"
                     name="Receitas"
-                    dot={{ fill: theme.colors.secondary, r: 4 }}
                   />
-                  <Line
+                  <Area
                     type="monotone"
                     dataKey="despesas"
-                    stroke={theme.colors.error}
-                    strokeWidth={3}
+                    stroke="#DC3545"
+                    strokeWidth={2}
+                    fill="url(#colorDespesas)"
                     name="Despesas"
-                    dot={{ fill: theme.colors.error, r: 4 }}
                   />
-                </LineChart>
+                </AreaChart>
               </ResponsiveContainer>
-            </ChartCard>
+            </S.ChartCard>
 
-            <TwoColumnCharts>
-              <ChartCard variant="elevated">
-                <div className="chart-header">
+            {/* Row com 2 gráficos */}
+            <S.ChartRow>
+              {/* Gastos por Categoria */}
+              <S.ChartCard
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                <S.ChartHeader>
                   <div>
-                    <h3>Gastos por Categoria</h3>
-                    <div className="subtitle">Distribuição percentual</div>
+                    <S.ChartTitle>Gastos por Categoria</S.ChartTitle>
+                    <S.ChartSubtitle>Distribuição percentual</S.ChartSubtitle>
                   </div>
-                </div>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={mockExpensesByCategory}
-                      dataKey="value"
-                      nameKey="name"
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={90}
-                      paddingAngle={3}
-                    >
-                      {mockExpensesByCategory.map((entry, index) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={COLORS[index % COLORS.length]}
+                </S.ChartHeader>
+                {categoryChartData.length > 0 ? (
+                  <>
+                    <ResponsiveContainer width="100%" height={250}>
+                      <PieChart>
+                        <Pie
+                          data={categoryChartData}
+                          dataKey="value"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={90}
+                          paddingAngle={3}
+                        >
+                          {categoryChartData.map((_, index) => (
+                            <Cell
+                              key={`cell-${index}`}
+                              fill={CHART_COLORS[index % CHART_COLORS.length]}
+                            />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          formatter={(value: number) => formatCurrency(value)}
                         />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <S.CategoryList>
+                      {categoryChartData.map((category, index) => (
+                        <S.CategoryItem key={category.name}>
+                          <S.CategoryInfo>
+                            <S.CategoryDot
+                              $color={CHART_COLORS[index % CHART_COLORS.length]}
+                            />
+                            <S.CategoryName>{category.name}</S.CategoryName>
+                          </S.CategoryInfo>
+                          <div>
+                            <S.CategoryValue>
+                              {formatCurrency(category.value)}
+                            </S.CategoryValue>
+                            <S.CategoryPercentage>
+                              ({category.percentage.toFixed(1)}%)
+                            </S.CategoryPercentage>
+                          </div>
+                        </S.CategoryItem>
                       ))}
-                    </Pie>
-                    <Tooltip
-                      formatter={(value: number) => formatCurrency(value)}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-                <CategoryList>
-                  {mockExpensesByCategory.map((category, index) => (
-                    <CategoryItem key={category.name}>
-                      <div className="category-info">
-                        <div
-                          className="color-dot"
-                          style={{
-                            backgroundColor: COLORS[index % COLORS.length],
-                          }}
-                        />
-                        <span className="name">{category.name}</span>
-                      </div>
-                      <span className="value">
-                        {formatCurrency(category.value)}
-                      </span>
-                    </CategoryItem>
-                  ))}
-                </CategoryList>
-              </ChartCard>
+                    </S.CategoryList>
+                  </>
+                ) : (
+                  <S.EmptyState>
+                    <div className="icon">🗂️</div>
+                    <p>Sem despesas neste período</p>
+                  </S.EmptyState>
+                )}
+              </S.ChartCard>
 
-              <ChartCard variant="elevated">
-                <div className="chart-header">
+              {/* Despesas Diárias */}
+              <S.ChartCard
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+              >
+                <S.ChartHeader>
                   <div>
-                    <h3>Despesas Diárias</h3>
-                    <div className="subtitle">
+                    <S.ChartTitle>Despesas Diárias</S.ChartTitle>
+                    <S.ChartSubtitle>
                       Padrão de gastos ao longo do mês
-                    </div>
+                    </S.ChartSubtitle>
                   </div>
-                </div>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={mockDailyExpenses}>
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      stroke={theme.colors.textMedium + "33"}
-                    />
-                    <XAxis
-                      dataKey="day"
-                      stroke={theme.colors.textMedium}
-                      label={{
-                        value: "Dia do Mês",
-                        position: "insideBottom",
-                        offset: -5,
-                      }}
-                      tick={{ fontSize: 11 }}
-                    />
-                    <YAxis
-                      stroke={theme.colors.textMedium}
-                      tickFormatter={(value) => `R$ ${value}`}
-                      tick={{ fontSize: 11 }}
-                    />
-                    <Tooltip
-                      formatter={(value: number) => formatCurrency(value)}
-                      contentStyle={{
-                        backgroundColor: theme.colors.white,
-                        border: `1px solid ${theme.colors.primary}`,
-                        borderRadius: "8px",
-                      }}
-                    />
-                    <Bar
-                      dataKey="value"
-                      fill={theme.colors.primary}
-                      radius={[4, 4, 0, 0]}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </ChartCard>
-            </TwoColumnCharts>
-          </ChartsContainer>
+                </S.ChartHeader>
+                {dailyChartData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={350}>
+                    <BarChart data={dailyChartData}>
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke={theme.colors.textMedium + '33'}
+                        vertical={false}
+                      />
+                      <XAxis
+                        dataKey="day"
+                        stroke={theme.colors.textMedium}
+                        tick={{ fontSize: 11 }}
+                        tickLine={false}
+                      />
+                      <YAxis
+                        stroke={theme.colors.textMedium}
+                        tickFormatter={(value) => `R$ ${value}`}
+                        tick={{ fontSize: 11 }}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Bar
+                        dataKey="value"
+                        fill={theme.colors.primary}
+                        radius={[4, 4, 0, 0]}
+                        name="Despesas"
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <S.EmptyState>
+                    <div className="icon">📅</div>
+                    <p>Sem despesas neste período</p>
+                  </S.EmptyState>
+                )}
+              </S.ChartCard>
+            </S.ChartRow>
+          </S.ChartsGrid>
 
-          <div>
-            <SectionTitle>💡 Insights Personalizados</SectionTitle>
-            <InsightsSection>
-              <InsightCard $type="success">
-                <TrendingUp
-                  className="icon"
-                  size={32}
-                  color={theme.colors.secondary}
-                />
-                <div className="content">
-                  <h4>Economia no Caminho Certo! 🎉</h4>
-                  <p>
-                    Você conseguiu economizar{" "}
-                    <strong>{formatCurrency(currentData.saldo)}</strong> este
-                    mês, representando{" "}
-                    <strong>
-                      {(
-                        (currentData.saldo / currentData.receitas) *
-                        100
-                      ).toFixed(1)}
-                      %
-                    </strong>{" "}
-                    da sua renda. Continue assim para atingir suas metas
-                    financeiras!
-                  </p>
-                </div>
-              </InsightCard>
-
-              <InsightCard $type="warning">
-                <AlertCircle
-                  className="icon"
-                  size={32}
-                  color={theme.colors.warning}
-                />
-                <div className="content">
-                  <h4>Atenção aos Gastos com Moradia</h4>
-                  <p>
-                    Seus gastos com moradia representam <strong>42%</strong> das
-                    suas despesas totais. O ideal é manter essa categoria entre
-                    25-30% da renda. Considere revisar seus custos fixos.
-                  </p>
-                </div>
-              </InsightCard>
-
-              <InsightCard $type="info">
-                <TrendingDown
-                  className="icon"
-                  size={32}
-                  color={theme.colors.primary}
-                />
-                <div className="content">
-                  <h4>Redução em Transporte</h4>
-                  <p>
-                    Suas despesas com transporte diminuíram <strong>15%</strong>{" "}
-                    comparado ao mês anterior. Essa economia de{" "}
-                    <strong>{formatCurrency(45)}</strong> pode ser direcionada
-                    para suas metas de investimento!
-                  </p>
-                </div>
-              </InsightCard>
-            </InsightsSection>
-          </div>
+          {/* Insights */}
+          {insights.length > 0 && (
+            <S.SectionContainer>
+              <S.SectionTitle>
+                <Lightbulb size={24} />
+                Insights Personalizados
+              </S.SectionTitle>
+              <S.InsightsSection>
+                {insights.map((insight, index) => (
+                  <S.InsightCard
+                    key={index}
+                    $type={insight.type}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.1 * index }}
+                  >
+                    <S.InsightIcon>
+                      {insight.type === 'success' && (
+                        <TrendingUp size={32} color={theme.colors.success} />
+                      )}
+                      {insight.type === 'warning' && (
+                        <AlertCircle size={32} color={theme.colors.warning} />
+                      )}
+                      {insight.type === 'info' && (
+                        <TrendingDown size={32} color={theme.colors.primary} />
+                      )}
+                    </S.InsightIcon>
+                    <S.InsightContent>
+                      <S.InsightTitle>{insight.title}</S.InsightTitle>
+                      <S.InsightText>{insight.text}</S.InsightText>
+                    </S.InsightContent>
+                  </S.InsightCard>
+                ))}
+              </S.InsightsSection>
+            </S.SectionContainer>
+          )}
         </>
       )}
-    </PageContainer>
+    </S.PageContainer>
   );
 };
 

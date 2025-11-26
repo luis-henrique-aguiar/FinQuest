@@ -29,12 +29,12 @@ public interface TransactionRepository extends JpaRepository<Transaction, String
     );
 
     @Query("""
-        SELECT t.category FROM Transaction t
-        WHERE t.userId = :userId
-        AND t.date BETWEEN :startDate AND :endDate
-        AND t.type = 'EXPENSE'
-    """)
-    List<String> findAllCategoriesByUserIdAndDateBetweenAndType(
+            SELECT DISTINCT t.category FROM Transaction t
+            WHERE t.userId = :userId
+            AND t.type = :type
+            AND t.date BETWEEN :startDate AND :endDate
+            """)
+    List<String> findDistinctCategoriesByUserIdAndTypeAndDateBetween(
             @Param("userId") String userId,
             @Param("type") TransactionType type,
             @Param("startDate") LocalDate startDate,
@@ -95,16 +95,17 @@ public interface TransactionRepository extends JpaRepository<Transaction, String
     );
 
     @Query("""
-        SELECT DISTINCT t.date FROM Transaction t
-        WHERE t.userId = :userId
-        AND t.date BETWEEN :startDate AND :endDate
-        AND t.type = :type
-    """)
-    List<LocalDate> findDistinctDatesByUseridAndDateBetweenAndType(
+            SELECT DISTINCT t.date FROM Transaction t
+            WHERE t.userId = :userId
+            AND t.type = :type
+            AND t.date BETWEEN :startDate AND :endDate
+            ORDER BY t.date ASC
+            """)
+    List<LocalDate> findDistinctDatesByUserIdAndTypeAndDateBetween(
             @Param("userId") String userId,
+            @Param("type") TransactionType type,
             @Param("startDate") LocalDate startDate,
-            @Param("endDate") LocalDate endDate,
-            @Param("type") TransactionType type
+            @Param("endDate") LocalDate endDate
     );
 
     @Query("""

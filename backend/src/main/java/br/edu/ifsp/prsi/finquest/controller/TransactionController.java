@@ -13,11 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.*;
 
@@ -35,21 +31,6 @@ public class TransactionController {
 
     public TransactionController(TransactionService transactionService) {
         this.transactionService = transactionService;
-    }
-
-    @GetMapping
-    public ResponseEntity<List<TransactionDTO>> getAllTransactions(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
-    ) {
-        String userId = userDetails.getUsername();
-
-        List<TransactionDTO> transactions = (startDate != null && endDate != null)
-                ? transactionService.getTransactionsByPeriod(userId, startDate, endDate)
-                : transactionService.getAllTransactions(userId);
-
-        return ResponseEntity.ok(transactions);
     }
 
     @GetMapping("/sum")
@@ -94,11 +75,6 @@ public class TransactionController {
         String userId = userDetails.getUsername();
 
         return ResponseEntity.ok(transactionService.getDailyExpensesByPeriod(userId,startDate,endDate));
-    }
-    private final TransactionService transactionService;
-
-    public TransactionController(TransactionService transactionService) {
-        this.transactionService = transactionService;
     }
 
     @PostMapping
