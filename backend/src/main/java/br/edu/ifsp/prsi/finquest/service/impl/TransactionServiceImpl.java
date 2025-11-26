@@ -1,6 +1,7 @@
 package br.edu.ifsp.prsi.finquest.service.impl;
 
 import br.edu.ifsp.prsi.finquest.dto.*;
+
 import br.edu.ifsp.prsi.finquest.exception.BusinessException;
 import br.edu.ifsp.prsi.finquest.model.Transaction;
 import br.edu.ifsp.prsi.finquest.model.enums.TransactionType;
@@ -13,7 +14,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.List;
+
+import java.util.ArrayList;
+import java.util.Collections;
 
 @Service
 public class TransactionServiceImpl implements TransactionService {
@@ -101,6 +106,119 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
+    public TransactionTypeSumDTO getSumByTypeAndPeriod(String userId, TransactionType type, LocalDate startDate, LocalDate endDate) {
+        BigDecimal total = transactionRepository
+                .sumByUserIdAndTypeAndDateBetween(
+                    userId, type, startDate, endDate
+                ) != null ? transactionRepository.sumByUserIdAndTypeAndDateBetween(
+                    userId, type, startDate, endDate
+                ) : BigDecimal.ZERO;
+        return new TransactionTypeSumDTO(total);
+    }
+
+    @Override
+    public ExpensesReportDTO getAllExpensesByPeriodGroupedByType(
+            String userId,
+            LocalDate startDate,
+            LocalDate endDate
+    ) {
+        List<ExpenseInfoDTO> expenses = new ArrayList<>();
+
+        List<String> categories = transactionRepository
+                .findDistinctCategoriesByUserIdAndTypeAndDateBetween(
+                        userId, TransactionType.EXPENSE, startDate, endDate);
+
+        BigDecimal totalAmount = transactionRepository
+                .sumByUserIdAndTypeAndDateBetween(userId, TransactionType.EXPENSE, startDate, endDate);
+
+        if (totalAmount == null || totalAmount.compareTo(BigDecimal.ZERO) == 0) {
+            return new ExpensesReportDTO(expenses);
+        }
+
+        for (String category : categories) {
+            BigDecimal amount = transactionRepository
+                    .sumByUserIdAndTypeAndDateBetweenAndCategory(
+                            userId, TransactionType.EXPENSE, startDate, endDate, category);
+
+            long count = transactionRepository
+                    .countByUserIdAndTypeAndDateBetweenAndCategory(
+                            userId, TransactionType.EXPENSE, startDate, endDate, category);
+
+            BigDecimal percentage = amount.divide(totalAmount, 4, RoundingMode.HALF_UP)
+                    .multiply(BigDecimal.valueOf(100));
+
+            expenses.add(new ExpenseInfoDTO(category, amount, percentage, count));
+        }
+
+        expenses.sort(Collections.reverseOrder());
+        return new ExpensesReportDTO(expenses);
+    }
+
+    @Override
+    public YearlyReportDTO getYearlyReport(String userId, int year) {
+        List<MonthlyReportDTO> reports = new ArrayList<>();
+
+        for (int month = 1; month <= 12; month++) {
+            YearMonth yearMonth = YearMonth.of(year, month);
+            LocalDate startDate = yearMonth.atDay(1);
+            LocalDate endDate = yearMonth.atEndOfMonth();
+
+            long transactionCount = transactionRepository
+                    .countByUserIdAndDateBetween(userId, startDate, endDate);
+
+            BigDecimal receitas;
+            BigDecimal despesas;
+
+            if (transactionCount > 0) {
+                receitas = transactionRepository
+                        .sumByUserIdAndTypeAndDateBetween(userId, TransactionType.INCOME, startDate, endDate);
+                despesas = transactionRepository
+                        .sumByUserIdAndTypeAndDateBetween(userId, TransactionType.EXPENSE, startDate, endDate);
+            } else {
+                receitas = BigDecimal.ZERO;
+                despesas = BigDecimal.ZERO;
+            }
+
+            reports.add(new MonthlyReportDTO(
+                    MonthlyReportDTO.months[month - 1],
+                    receitas,
+                    despesas,
+                    receitas.subtract(despesas),
+                    transactionCount
+            ));
+        }
+
+        return new YearlyReportDTO(reports);
+    }
+
+    @Override
+    public DailyExpensesReportDTO getDailyExpensesByPeriod(
+            String userId,
+            LocalDate startDate,
+            LocalDate endDate
+    ) {
+        List<DailyExpenseDTO> dailyExpenses = new ArrayList<>();
+
+        List<LocalDate> dates = transactionRepository
+                .findDistinctDatesByUserIdAndTypeAndDateBetween(
+                        userId, TransactionType.EXPENSE, startDate, endDate);
+
+        for (LocalDate date : dates) {
+            BigDecimal value = transactionRepository
+                    .sumByUserIdAndTypeAndDateBetween(userId, TransactionType.EXPENSE, date, date);
+
+            long count = transactionRepository
+                    .countByUserIdAndTypeAndDateBetween(userId, TransactionType.EXPENSE, date, date);
+
+            dailyExpenses.add(new DailyExpenseDTO(
+                    String.valueOf(date.getDayOfMonth()),
+                    value != null ? value : BigDecimal.ZERO,
+                    count
+            ));
+        }
+        return new DailyExpensesReportDTO(dailyExpenses);
+    }
+
     public FinancialOverviewDTO getFinancialOverview(
             String userId,
             LocalDate startDate,
