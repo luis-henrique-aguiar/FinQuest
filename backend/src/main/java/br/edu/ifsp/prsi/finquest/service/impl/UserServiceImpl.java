@@ -1,9 +1,6 @@
 package br.edu.ifsp.prsi.finquest.service.impl;
 
-import br.edu.ifsp.prsi.finquest.dto.UpdateUserEmailDTO;
-import br.edu.ifsp.prsi.finquest.dto.UpdateUserNameDTO;
-import br.edu.ifsp.prsi.finquest.dto.UpdateUserPasswordDTO;
-import br.edu.ifsp.prsi.finquest.dto.UserDTO;
+import br.edu.ifsp.prsi.finquest.dto.*;
 import br.edu.ifsp.prsi.finquest.exception.BusinessException;
 import br.edu.ifsp.prsi.finquest.model.Achievement;
 import br.edu.ifsp.prsi.finquest.model.User;
@@ -24,7 +21,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -48,7 +47,14 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserDTO findUserById(String id){
         User user = userRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado para o ID: " + id));
-        return UserDTO.convertToDTO(user);
+
+        List<UserAchievement> userAchievements = userAchievementRepository.findByIdUserId(id);
+
+        List<UserAchievementDTO> achievementDTOs = userAchievements.stream()
+                .map(UserAchievementDTO::new)
+                .collect(Collectors.toList());
+
+        return UserDTO.convertToDTOWithAchievements(user, achievementDTOs);
     }
 
     @Transactional

@@ -14,6 +14,13 @@ import { auth } from "../firebase";
 import FullScreenLoader from "../components/common/FullScreenLoader";
 import api from "../services/api";
 
+export interface Achievement {
+    id: number;
+    title: string;
+    icon: string;
+    unlockedDate: string;
+}
+
 export interface User {
   uid: string;
   name: string;
@@ -24,6 +31,7 @@ export interface User {
   budget: number | null;
   level: number;
   role: "USER" | "ADMIN";
+  unlockedAchievements: Achievement[];
 }
 
 export interface AuthContextType {
@@ -34,7 +42,7 @@ export interface AuthContextType {
   register: (name: string, email: string, password: string) => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  updateUserContext: (updatedData: Partial<User>) => void;
+  updateUserContext: (updatedData: Partial<User> & { unlockedBadge?: Achievement}) => void;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(
@@ -69,6 +77,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
             budget: backendUser.budget,
             level: backendUser.level || 1,
             role: backendUser.role || "USER",
+            unlockedAchievements: backendUser.unlockedAchievements || [],
           };
 
           if (import.meta.env.DEV) {
@@ -173,11 +182,36 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     }
   };
 
-  const updateUserContext = (updatedData: Partial<User>) => {
+  /*const updateUserContext = (updatedData: Partial<User>) => {
     setUser((prevUser) => {
       if (!prevUser) return null;
       const newUser = { ...prevUser, ...updatedData };
       console.log("Usuário atualizado:", newUser);
+      return newUser;
+    });
+  };*/
+
+  const updateUserContext = (updatedData: Partial<User> & { unlockedBadge?: Achievement }) => {
+    setUser((prevUser) => {
+      if (!prevUser) return null;
+
+      const newAchievement = updatedData.unlockedBadge;
+
+      let mergedAchievements = prevUser.unlockedAchievements;
+      const dataToMerge: Partial<User> = { ...updatedData };
+
+      if (newAchievement) {
+          mergedAchievements = [...prevUser.unlockedAchievements, newAchievement];
+          delete (dataToMerge as any).unlockedBadge;
+      }
+
+      const newUser: User = {
+          ...prevUser,
+          ...dataToMerge,
+          unlockedAchievements: mergedAchievements
+      };
+
+      console.log("Usuário atualizado (Fusão):", newUser);
       return newUser;
     });
   };

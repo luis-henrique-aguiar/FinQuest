@@ -20,7 +20,14 @@ public class User {
     private String email;
 
     @Column(name = "registration_at", nullable = false)
-    private LocalDateTime registrationDate;
+    private LocalDateTime registrationAt;
+
+    @PrePersist
+    protected void onCreate() {
+        if (this.registrationAt == null) {
+            this.registrationAt = LocalDateTime.now();
+        }
+    }
 
     @Column(name = "total_fin_points")
     private Integer totalFinPoints;
@@ -44,7 +51,6 @@ public class User {
         this.id = id;
         this.name = name;
         this.email = email;
-        this.registrationDate = LocalDateTime.now();
     }
 
     public String getId() { return id; }
@@ -59,9 +65,9 @@ public class User {
 
     public void setEmail(String email) { this.email = email; }
 
-    public LocalDateTime getRegistrationDate() { return registrationDate; }
+    public LocalDateTime getRegistrationAt() { return registrationAt; }
 
-    public void setRegistrationDate(LocalDateTime registrationDate) { this.registrationDate = registrationDate; }
+    public void setRegistrationAt(LocalDateTime registrationDate) { this.registrationAt = registrationDate; }
 
     public int getTotalFinPoints() { return totalFinPoints; }
 

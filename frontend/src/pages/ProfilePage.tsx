@@ -13,7 +13,7 @@ import { PasswordChangeModal } from "../components/profile/PasswordChangeModal";
 import { calculateLevelProgress, getFinPointsForLevel } from "../utils/levelingSystem";
 import * as S from "./ProfilePage.styles";
 
-const badges = [
+/*const badges = [
   { id: 1, level: "gold", icon: "🏆", label: "Mestre do Orçamento", status: "unlocked" },
   { id: 2, level: "silver", icon: "💸", label: "Poupadora", status: "unlocked" },
   { id: 3, level: "bronze", icon: "📊", label: "Analista", status: "unlocked" },
@@ -22,9 +22,9 @@ const badges = [
   { id: 6, level: "silver", icon: "🔄", label: "Consistente", status: "locked" },
   { id: 7, level: "gold", icon: "🚀", label: "Ambiciosa", status: "locked" },
   { id: 8, level: "bronze", icon: "📚", label: "Estudiosa", status: "locked" },
-] as const;
+] as const;*/
 
-const achievements = [
+/*const achievements = [
   {
     id: 1,
     title: "Primeira Semana Completa",
@@ -43,7 +43,7 @@ const achievements = [
     description: "Economizou R$100 em sua primeira meta",
     icon: "💰",
   },
-];
+];*/
 
 export const ProfilePage: React.FC = () => {
   const { user, logout, updateUserContext } = useAuth();
@@ -53,6 +53,12 @@ export const ProfilePage: React.FC = () => {
   if (!user) {
     return <div>Carregando perfil...</div>;
   }
+
+  const allAchievements = user.unlockedAchievements || [];
+  const recentAchievements = allAchievements
+      .slice(-3)
+      .reverse();
+  const hasAchievements = allAchievements.length > 0;
 
   const progressPercent = calculateLevelProgress(user.totalFinPoints);
   const finPointsForNextLevel = getFinPointsForLevel(user.level + 1);
@@ -81,16 +87,15 @@ export const ProfilePage: React.FC = () => {
   };
 
   const handleSaveName = async (newName: string) => {
-    if (newName.trim() === user!.name) return;
+    const nameTrimmed = newName.trim();
+    if (nameTrimmed === user!.name) return;
 
     try {
       const response = await api.put("/users/name", {
-        name: newName.trim(),
+        name: nameTrimmed,
       });
 
-      const updatedUserDto = response.data;
-
-      updateUserContext(updatedUserDto);
+      updateUserContext({ name: nameTrimmed });
       addToast("Nome atualizado com sucesso!", "success");
 
     } catch (error) {
@@ -104,17 +109,15 @@ export const ProfilePage: React.FC = () => {
   };
 
   const handleSaveEmail = async (newEmail: string) => {
-    if (newEmail.trim() === user!.email) return;
+    const emailTrimmed = newEmail.trim();
+    if (emailTrimmed === user!.email) return;
 
     try {
       const response = await api.put("/users/email", {
-        email: newEmail.trim(),
+        email: emailTrimmed,
       });
 
-      const updatedUserDto = response.data;
-
       await logout();
-      
       addToast("E-mail atualizado com sucesso! Por segurança, você foi desconectado e deve fazer login novamente com seu novo e-mail.", "success");
     } catch (error: any) {
         console.error("Erro no updateEmail:", error);
@@ -203,37 +206,25 @@ export const ProfilePage: React.FC = () => {
         </S.SettingItem>
       </S.SettingsSection>
 
-      <div>
-        <S.SectionTitle>Suas Conquistas</S.SectionTitle>
-        <S.BadgesContainer>
-          {badges.map((badge) => (
-            <Badge
-              key={badge.id}
-              level={badge.level as "bronze" | "silver" | "gold"}
-              icon={badge.icon}
-              label={badge.label}
-              status={badge.status as "locked" | "unlocked"}
-              onClick={() => console.log(`Badge ${badge.id} clicked`)}
-            />
-          ))}
-        </S.BadgesContainer>
-      </div>
-
       <S.AchievementsSection padding="medium">
         <S.SectionTitle>Conquistas Recentes</S.SectionTitle>
-        <S.AchievementsList>
-          {achievements.map((achievement) => (
-            <S.Achievement key={achievement.id}>
-              <S.AchievementIcon>{achievement.icon}</S.AchievementIcon>
-              <S.AchievementInfo>
-                <S.AchievementTitle>{achievement.title}</S.AchievementTitle>
-                <S.AchievementDescription>
-                  {achievement.description}
-                </S.AchievementDescription>
-              </S.AchievementInfo>
-            </S.Achievement>
-          ))}
-        </S.AchievementsList>
+
+        {hasAchievements ? (
+          <S.AchievementsList>
+            {recentAchievements.map((achievement) => (
+              <S.Achievement key={achievement.id}>
+                <S.AchievementIcon>{achievement.icon}</S.AchievementIcon>
+                <S.AchievementInfo>
+                  <S.AchievementTitle>{achievement.title}</S.AchievementTitle>
+                </S.AchievementInfo>
+              </S.Achievement>
+            ))}
+          </S.AchievementsList>
+        ) : (
+          <div style={{ padding: "10px", textAlign: "center", color: "#666" }}>
+              Nenhuma conquista desbloqueada ainda. Continue usando o FinQuest para ganhar sua primeira!
+          </div>
+        )}
       </S.AchievementsSection>
 
       <S.SettingsSection padding="medium">
