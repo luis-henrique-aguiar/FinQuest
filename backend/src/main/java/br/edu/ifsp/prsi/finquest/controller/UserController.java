@@ -1,15 +1,14 @@
 package br.edu.ifsp.prsi.finquest.controller;
 
-import br.edu.ifsp.prsi.finquest.dto.UpdateUserEmailDTO;
-import br.edu.ifsp.prsi.finquest.dto.UpdateUserNameDTO;
-import br.edu.ifsp.prsi.finquest.dto.UpdateUserPasswordDTO;
-import br.edu.ifsp.prsi.finquest.dto.UserDTO;
+import br.edu.ifsp.prsi.finquest.dto.*;
 import br.edu.ifsp.prsi.finquest.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/users")
@@ -55,5 +54,12 @@ public class UserController {
         String userId = userDetails.getUsername();
         userService.updatePassword(userId, request);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/achievements")
+    public ResponseEntity<List<AchievementStatusDTO>> getAllAchievementsWithStatus(@AuthenticationPrincipal UserDetails userDetails) {
+        String userId = userDetails.getUsername();
+        List<AchievementStatusDTO> achievementsDTO = userService.getAllAchievementsWithStatus(userId);
+        return ResponseEntity.ok(achievementsDTO);
     }
 }

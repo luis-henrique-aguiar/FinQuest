@@ -101,6 +101,14 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public List<AchievementStatusDTO> getAllAchievementsWithStatus(String userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado."));
+
+        return achievementRepository.findAllWithStatusByUserId(user.getId());
+    }
+
+    @Override
     public void updatePassword(String userId, UpdateUserPasswordDTO request) {
         if (!request.newPassword().equals(request.confirmationPassword())) {
             throw new BusinessException("A nova senha e a confirmação não coincidem.");

@@ -1,9 +1,8 @@
 package br.edu.ifsp.prsi.finquest.service;
 
-import br.edu.ifsp.prsi.finquest.dto.UpdateUserEmailDTO;
-import br.edu.ifsp.prsi.finquest.dto.UpdateUserNameDTO;
-import br.edu.ifsp.prsi.finquest.dto.UpdateUserPasswordDTO;
-import br.edu.ifsp.prsi.finquest.dto.UserDTO;
+import br.edu.ifsp.prsi.finquest.dto.*;
+
+import java.util.List;
 
 public interface UserService {
 
@@ -12,4 +11,5 @@ public interface UserService {
     UserDTO updateEmail(String userId, UpdateUserEmailDTO request);
     UserDTO updateName(String userId, UpdateUserNameDTO request);
     void updatePassword(String userId, UpdateUserPasswordDTO request);
+    List<AchievementStatusDTO> getAllAchievementsWithStatus(String userId);
 }
