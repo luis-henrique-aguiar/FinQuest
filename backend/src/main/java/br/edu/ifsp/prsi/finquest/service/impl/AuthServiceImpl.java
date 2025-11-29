@@ -32,7 +32,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
-    public RegisterResponseDTO register(RegisterRequestDTO request) throws Exception {
+    public RegisterResponseDTO register(RegisterRequestDTO request) {
         logger.info("Iniciando registro de usuario: email={}", request.email());
 
         validateEmailNotInUse(request.email());

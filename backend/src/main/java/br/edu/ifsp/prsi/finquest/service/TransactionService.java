@@ -26,9 +26,6 @@ public interface TransactionService {
 
     void deleteTransaction(String userId, String transactionId);
     
-    FinancialOverviewDTO getFinancialOverview(
-            String userId,
-            LocalDate startDate,
-            LocalDate endDate
-    );
+    FinancialOverviewDTO getFinancialOverview(String userId, LocalDate startDate, LocalDate endDate);
+
 }

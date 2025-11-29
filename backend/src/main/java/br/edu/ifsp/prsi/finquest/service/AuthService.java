@@ -5,6 +5,6 @@ import br.edu.ifsp.prsi.finquest.dto.RegisterResponseDTO;
 
 public interface AuthService {
 
-    RegisterResponseDTO register(RegisterRequestDTO registerRequestDTO) throws Exception;
+    RegisterResponseDTO register(RegisterRequestDTO registerRequestDTO);
 
 }

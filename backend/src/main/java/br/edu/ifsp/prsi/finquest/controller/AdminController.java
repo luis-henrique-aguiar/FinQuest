@@ -39,8 +39,9 @@ public class AdminController {
     }
 
     @PostMapping("/users/{userId}/promote")
-    public ResponseEntity<Void> promoteUserToAdmin(@AuthenticationPrincipal UserDetails userDetails,
-                                                   @PathVariable String userId) {
+    public ResponseEntity<Void> promoteUserToAdmin(
+            @AuthenticationPrincipal UserDetails userDetails, @PathVariable String userId
+    ) {
         String adminId = userDetails.getUsername();
         adminService.promoteUserToAdmin(userId, adminId);
         return ResponseEntity.ok().build();
