@@ -232,7 +232,7 @@ export const ProfilePage: React.FC = () => {
         
         <S.SettingItem>
           <S.SettingLabel>Membro desde</S.SettingLabel>
-          <span>{formatRegistrationDate(user.registrationDate)}</span>
+          <span>{formatRegistrationDate(user.registrationAt)}</span>
         </S.SettingItem>
         
         <S.SettingItem>

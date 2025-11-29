@@ -25,10 +25,9 @@ export interface User {
   uid: string;
   name: string;
   email: string | null;
-  registrationDate: string;
+  registrationAt: string;
   avatarUrl: string | null;
   totalFinPoints: number;
-  budget: number | null;
   level: number;
   role: "USER" | "ADMIN";
   unlockedAchievements: Achievement[];
@@ -71,10 +70,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
             uid: fbUser.uid,
             name: backendUser.name,
             email: backendUser.email,
-            registrationDate: backendUser.registrationDate,
+            registrationAt: backendUser.registrationAt,
             avatarUrl: backendUser.avatarUrl || null,
             totalFinPoints: backendUser.totalFinPoints || 0,
-            budget: backendUser.budget,
             level: backendUser.level || 1,
             role: backendUser.role || "USER",
             unlockedAchievements: backendUser.unlockedAchievements || [],

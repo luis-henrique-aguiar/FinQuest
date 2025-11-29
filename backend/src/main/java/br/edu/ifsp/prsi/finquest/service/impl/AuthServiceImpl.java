@@ -55,7 +55,6 @@ public class AuthServiceImpl implements AuthService {
             newUser.setId(firebaseUser.getUid());
             newUser.setEmail(registerRequestDTO.email());
             newUser.setName(registerRequestDTO.name());
-            newUser.setBudget(BigDecimal.ZERO);
             newUser.setAvatarUrl(null);
             newUser.setTotalFinPoints(0);
             newUser.setLevel(1);

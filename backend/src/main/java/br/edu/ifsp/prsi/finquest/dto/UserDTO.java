@@ -14,7 +14,6 @@ public record UserDTO(
         String email,
         LocalDateTime registrationAt,
         Integer totalFinPoints,
-        BigDecimal budget,
         String avatarUrl,
         Integer level,
         UserRole role,
@@ -35,7 +34,6 @@ public record UserDTO(
         user.setEmail(userDTO.email());
         user.setRegistrationAt(userDTO.registrationAt());
         user.setTotalFinPoints(Optional.ofNullable(userDTO.totalFinPoints()).orElse(0));
-        user.setBudget(userDTO.budget() != null ? userDTO.budget() : BigDecimal.ZERO);
         user.setAvatarUrl(userDTO.avatarUrl() != null ? userDTO.avatarUrl() : DEFAULT_AVATAR_URL);
         user.setLevel(userDTO.level());
         user.setRole(userDTO.role());
@@ -54,7 +52,6 @@ public record UserDTO(
                 user.getEmail(),
                 user.getRegistrationAt(),
                 user.getTotalFinPoints(),
-                user.getBudget(),
                 user.getAvatarUrl(),
                 user.getLevel(),
                 user.getRole(),
@@ -73,7 +70,6 @@ public record UserDTO(
                 user.getEmail(),
                 user.getRegistrationAt(),
                 user.getTotalFinPoints(),
-                user.getBudget(),
                 user.getAvatarUrl(),
                 user.getLevel(),
                 user.getRole(),
