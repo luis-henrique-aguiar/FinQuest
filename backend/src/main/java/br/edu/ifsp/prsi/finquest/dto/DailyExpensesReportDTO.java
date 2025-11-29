@@ -4,5 +4,4 @@ import java.util.List;
 
 public record DailyExpensesReportDTO(
         List<DailyExpenseDTO> expenses
-) {
-}
+) {}

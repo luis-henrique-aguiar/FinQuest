@@ -4,5 +4,4 @@ import java.util.List;
 
 public record YearlyReportDTO(
         List<MonthlyReportDTO> reports
-) {
-}
+) {}

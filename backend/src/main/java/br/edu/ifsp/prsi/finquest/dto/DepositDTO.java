@@ -9,4 +9,4 @@ public record DepositDTO(
         @NotNull(message = "O valor do depósito é obrigatório.")
         @DecimalMin(value = "0.01", inclusive = true, message = "O valor deve ser positivo.")
         BigDecimal amount
-) { }
+) {}

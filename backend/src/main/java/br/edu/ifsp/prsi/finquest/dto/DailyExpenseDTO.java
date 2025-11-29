@@ -6,5 +6,4 @@ public record DailyExpenseDTO(
         String day,
         BigDecimal value,
         long count
-) {
-}
+) {}

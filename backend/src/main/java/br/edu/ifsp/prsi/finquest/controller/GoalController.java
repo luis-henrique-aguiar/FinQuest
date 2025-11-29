@@ -1,7 +1,6 @@
 package br.edu.ifsp.prsi.finquest.controller;
 
 import br.edu.ifsp.prsi.finquest.dto.*;
-import br.edu.ifsp.prsi.finquest.model.Goal;
 import br.edu.ifsp.prsi.finquest.service.GoalService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
