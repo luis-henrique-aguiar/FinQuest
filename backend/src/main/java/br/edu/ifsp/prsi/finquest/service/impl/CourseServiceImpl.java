@@ -12,7 +12,10 @@ import br.edu.ifsp.prsi.finquest.repository.UserEnrollmentRepository;
 import br.edu.ifsp.prsi.finquest.repository.UserLessonCompletionRepository;
 import br.edu.ifsp.prsi.finquest.service.CourseService;
 import jakarta.persistence.EntityNotFoundException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
@@ -22,61 +25,56 @@ import java.util.stream.Collectors;
 @Service
 public class CourseServiceImpl implements CourseService {
 
+    private static final Logger logger = LoggerFactory.getLogger(CourseServiceImpl.class);
+
     private final CourseRepository courseRepository;
     private final UserEnrollmentRepository enrollmentRepository;
     private final LessonRepository lessonRepository;
     private final UserLessonCompletionRepository completionRepository;
 
-    public CourseServiceImpl(CourseRepository courseRepository,
-                             UserEnrollmentRepository enrollmentRepository,
-                             LessonRepository lessonRepository,
-                             UserLessonCompletionRepository completionRepository) {
+    public CourseServiceImpl(
+            CourseRepository courseRepository,
+            UserEnrollmentRepository enrollmentRepository,
+            LessonRepository lessonRepository,
+            UserLessonCompletionRepository completionRepository
+    ) {
         this.courseRepository = courseRepository;
         this.enrollmentRepository = enrollmentRepository;
         this.lessonRepository = lessonRepository;
         this.completionRepository = completionRepository;
     }
 
+    @Transactional(readOnly = true)
     public List<CourseProgressDTO> getCoursesForUser(String userId) {
-        List<UserEnrollment> enrollments = enrollmentRepository.findByIdUserId(userId);
+        logger.debug("Buscando cursos para o usuario: userId={}", userId);
 
-        Map<String, Integer> progressMap = enrollments.stream()
-                .collect(Collectors.toMap(
-                        enrollment -> enrollment.getId().getCourseId(),
-                        UserEnrollment::getProgress
-                ));
-
+        Map<String, Integer> progressMap = buildProgressMap(userId);
         List<Course> allCourses = courseRepository.findAll();
 
-        return allCourses.stream()
-                .map(course -> new CourseProgressDTO(
-                        course.getId(),
-                        course.getTitle(),
-                        course.getDescription(),
-                        course.getIcon(),
-                        progressMap.getOrDefault(course.getId(), null)
-                ))
+        List<CourseProgressDTO> result = allCourses.stream()
+                .map(course -> mapToCourseProgressDTO(course, progressMap))
                 .toList();
+
+        logger.debug("Cursos retornados: userId={}, totalCourses={}, enrolledCourses={}",
+                userId, result.size(), progressMap.size());
+
+        return result;
     }
 
+    @Transactional(readOnly = true)
     public CourseDetailsDTO getCourseDetailsForUser(String courseId, String userId) {
-        Course course = courseRepository.findById(courseId)
-                .orElseThrow(() -> new EntityNotFoundException("Curso não encontrado: " + courseId));
+        logger.debug("Buscando detalhes do curso: courseId={}, userId={}", courseId, userId);
 
+        Course course = findCourseOrThrow(courseId);
         List<Lesson> lessons = lessonRepository.findAllByCourseIdOrderByLessonOrderAsc(courseId);
-
-        Set<String> completedLessonIds = completionRepository.findUserCompletionsByCourse(userId, courseId)
-                .stream()
-                .map(completion -> completion.getId().getLessonId())
-                .collect(Collectors.toSet());
+        Set<String> completedLessonIds = getCompletedLessonIds(userId, courseId);
 
         List<LessonProgressDTO> lessonDTOs = lessons.stream()
-                .map(lesson -> new LessonProgressDTO(
-                        lesson.getId(),
-                        lesson.getTitle(),
-                        completedLessonIds.contains(lesson.getId())
-                ))
+                .map(lesson -> mapToLessonProgressDTO(lesson, completedLessonIds))
                 .toList();
+
+        logger.debug("Detalhes do curso carregados: courseId={}, totalLessons={}, completedLessons={}",
+                courseId, lessons.size(), completedLessonIds.size());
 
         return new CourseDetailsDTO(
                 course.getId(),
@@ -84,5 +82,45 @@ public class CourseServiceImpl implements CourseService {
                 course.getDescription(),
                 lessonDTOs
         );
+    }
+
+    private Map<String, Integer> buildProgressMap(String userId) {
+        List<UserEnrollment> enrollments = enrollmentRepository.findByIdUserId(userId);
+
+        return enrollments.stream()
+                .collect(Collectors.toMap(
+                        enrollment -> enrollment.getId().getCourseId(),
+                        UserEnrollment::getProgress
+                ));
+    }
+
+    private Set<String> getCompletedLessonIds(String userId, String courseId) {
+        return completionRepository.findUserCompletionsByCourse(userId, courseId)
+                .stream()
+                .map(completion -> completion.getId().getLessonId())
+                .collect(Collectors.toSet());
+    }
+
+    private CourseProgressDTO mapToCourseProgressDTO(Course course, Map<String, Integer> progressMap) {
+        return new CourseProgressDTO(
+                course.getId(),
+                course.getTitle(),
+                course.getDescription(),
+                course.getIcon(),
+                progressMap.getOrDefault(course.getId(), null)
+        );
+    }
+
+    private LessonProgressDTO mapToLessonProgressDTO(Lesson lesson, Set<String> completedIds) {
+        return new LessonProgressDTO(
+                lesson.getId(),
+                lesson.getTitle(),
+                completedIds.contains(lesson.getId())
+        );
+    }
+
+    private Course findCourseOrThrow(String courseId) {
+        return courseRepository.findById(courseId)
+                .orElseThrow(() -> new EntityNotFoundException("Curso nao encontrado: " + courseId));
     }
 }

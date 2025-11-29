@@ -39,56 +39,77 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public UserDTO findUserById(String id){
+    public UserDTO findUserById(String id) {
+        logger.debug("Buscando usuario: userId={}", id);
+
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado para o ID: " + id));
+                .orElseThrow(() -> new EntityNotFoundException("Usuario nao encontrado: " + id));
+
         return UserDTO.convertToDTO(user);
     }
 
+    @Override
     @Transactional
     public boolean addFinPoints(String userId, int points) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado: " + userId));
+        logger.debug("Adicionando FinPoints: userId={}, points={}", userId, points);
 
-        int oldLevel = user.getLevel();
-        int oldFinPoints = user.getTotalFinPoints();
+        User user = findUserOrThrow(userId);
 
-        user.setTotalFinPoints(oldFinPoints + points);
+        int previousLevel = user.getLevel();
+        int previousPoints = user.getTotalFinPoints();
 
-        int newLevel = LevelingSystem.calculateLevel(user.getTotalFinPoints());
+        int newTotalPoints = previousPoints + points;
+        int newLevel = LevelingSystem.calculateLevel(newTotalPoints);
+
+        user.setTotalFinPoints(newTotalPoints);
         user.setLevel(newLevel);
-
         userRepository.save(user);
 
-        boolean didLevelUp = newLevel > oldLevel;
+        boolean leveledUp = newLevel > previousLevel;
 
-        logger.info("Usuário {} ganhou {} FinPoints. Total: {}. Nível: {} → {}",
-                userId, points, user.getTotalFinPoints(), oldLevel, newLevel);
+        logger.info("FinPoints atualizados: userId={}, pointsAdded={}, totalPoints={}, level={} -> {}",
+                userId, points, newTotalPoints, previousLevel, newLevel);
 
-        if (didLevelUp) {
-            logger.info("Usuário {} subiu de nível! {} → {}", userId, oldLevel, newLevel);
-            checkAndGrantLevelBadge(userId, newLevel);
+        if (leveledUp) {
+            handleLevelUp(userId, previousLevel, newLevel);
         }
 
-        return didLevelUp;
+        return leveledUp;
+    }
+
+    private void handleLevelUp(String userId, int previousLevel, int newLevel) {
+        logger.info("Level up detectado: userId={}, previousLevel={}, newLevel={}",
+                userId, previousLevel, newLevel);
+
+        checkAndGrantLevelBadge(userId, newLevel);
     }
 
     private void checkAndGrantLevelBadge(String userId, int level) {
         Optional<Achievement> badgeOpt = achievementRepository.findByRequiredLevel(level);
 
         if (badgeOpt.isEmpty()) {
-            logger.debug("Nenhum badge encontrado para o nível {}", level);
+            logger.debug("Nenhum badge configurado para o nivel: level={}", level);
             return;
         }
 
         Achievement badge = badgeOpt.get();
 
-        UserAchievementId achievementId = new UserAchievementId(userId, badge.getId());
-        if (userAchievementRepository.existsById(achievementId)) {
-            logger.debug("Usuário {} já possui o badge '{}' (nível {})", userId, badge.getTitle(), level);
+        if (userAlreadyHasBadge(userId, badge.getId())) {
+            logger.debug("Usuario ja possui o badge: userId={}, badgeId={}, badgeTitle='{}'",
+                    userId, badge.getId(), badge.getTitle());
             return;
         }
 
+        grantBadgeToUser(userId, badge);
+    }
+
+    private boolean userAlreadyHasBadge(String userId, Long badgeId) {
+        UserAchievementId achievementId = new UserAchievementId(userId, badgeId);
+        return userAchievementRepository.existsById(achievementId);
+    }
+
+    private void grantBadgeToUser(String userId, Achievement badge) {
+        UserAchievementId achievementId = new UserAchievementId(userId, badge.getId());
         User user = userRepository.getReferenceById(userId);
 
         UserAchievement userAchievement = new UserAchievement();
@@ -99,7 +120,12 @@ public class UserServiceImpl implements UserService {
 
         userAchievementRepository.save(userAchievement);
 
-        logger.info("Badge '{}' ({}) concedido ao usuário {} por atingir o nível {}",
-                badge.getTitle(), badge.getIcon(), userId, level);
+        logger.info("Badge concedido: userId={}, badgeId={}, badgeTitle='{}', requiredLevel={}",
+                userId, badge.getId(), badge.getTitle(), badge.getRequiredLevel());
+    }
+
+    private User findUserOrThrow(String userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("Usuario nao encontrado: " + userId));
     }
 }

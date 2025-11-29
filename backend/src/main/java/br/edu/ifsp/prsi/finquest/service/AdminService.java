@@ -11,6 +11,6 @@ public interface AdminService {
 
     Page<UserSummaryDTO> getAllUsers(Pageable pageable);
 
-    void promoteUserToAdmin(String userId);
+    void promoteUserToAdmin(String targetUserId, String adminUserId);
 
 }

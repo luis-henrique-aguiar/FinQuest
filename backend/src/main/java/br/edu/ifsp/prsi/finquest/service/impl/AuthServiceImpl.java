@@ -32,71 +32,109 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
-    public RegisterResponseDTO register(RegisterRequestDTO registerRequestDTO) throws Exception {
-        logger.info("Iniciando registro de usuário: {}", registerRequestDTO.email());
+    public RegisterResponseDTO register(RegisterRequestDTO request) throws Exception {
+        logger.info("Iniciando registro de usuario: email={}", request.email());
 
-        if (userRepository.existsByEmail(registerRequestDTO.email())) {
-            throw new BusinessException("Email já cadastrado.");
-        }
+        validateEmailNotInUse(request.email());
 
         UserRecord firebaseUser = null;
 
         try {
-            UserRecord.CreateRequest request = new UserRecord.CreateRequest()
-                    .setEmail(registerRequestDTO.email())
-                    .setPassword(registerRequestDTO.password())
-                    .setDisplayName(registerRequestDTO.name())
-                    .setEmailVerified(false);
+            firebaseUser = createFirebaseUser(request);
+            User savedUser = createLocalUser(firebaseUser, request);
 
-            firebaseUser = firebaseAuth.createUser(request);
-            logger.info("Usuário criado no Firebase: {}", firebaseUser.getUid());
-
-            User newUser = new User();
-            newUser.setId(firebaseUser.getUid());
-            newUser.setEmail(registerRequestDTO.email());
-            newUser.setName(registerRequestDTO.name());
-            newUser.setBudget(BigDecimal.ZERO);
-            newUser.setAvatarUrl(null);
-            newUser.setTotalFinPoints(0);
-            newUser.setLevel(1);
-            newUser.setRole(UserRole.USER);
-
-            userRepository.save(newUser);
-            logger.info("Usuário salvo no banco de dados: {}", newUser.getId());
+            logger.info("Usuario registrado com sucesso: userId={}, email={}",
+                    savedUser.getId(), savedUser.getEmail());
 
             return new RegisterResponseDTO(
                     firebaseUser.getUid(),
-                    registerRequestDTO.name(),
-                    registerRequestDTO.email()
+                    request.name(),
+                    request.email()
             );
 
         } catch (FirebaseAuthException e) {
-            logger.error("Erro ao criar usuário no Firebase: {}", e.getMessage());
-
-            if (firebaseUser != null) {
-                try {
-                    firebaseAuth.deleteUser(firebaseUser.getUid());
-                    logger.info("Rollback: Usuário deletado do Firebase");
-                } catch (FirebaseAuthException deleteError) {
-                    logger.error("Erro no rollback do Firebase: {}", deleteError.getMessage());
-                }
-            }
-
-            throw new BusinessException("Erro ao criar usuário: " + e.getMessage());
+            handleFirebaseError(firebaseUser, e);
+            throw new BusinessException("Erro ao criar usuario: " + e.getMessage());
 
         } catch (Exception e) {
-            logger.error("Erro inesperado no registro: {}", e.getMessage());
-            if (firebaseUser != null) {
-                try {
-                    firebaseAuth.deleteUser(firebaseUser.getUid());
-                    userRepository.deleteById(firebaseUser.getUid());
-                    logger.info("Rollback completo: Usuário deletado do Firebase e do banco");
-                } catch (Exception rollbackError) {
-                    logger.error("Erro no rollback: {}", rollbackError.getMessage());
-                }
-            }
+            handleUnexpectedError(firebaseUser, e);
+            throw new BusinessException("Erro ao registrar usuario.");
+        }
+    }
 
-            throw new BusinessException("Erro ao registrar usuário.");
+    private void validateEmailNotInUse(String email) {
+        if (userRepository.existsByEmail(email)) {
+            logger.warn("Tentativa de registro com email ja cadastrado: email={}", email);
+            throw new BusinessException("Email ja cadastrado.");
+        }
+    }
+
+    private UserRecord createFirebaseUser(RegisterRequestDTO request) throws FirebaseAuthException {
+        UserRecord.CreateRequest firebaseRequest = new UserRecord.CreateRequest()
+                .setEmail(request.email())
+                .setPassword(request.password())
+                .setDisplayName(request.name())
+                .setEmailVerified(false);
+
+        UserRecord firebaseUser = firebaseAuth.createUser(firebaseRequest);
+
+        logger.debug("Usuario criado no Firebase: firebaseUid={}", firebaseUser.getUid());
+
+        return firebaseUser;
+    }
+
+    private User createLocalUser(UserRecord firebaseUser, RegisterRequestDTO request) {
+        User newUser = new User();
+        newUser.setId(firebaseUser.getUid());
+        newUser.setEmail(request.email());
+        newUser.setName(request.name());
+        newUser.setBudget(BigDecimal.ZERO);
+        newUser.setAvatarUrl(null);
+        newUser.setTotalFinPoints(0);
+        newUser.setLevel(1);
+        newUser.setRole(UserRole.USER);
+
+        User savedUser = userRepository.save(newUser);
+
+        logger.debug("Usuario criado no banco local: userId={}", savedUser.getId());
+
+        return savedUser;
+    }
+
+    private void handleFirebaseError(UserRecord firebaseUser, FirebaseAuthException e) {
+        logger.error("Erro ao criar usuario no Firebase: error={}", e.getMessage());
+
+        if (firebaseUser != null) {
+            rollbackFirebaseUser(firebaseUser.getUid());
+        }
+    }
+
+    private void handleUnexpectedError(UserRecord firebaseUser, Exception e) {
+        logger.error("Erro inesperado no registro: error={}", e.getMessage(), e);
+
+        if (firebaseUser != null) {
+            rollbackFirebaseUser(firebaseUser.getUid());
+            rollbackLocalUser(firebaseUser.getUid());
+        }
+    }
+
+    private void rollbackFirebaseUser(String firebaseUid) {
+        try {
+            firebaseAuth.deleteUser(firebaseUid);
+            logger.info("Rollback Firebase executado: firebaseUid={}", firebaseUid);
+        } catch (FirebaseAuthException deleteError) {
+            logger.error("Erro no rollback do Firebase: firebaseUid={}, error={}",
+                    firebaseUid, deleteError.getMessage());
+        }
+    }
+
+    private void rollbackLocalUser(String userId) {
+        try {
+            userRepository.deleteById(userId);
+            logger.info("Rollback banco local executado: userId={}", userId);
+        } catch (Exception deleteError) {
+            logger.error("Erro no rollback do banco local: userId={}, error={}",
+                    userId, deleteError.getMessage());
         }
     }
 }

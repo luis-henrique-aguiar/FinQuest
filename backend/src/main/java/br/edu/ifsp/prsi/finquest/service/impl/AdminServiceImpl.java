@@ -2,6 +2,7 @@ package br.edu.ifsp.prsi.finquest.service.impl;
 
 import br.edu.ifsp.prsi.finquest.dto.AdminStatsDTO;
 import br.edu.ifsp.prsi.finquest.dto.UserSummaryDTO;
+import br.edu.ifsp.prsi.finquest.exception.BusinessException;
 import br.edu.ifsp.prsi.finquest.model.User;
 import br.edu.ifsp.prsi.finquest.model.UserLessonCompletion;
 import br.edu.ifsp.prsi.finquest.model.enums.MissionStatus;
@@ -25,6 +26,8 @@ public class AdminServiceImpl implements AdminService {
 
     private static final Logger logger = LoggerFactory.getLogger(AdminServiceImpl.class);
 
+    private static final int ACTIVE_USERS_DAYS_THRESHOLD = 30;
+
     private final UserRepository userRepository;
     private final UserLessonCompletionRepository lessonCompletionRepository;
     private final UserMissionProgressRepository missionProgressRepository;
@@ -42,22 +45,17 @@ public class AdminServiceImpl implements AdminService {
     @Override
     @Transactional(readOnly = true)
     public AdminStatsDTO getSystemStats() {
+        logger.info("Gerando estatisticas do sistema");
+
         long totalUsers = userRepository.count();
-
-        // Usuários ativos nos últimos 30 dias (baseado em lesson completion)
-        LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
-        long activeUsers = lessonCompletionRepository.countDistinctUsersByCompletedAtAfter(thirtyDaysAgo);
-
+        long activeUsers = countActiveUsers();
         long totalLessonsCompleted = lessonCompletionRepository.count();
         long totalMissionsCompleted = missionProgressRepository.countByStatus(MissionStatus.COMPLETED);
+        double averageFinPoints = getAverageFinPoints();
+        int highestLevel = getHighestLevel();
 
-        Double avgFinPoints = userRepository.findAverageFinPoints();
-        double averageFinPoints = avgFinPoints != null ? avgFinPoints : 0.0;
-
-        Integer maxLevel = userRepository.findMaxLevel();
-        int highestLevel = maxLevel != null ? maxLevel : 1;
-
-        logger.info("Estatísticas do sistema solicitadas por admin");
+        logger.info("Estatisticas geradas: totalUsers={}, activeUsers={}, lessonsCompleted={}, missionsCompleted={}",
+                totalUsers, activeUsers, totalLessonsCompleted, totalMissionsCompleted);
 
         return new AdminStatsDTO(
                 totalUsers,
@@ -72,40 +70,76 @@ public class AdminServiceImpl implements AdminService {
     @Override
     @Transactional(readOnly = true)
     public Page<UserSummaryDTO> getAllUsers(Pageable pageable) {
+        logger.debug("Buscando usuarios: page={}, size={}", pageable.getPageNumber(), pageable.getPageSize());
+
         Page<User> users = userRepository.findAll(pageable);
 
-        return users.map(user -> {
-            List<UserLessonCompletion> completions = lessonCompletionRepository
-                    .findAllByUserIdOrderByCompletedAtDesc(user.getId());
+        Page<UserSummaryDTO> result = users.map(this::buildUserSummary);
 
-            LocalDate lastActivity = null;
-            if (!completions.isEmpty()) {
-                lastActivity = completions.get(0).getCompletedAt().toLocalDate();
-            }
+        logger.debug("Usuarios encontrados: total={}, page={}", result.getTotalElements(), pageable.getPageNumber());
 
-            long completedLessons = lessonCompletionRepository.countByUserId(user.getId());
-
-            return new UserSummaryDTO(
-                    user.getId(),
-                    user.getName(),
-                    user.getEmail(),
-                    user.getLevel(),
-                    user.getTotalFinPoints(),
-                    lastActivity,
-                    completedLessons
-            );
-        });
+        return result;
     }
 
-    @Override
     @Transactional
-    public void promoteUserToAdmin(String userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado: " + userId));
+    @Override
+    public void promoteUserToAdmin(String targetUserId, String adminUserId) {
+        logger.info("Tentativa de promocao: targetUserId={}, requestedBy={}",
+                targetUserId, adminUserId);
 
-        user.setRole(UserRole.ADMIN);
-        userRepository.save(user);
+        User targetUser = userRepository.findById(targetUserId)
+                .orElseThrow(() -> new EntityNotFoundException("Usuario nao encontrado: " + targetUserId));
 
-        logger.info("Usuário {} promovido a ADMIN", userId);
+        if (targetUser.getRole() == UserRole.ADMIN) {
+            logger.warn("Usuario ja e admin: targetUserId={}", targetUserId);
+            throw new BusinessException("Usuario ja possui role ADMIN.");
+        }
+
+        targetUser.setRole(UserRole.ADMIN);
+        userRepository.save(targetUser);
+
+        logger.info("Usuario promovido a admin: targetUserId={}, promotedBy={}",
+                targetUserId, adminUserId);
+    }
+
+    private UserSummaryDTO buildUserSummary(User user) {
+        LocalDate lastActivity = findLastActivityDate(user.getId());
+        long completedLessons = lessonCompletionRepository.countByUserId(user.getId());
+
+        return new UserSummaryDTO(
+                user.getId(),
+                user.getName(),
+                user.getEmail(),
+                user.getLevel(),
+                user.getTotalFinPoints(),
+                lastActivity,
+                completedLessons
+        );
+    }
+
+    private LocalDate findLastActivityDate(String userId) {
+        List<UserLessonCompletion> completions = lessonCompletionRepository
+                .findAllByUserIdOrderByCompletedAtDesc(userId);
+
+        if (completions.isEmpty()) {
+            return null;
+        }
+
+        return completions.getFirst().getCompletedAt().toLocalDate();
+    }
+
+    private long countActiveUsers() {
+        LocalDateTime threshold = LocalDateTime.now().minusDays(ACTIVE_USERS_DAYS_THRESHOLD);
+        return lessonCompletionRepository.countDistinctUsersByCompletedAtAfter(threshold);
+    }
+
+    private double getAverageFinPoints() {
+        Double avg = userRepository.findAverageFinPoints();
+        return avg != null ? avg : 0.0;
+    }
+
+    private int getHighestLevel() {
+        Integer maxLevel = userRepository.findMaxLevel();
+        return maxLevel != null ? maxLevel : 1;
     }
 }
