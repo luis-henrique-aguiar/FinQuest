@@ -1,7 +1,6 @@
 package br.edu.ifsp.prsi.finquest.service.impl;
 
 import br.edu.ifsp.prsi.finquest.dto.*;
-import br.edu.ifsp.prsi.finquest.events.GoalCompletedEvent;
 import br.edu.ifsp.prsi.finquest.exception.BusinessException;
 import br.edu.ifsp.prsi.finquest.model.*;
 import br.edu.ifsp.prsi.finquest.repository.GoalRepository;
@@ -16,7 +15,6 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 public class GoalServiceImpl implements GoalService {
@@ -140,19 +138,10 @@ public class GoalServiceImpl implements GoalService {
     private List<GoalDTO> convertToDtoList(List<Goal> goals) {
         return goals.stream()
                 .map(GoalDTO::fromEntity)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     private void determineGoalStatus(Goal goal) {
-        /*if (goal.getTargetAmount().compareTo(goal.getCurrentAmount()) > 0) {
-            if (goal.getStatus().equals(GoalStatus.COMPLETED)) {
-                goal.setStatus(GoalStatus.IN_PROGRESS);
-            }
-        } else {
-            if (!goal.getStatus().equals(GoalStatus.COMPLETED)) {
-                goal.setStatus(GoalStatus.COMPLETED);
-            }
-        }*/
         if (goal.getCurrentAmount().compareTo(goal.getTargetAmount()) >= 0) {
             goal.setStatus(GoalStatus.COMPLETED);
         } else {
@@ -165,9 +154,9 @@ public class GoalServiceImpl implements GoalService {
                 && !oldStatus.equals(GoalStatus.COMPLETED);
 
         if (justCompleted) {
-            GoalCompletedEvent event = new GoalCompletedEvent(this, updatedGoalEntity.getUserId(), updatedGoalEntity.getId());
-            return missionService.handleGoalCompleted(event);
+            return missionService.processGoalCompletion(updatedGoalEntity.getUserId(), updatedGoalEntity.getId());
         }
+
         return null;
     }
 }

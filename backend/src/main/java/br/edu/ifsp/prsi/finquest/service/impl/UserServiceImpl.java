@@ -40,7 +40,8 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserDTO findUserById(String id){
-        User user = userRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado para o ID: " + id));
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado para o ID: " + id));
         return UserDTO.convertToDTO(user);
     }
 
