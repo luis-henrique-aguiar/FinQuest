@@ -32,7 +32,7 @@ import LearnHubPage from "./pages/LearnHubPage";
 import { CourseDetailsPage } from "./pages/CourseDetailsPage";
 import ProfilePage from "./pages/ProfilePage";
 import MissionsPage from "./pages/MissionsPage";
-import BudgetPage from "./pages/BudgetPage";
+import { FinancePlanningPage } from "./pages/FinancePlanning";
 import GoalsPage from "./pages/GoalsPage";
 import InvestmentSimulatorPage from "./pages/InvestmentSimulatorPage";
 import ReportsPage from "./pages/ReportsPage";
@@ -81,7 +81,7 @@ const AppRoutes = () => {
           <Route path="/learn/:courseId/:lessonId" element={<LessonPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/missions" element={<MissionsPage />} />
-          <Route path="/budget" element={<BudgetPage />} />
+          <Route path="/planning" element={<FinancePlanningPage />} />
           <Route path="/goals" element={<GoalsPage />} />
           <Route path="/simulator" element={<InvestmentSimulatorPage />} />
           <Route path="/reports" element={<ReportsPage />} />
