@@ -12,11 +12,11 @@ public record UpdateGoalDTO (
         @Size(max = 100, message = "O nome da meta não pode exceder 100 caracteres.")
         String name,
 
-        @NotNull(message = "O Valor Alvo é obrigatório.")
-        @DecimalMin(value = "0.01", inclusive = true, message = "O Valor Alvo deve ser maior que zero.")
+        @NotNull(message = "O valor alvo é obrigatório.")
+        @DecimalMin(value = "0.01", inclusive = true, message = "O valor alvo deve ser maior que zero.")
         BigDecimal targetAmount,
 
-        @NotNull(message = "O Valor Atual é obrigatório.")
-        @DecimalMin(value = "0.00", inclusive = true, message = "O Valor Atual deve ser maior ou igual a zero.")
+        @NotNull(message = "O valor atual é obrigatório.")
+        @DecimalMin(value = "0.00", inclusive = true, message = "O valor atual deve ser maior ou igual a zero.")
         BigDecimal currentAmount
 ) {}

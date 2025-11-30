@@ -12,7 +12,7 @@ public record RegisterGoalDTO(
         @Size(max = 100, message = "O nome da meta não pode exceder 100 caracteres.")
         String name,
 
-        @NotNull(message = "O Valor Alvo é obrigatório.")
+        @NotNull(message = "O valor alvo é obrigatório.")
         @DecimalMin(value = "0.01", inclusive = true, message = "O Valor Alvo deve ser maior que zero.")
         BigDecimal targetAmount
 ) {}

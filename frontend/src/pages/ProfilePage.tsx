@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { Lock } from "react-feather";
 import { useAuth } from "../hooks/useAuth";
+import { useToast } from "../hooks/useToast";
+import api from "../services/api";
 import Button from "../components/common/Button";
 import FinPoints from "../components/gamification/FinPoints";
 import Badge from "../components/gamification/Badge";
@@ -11,7 +13,7 @@ import { PasswordChangeModal } from "../components/profile/PasswordChangeModal";
 import { calculateLevelProgress, getFinPointsForLevel } from "../utils/levelingSystem";
 import * as S from "./ProfilePage.styles";
 
-const badges = [
+/*const badges = [
   { id: 1, level: "gold", icon: "🏆", label: "Mestre do Orçamento", status: "unlocked" },
   { id: 2, level: "silver", icon: "💸", label: "Poupadora", status: "unlocked" },
   { id: 3, level: "bronze", icon: "📊", label: "Analista", status: "unlocked" },
@@ -20,9 +22,9 @@ const badges = [
   { id: 6, level: "silver", icon: "🔄", label: "Consistente", status: "locked" },
   { id: 7, level: "gold", icon: "🚀", label: "Ambiciosa", status: "locked" },
   { id: 8, level: "bronze", icon: "📚", label: "Estudiosa", status: "locked" },
-] as const;
+] as const;*/
 
-const achievements = [
+/*const achievements = [
   {
     id: 1,
     title: "Primeira Semana Completa",
@@ -41,19 +43,40 @@ const achievements = [
     description: "Economizou R$100 em sua primeira meta",
     icon: "💰",
   },
-];
+];*/
 
 export const ProfilePage: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, updateUserContext } = useAuth();
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const { addToast } = useToast();
 
   if (!user) {
     return <div>Carregando perfil...</div>;
   }
 
+  const allAchievements = user.unlockedAchievements || [];
+  const recentAchievements = allAchievements
+      .slice(-3)
+      .reverse();
+  const hasAchievements = allAchievements.length > 0;
+
   const progressPercent = calculateLevelProgress(user.totalFinPoints);
   const finPointsForNextLevel = getFinPointsForLevel(user.level + 1);
   const tooltipMessage = `${user.totalFinPoints.toLocaleString()} / ${finPointsForNextLevel.toLocaleString()} FinPoints`;
+
+  const formatRegistrationDate = (dateString: string | undefined): string => {
+    if (!dateString) return "N/A";
+
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return "Data inválida";
+      return date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+
+    } catch (error) {
+      console.error("Erro ao formatar data de registro:", error);
+      return "N/A";
+    }
+  };
 
   const handleSaveAvatar = async (newAvatarUrl: string, file?: File) => {
     if (file) {
@@ -64,11 +87,51 @@ export const ProfilePage: React.FC = () => {
   };
 
   const handleSaveName = async (newName: string) => {
-    console.log("Salvando nome:", newName);
+    const nameTrimmed = newName.trim();
+    if (nameTrimmed === user!.name) return;
+
+    try {
+      const response = await api.put("/users/name", {
+        name: nameTrimmed,
+      });
+
+      updateUserContext({ name: nameTrimmed });
+      addToast("Nome atualizado com sucesso!", "success");
+
+    } catch (error) {
+      if (error?.response?.data?.details) {
+          addToast(`${error.response.data.details[0]}`, "error");
+      } else {
+          console.log(error);
+          addToast("Erro ao atualizar nome. Tente novamente.", "error");
+      }
+    }
   };
 
   const handleSaveEmail = async (newEmail: string) => {
-    console.log("Salvando email:", newEmail);
+    const emailTrimmed = newEmail.trim();
+    if (emailTrimmed === user!.email) return;
+
+    try {
+      const response = await api.put("/users/email", {
+        email: emailTrimmed,
+      });
+
+      await logout();
+      addToast("E-mail atualizado com sucesso! Por segurança, você foi desconectado e deve fazer login novamente com seu novo e-mail.", "success");
+    } catch (error: any) {
+        console.error("Erro no updateEmail:", error);
+
+        let errorMessage = "Erro ao atualizar email. Tente novamente.";
+
+        if (error?.response?.data?.message) {
+          errorMessage = error.response.data.message;
+        } else if (error?.response?.data?.details) {
+          errorMessage = error.response.data.details[0];
+        }
+
+        addToast(errorMessage, "error");
+    }
   };
 
   return (
@@ -143,37 +206,25 @@ export const ProfilePage: React.FC = () => {
         </S.SettingItem>
       </S.SettingsSection>
 
-      <div>
-        <S.SectionTitle>Suas Conquistas</S.SectionTitle>
-        <S.BadgesContainer>
-          {badges.map((badge) => (
-            <Badge
-              key={badge.id}
-              level={badge.level as "bronze" | "silver" | "gold"}
-              icon={badge.icon}
-              label={badge.label}
-              status={badge.status as "locked" | "unlocked"}
-              onClick={() => console.log(`Badge ${badge.id} clicked`)}
-            />
-          ))}
-        </S.BadgesContainer>
-      </div>
-
       <S.AchievementsSection padding="medium">
         <S.SectionTitle>Conquistas Recentes</S.SectionTitle>
-        <S.AchievementsList>
-          {achievements.map((achievement) => (
-            <S.Achievement key={achievement.id}>
-              <S.AchievementIcon>{achievement.icon}</S.AchievementIcon>
-              <S.AchievementInfo>
-                <S.AchievementTitle>{achievement.title}</S.AchievementTitle>
-                <S.AchievementDescription>
-                  {achievement.description}
-                </S.AchievementDescription>
-              </S.AchievementInfo>
-            </S.Achievement>
-          ))}
-        </S.AchievementsList>
+
+        {hasAchievements ? (
+          <S.AchievementsList>
+            {recentAchievements.map((achievement) => (
+              <S.Achievement key={achievement.id}>
+                <S.AchievementIcon>{achievement.icon}</S.AchievementIcon>
+                <S.AchievementInfo>
+                  <S.AchievementTitle>{achievement.title}</S.AchievementTitle>
+                </S.AchievementInfo>
+              </S.Achievement>
+            ))}
+          </S.AchievementsList>
+        ) : (
+          <div style={{ padding: "10px", textAlign: "center", color: "#666" }}>
+              Nenhuma conquista desbloqueada ainda. Continue usando o FinQuest para ganhar sua primeira!
+          </div>
+        )}
       </S.AchievementsSection>
 
       <S.SettingsSection padding="medium">
@@ -181,7 +232,7 @@ export const ProfilePage: React.FC = () => {
         
         <S.SettingItem>
           <S.SettingLabel>Membro desde</S.SettingLabel>
-          <span>Janeiro 2024</span>
+          <span>{formatRegistrationDate(user.registrationAt)}</span>
         </S.SettingItem>
         
         <S.SettingItem>
