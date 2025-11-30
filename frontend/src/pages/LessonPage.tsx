@@ -131,7 +131,7 @@ const LessonPage = () => {
 
       console.log("🎯 Lesson Completion Data:", rewardData);
 
-      if (rewardData.didLevelUp && rewardData.unlockedBadge) {
+      /*if (rewardData.didLevelUp && rewardData.unlockedBadge) {
         showBadgeUnlocked(
           rewardData.unlockedBadge,
           rewardData.level,
@@ -144,8 +144,28 @@ const LessonPage = () => {
       updateUserContext({
         totalFinPoints: rewardData.totalFinPoints,
         level: rewardData.level,
-      });
+      });*/
 
+      const updateData: Partial<User> & { unlockedBadge?: Achievement } = {
+        totalFinPoints: rewardData.totalFinPoints,
+        level: rewardData.level,
+      };
+
+      if (rewardData.unlockedBadge) {
+        updateData.unlockedBadge = rewardData.unlockedBadge;
+      }
+
+      if (rewardData.didLevelUp && rewardData.unlockedBadge) {
+          showBadgeUnlocked(
+              rewardData.unlockedBadge,
+              rewardData.level,
+              rewardData.totalFinPoints
+          );
+      } else if (rewardData.didLevelUp) {
+          showLevelUp(rewardData.level);
+      }
+
+      updateUserContext(updateData);
       setIsQuizCompleted(true);
     } catch (error: any) {
       if (error.response?.data?.error === "CONFLICT") {

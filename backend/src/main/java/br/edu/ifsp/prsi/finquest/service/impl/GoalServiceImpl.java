@@ -116,7 +116,7 @@ public class GoalServiceImpl implements GoalService {
         Goal goal = findGoalAndValidateUser(userId, goalId);
         goalRepository.delete(goal);
 
-        return null;
+        return GoalDTO.fromEntity(goal);
     }
 
     @Override
@@ -144,15 +144,6 @@ public class GoalServiceImpl implements GoalService {
     }
 
     private void determineGoalStatus(Goal goal) {
-        /*if (goal.getTargetAmount().compareTo(goal.getCurrentAmount()) > 0) {
-            if (goal.getStatus().equals(GoalStatus.COMPLETED)) {
-                goal.setStatus(GoalStatus.IN_PROGRESS);
-            }
-        } else {
-            if (!goal.getStatus().equals(GoalStatus.COMPLETED)) {
-                goal.setStatus(GoalStatus.COMPLETED);
-            }
-        }*/
         if (goal.getCurrentAmount().compareTo(goal.getTargetAmount()) >= 0) {
             goal.setStatus(GoalStatus.COMPLETED);
         } else {

@@ -57,13 +57,20 @@ export const GoalsPage: React.FC = () => {
     }
   };
 
+  const getNormalizedStatus = (goal: GoalDTO) => {
+    if (goal.currentAmount >= goal.targetAmount) {
+        return 'COMPLETED';
+    }
+    return goal.statusLabel;
+  };
+
   const filteredGoals = useMemo(() => {
       switch (activeFilter) {
         case 'IN_PROGRESS':
-          return goals.filter(goal => goal.statusLabel === 'IN_PROGRESS');
+          return goals.filter(goal => getNormalizedStatus(goal) !== 'COMPLETED');
 
         case 'COMPLETED':
-          return goals.filter(goal => goal.statusLabel === 'COMPLETED');
+          return goals.filter(goal => getNormalizedStatus(goal) === 'COMPLETED');
 
         default:
           return goals;
@@ -72,8 +79,8 @@ export const GoalsPage: React.FC = () => {
 
   // Estatísticas calculadas
   const stats = useMemo(() => {
-    const activeGoals = goals.filter(goal => goal.completionPercentage !== '100%');
-    const completedGoals = goals.filter(goal => goal.completionPercentage === '100%');
+    const activeGoals = goals.filter(goal => getNormalizedStatus(goal) !== 'COMPLETED');
+    const completedGoals = goals.filter(goal => getNormalizedStatus(goal) === 'COMPLETED');
     const totalSaved = activeGoals.reduce((sum, goal) => sum + goal.currentAmount, 0);
     const totalTarget = activeGoals.reduce((sum, goal) => sum + goal.targetAmount, 0);
     const overallProgress = totalTarget > 0 ? (totalSaved / totalTarget) * 100 : 0;
@@ -122,8 +129,12 @@ export const GoalsPage: React.FC = () => {
       resetForm();
       addToast("Nova meta criada com sucesso!", "success");
     } catch (error) {
-      console.error('Erro ao criar meta:', error);
-      addToast("Erro ao criar meta. Tente novamente.", "error");
+        if (error?.response?.data?.details) {
+            addToast(`${error.response.data.details[0]}`, "error");
+        } else {
+            console.error('Erro ao criar meta:', error);
+            addToast("Erro ao criar meta. Tente novamente.", "error");
+        }
     }
   };
 
@@ -166,10 +177,16 @@ export const GoalsPage: React.FC = () => {
       }
 
       if (missionCompletion) {
-          updateUserContext({
+          const updateData: Partial<User> & { unlockedBadge?: Achievement } = {
             totalFinPoints: missionCompletion.totalFinPoints,
             level: missionCompletion.level,
-          });
+          };
+
+          if (missionCompletion.unlockedBadge) {
+              updateData.unlockedBadge = missionCompletion.unlockedBadge;
+          }
+
+          updateUserContext(updateData);
 
           if (missionCompletion.didLevelUp && missionCompletion.unlockedBadge) {
             showBadgeUnlocked(
@@ -182,8 +199,12 @@ export const GoalsPage: React.FC = () => {
           }
       }
     } catch (error) {
-      console.error('Erro ao atualizar meta:', error);
-      addToast("Erro ao atualizar meta. Tente novamente.", "error");
+        if (error?.response?.data?.details) {
+            addToast(`${error.response.data.details[0]}`, "error");
+        } else {
+            console.error('Erro ao atualizar meta:', error);
+            addToast("Erro ao atualizar meta. Tente novamente.", "error");
+        }
     }
   };
 
@@ -237,24 +258,33 @@ export const GoalsPage: React.FC = () => {
       }
 
       if (missionCompletion) {
-          updateUserContext({
+        const updateData: Partial<User> & { unlockedBadge?: Achievement } = {
             totalFinPoints: missionCompletion.totalFinPoints,
             level: missionCompletion.level,
-          });
+        };
 
-          if (missionCompletion.didLevelUp && missionCompletion.unlockedBadge) {
+        if (missionCompletion.unlockedBadge) {
+            updateData.unlockedBadge = missionCompletion.unlockedBadge;
+        }
+
+        updateUserContext(updateData);
+
+        if (missionCompletion.didLevelUp && missionCompletion.unlockedBadge) {
             showBadgeUnlocked(
-              missionCompletion.unlockedBadge,
-              missionCompletion.level,
-              missionCompletion.totalFinPoints
+                missionCompletion.unlockedBadge,
+                missionCompletion.level,
+                missionCompletion.totalFinPoints
             );
-          } else if (missionCompletion.didLevelUp) {
+        } else if (missionCompletion.didLevelUp) {
             showLevelUp(missionCompletion.level);
-          }
+        }
       }
     } catch (error) {
-      console.error('Erro ao adicionar fundos:', error);
-      addToast("Erro ao adicionar fundos. Tente novamente.", "error");
+        if (error?.response?.data?.details) {
+            addToast(`${error.response.data.details[0]}`, "error");
+        } else {
+            addToast("Erro ao adicionar fundos. Tente novamente.", "error");
+        }
     }
   };
 
@@ -646,7 +676,7 @@ export const GoalsPage: React.FC = () => {
               name={goal.name}
               target={goal.targetAmount}
               saved={goal.currentAmount}
-              status={goal.statusLabel}
+              status={getNormalizedStatus(goal)}
               onAddFunds={() => openAddFundsModal(goal)}
               onEdit={() => openEditModal(goal)}
               onDelete={() => openConfirmDeleteModal(goal)}
