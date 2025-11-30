@@ -1,9 +1,32 @@
-import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
+import {
+  ref,
+  uploadBytes,
+  getDownloadURL,
+  deleteObject,
+} from "firebase/storage";
 import { storage } from "../firebase";
+
+export const deleteImageByUrl = async (imageUrl: string | null | undefined) => {
+  if (!imageUrl) return;
+
+  if (!imageUrl.includes("firebasestorage.googleapis.com")) {
+    return;
+  }
+
+  try {
+    const imageRef = ref(storage, imageUrl);
+    await deleteObject(imageRef);
+  } catch (error: any) {
+    if (error.code !== "storage/object-not-found") {
+      console.error("Erro ao excluir imagem antiga:", error);
+    }
+  }
+};
 
 export const uploadProfileImage = async (
   userId: string,
-  file: File
+  file: File,
+  oldImageUrl?: string
 ): Promise<string> => {
   if (!file.type.startsWith("image/")) {
     throw new Error("O arquivo deve ser uma imagem");
@@ -12,6 +35,10 @@ export const uploadProfileImage = async (
   const MAX_SIZE = 5 * 1024 * 1024; // 5MB
   if (file.size > MAX_SIZE) {
     throw new Error("A imagem deve ter no máximo 5MB");
+  }
+
+  if (oldImageUrl) {
+    await deleteImageByUrl(oldImageUrl);
   }
 
   const fileExtension = file.name.split(".").pop() || "jpg";
@@ -35,10 +62,10 @@ export const compressImage = (
 ): Promise<Blob> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    
+
     reader.onload = (event) => {
       const img = new Image();
-      
+
       img.onload = () => {
         const canvas = document.createElement("canvas");
         let { width, height } = img;
@@ -83,15 +110,14 @@ export const compressImage = (
 
 export const uploadProfileImageWithCompression = async (
   userId: string,
-  file: File
+  file: File,
+  oldImageUrl?: string
 ): Promise<string> => {
   const compressedBlob = await compressImage(file);
-  
-  const compressedFile = new File(
-    [compressedBlob],
-    `profile_${userId}.jpg`,
-    { type: "image/jpeg" }
-  );
 
-  return uploadProfileImage(userId, compressedFile);
+  const compressedFile = new File([compressedBlob], `profile_${userId}.jpg`, {
+    type: "image/jpeg",
+  });
+
+  return uploadProfileImage(userId, compressedFile, oldImageUrl);
 };

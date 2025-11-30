@@ -14,7 +14,7 @@ import {
   getFinPointsForLevel,
 } from "../utils/levelingSystem";
 import * as S from "./ProfilePage.styles";
-import { uploadProfileImageWithCompression } from "../services/storageService";
+import { deleteImageByUrl, uploadProfileImageWithCompression } from "../services/storageService";
 import { updateUserAvatar } from "../services/userService";
 
 export const ProfilePage: React.FC = () => {
@@ -45,7 +45,6 @@ export const ProfilePage: React.FC = () => {
         year: "numeric",
       });
     } catch (error) {
-      console.error("Erro ao formatar data de registro:", error);
       return "N/A";
     }
   };
@@ -57,15 +56,18 @@ export const ProfilePage: React.FC = () => {
       if (file) {
         finalAvatarUrl = await uploadProfileImageWithCompression(
           user.uid,
-          file
+          file,
+          user.avatarUrl || undefined
         );
+      }
+      else if (user.avatarUrl && user.avatarUrl.includes("firebasestorage")) {
+        await deleteImageByUrl(user.avatarUrl);
       }
 
       const updatedUser = await updateUserAvatar(finalAvatarUrl);
 
       updateUserContext({ avatarUrl: updatedUser.avatarUrl || undefined });
     } catch (error: any) {
-      console.error("Erro ao salvar avatar:", error);
 
       if (error.message?.includes("5MB")) {
         addToast("A imagem deve ter no máximo 5MB", "error");
@@ -92,7 +94,6 @@ export const ProfilePage: React.FC = () => {
       if (error?.response?.data?.details) {
         addToast(`${error.response.data.details[0]}`, "error");
       } else {
-        console.log(error);
         addToast("Erro ao atualizar nome. Tente novamente.", "error");
       }
     }
@@ -113,7 +114,6 @@ export const ProfilePage: React.FC = () => {
         "success"
       );
     } catch (error: any) {
-      console.error("Erro no updateEmail:", error);
 
       let errorMessage = "Erro ao atualizar email. Tente novamente.";
 

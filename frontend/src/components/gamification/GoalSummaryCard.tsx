@@ -9,7 +9,6 @@ interface GoalSummaryCardProps {
   onClick: () => void;
 }
 
-// Reutilizando o estilo de card padrão do projeto
 const CardContainer = styled(motion.div)`
   background: ${({ theme }) => theme.colors.white};
   border-radius: ${({ theme }) => theme.borderRadius.large};
@@ -79,7 +78,7 @@ const ValuesText = styled.p`
 `;
 
 const ProgressSection = styled.div`
-  margin-top: auto; /* Empurra para o fundo se o card crescer */
+  margin-top: auto;
 `;
 
 const ProgressHeader = styled.div`
@@ -110,14 +109,11 @@ const ProgressFill = styled(motion.div)<{ $progress: number }>`
 `;
 
 export const GoalSummaryCard: React.FC<GoalSummaryCardProps> = ({ goal, onClick }) => {
-  // Cálculo de porcentagem seguro
   const progress = goal.targetAmount > 0 
     ? Math.min((goal.currentAmount / goal.targetAmount) * 100, 100) 
     : 0;
 
   const formatCurrency = (val: number) => {
-    // Formatação compacta (ex: 1.2k) ou normal dependendo do espaço, 
-    // mas aqui vamos usar o padrão normal para clareza
     return val.toLocaleString('pt-BR', { 
       style: 'currency', 
       currency: 'BRL', 

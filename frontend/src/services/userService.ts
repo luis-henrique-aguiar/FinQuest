@@ -50,7 +50,6 @@ export const getAllGoals = async (): Promise<GoalDTO[]> => {
     const response = await api.get('/goals');
     return response.data;
   } catch (error) {
-    console.error('Erro ao buscar missões:', error);
     throw error;
   }
 };

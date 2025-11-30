@@ -6,7 +6,10 @@ import Button from "../common/Button";
 import { useToast } from "../../hooks/useToast";
 import { useAuth } from "../../hooks/useAuth";
 import api from "../../services/api";
-import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "firebase/auth";
+import {
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+} from "firebase/auth";
 
 interface PasswordChangeModalProps {
   isOpen: boolean;
@@ -76,7 +79,7 @@ const PasswordToggle = styled.button`
   padding: 4px;
   border-radius: 4px;
   transition: all 0.2s ease;
-  
+
   &:hover {
     color: ${({ theme }) => theme.colors.primary};
     background-color: ${({ theme }) => theme.colors.primary}11;
@@ -122,7 +125,7 @@ const ButtonsContainer = styled.div`
   display: flex;
   gap: ${({ theme }) => theme.spacing.sm};
   margin-top: ${({ theme }) => theme.spacing.md};
-  
+
   @media (max-width: 480px) {
     flex-direction: column;
   }
@@ -136,7 +139,7 @@ const SecurityTip = styled.div`
   background-color: ${({ theme }) => theme.colors.primary}11;
   padding: ${({ theme }) => theme.spacing.md};
   border-radius: 12px;
-  
+
   h4 {
     margin: 0 0 ${({ theme }) => theme.spacing.xs} 0;
     color: ${({ theme }) => theme.colors.primary};
@@ -146,7 +149,7 @@ const SecurityTip = styled.div`
     align-items: center;
     gap: 0.5rem;
   }
-  
+
   p {
     margin: 0;
     font-size: 0.8rem;
@@ -164,13 +167,13 @@ export const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
     newPassword: "",
     confirmPassword: "",
   });
-  
+
   const [showPasswords, setShowPasswords] = useState({
     current: false,
     new: false,
     confirm: false,
   });
-  
+
   const [isLoading, setIsLoading] = useState(false);
   const { addToast } = useToast();
   const { firebaseUser, user, logout } = useAuth();
@@ -204,37 +207,43 @@ export const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
   };
 
   const handleInputChange = (field: keyof typeof formData, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const togglePasswordVisibility = (field: keyof typeof showPasswords) => {
-    setShowPasswords(prev => ({ ...prev, [field]: !prev[field] }));
+    setShowPasswords((prev) => ({ ...prev, [field]: !prev[field] }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.currentPassword) {
       addToast("Senha atual é obrigatória", "error");
       return;
     }
-    
+
     if (formData.newPassword.length < 6) {
       addToast("Nova senha deve ter pelo menos 6 caracteres", "error");
       return;
     }
-    
+
     if (formData.newPassword !== formData.confirmPassword) {
       addToast("Nova senha e confirmação não coincidem", "error");
       return;
     }
 
+    if (!user || !user.email || !firebaseUser) {
+      addToast("Sessão inválida. Por favor, faça login novamente.", "error");
+      return;
+    }
+
     setIsLoading(true);
     try {
-      const credential = EmailAuthProvider.credential(user.email!, formData.currentPassword);
+      const credential = EmailAuthProvider.credential(
+        user.email!,
+        formData.currentPassword
+      );
       await reauthenticateWithCredential(firebaseUser, credential);
-
-      console.log("Reautenticação no Firebase OK.");
 
       await api.put("/users/password", {
         newPassword: formData.newPassword,
@@ -243,28 +252,36 @@ export const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
 
       await logout();
 
-      addToast("Senha alterada com sucesso! Por segurança, você foi desconectado e deve fazer login novamente com sua nova senha.", "success");
-      setFormData({ currentPassword: "", newPassword: "", confirmPassword: "" });
+      addToast(
+        "Senha alterada com sucesso! Por segurança, você foi desconectado e deve fazer login novamente com sua nova senha.",
+        "success"
+      );
+      setFormData({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
       onClose();
     } catch (error: any) {
+      let errorMessage = "Erro ao alterar senha. Tente novamente.";
 
-    console.log(error);
-        let errorMessage = "Erro ao alterar senha. Tente novamente.";
-
-         if (error?.response?.data?.details) {
-             addToast(`${error.response.data.details[0]}`, "error");
-         } else if (error.response?.data?.message) {
-             errorMessage = error.response.data.message;
-         } else if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-             errorMessage = "A senha atual digitada está incorreta.";
-         } else if (error.code === 'auth/weak-password') {
-             errorMessage = "A nova senha é muito fraca (mínimo 6 caracteres).";
-         }
-
-        addToast(errorMessage, "error");
-      } finally {
-        setIsLoading(false);
+      if (error?.response?.data?.details) {
+        addToast(`${error.response.data.details[0]}`, "error");
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (
+        error.code === "auth/wrong-password" ||
+        error.code === "auth/invalid-credential"
+      ) {
+        errorMessage = "A senha atual digitada está incorreta.";
+      } else if (error.code === "auth/weak-password") {
+        errorMessage = "A nova senha é muito fraca (mínimo 6 caracteres).";
       }
+
+      addToast(errorMessage, "error");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleClose = () => {
@@ -280,7 +297,10 @@ export const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
             <span>🔒</span>
             Dica de Segurança
           </h4>
-          <p>Use uma senha forte com pelo menos 8 caracteres, incluindo letras maiúsculas, minúsculas, números e símbolos.</p>
+          <p>
+            Use uma senha forte com pelo menos 8 caracteres, incluindo letras
+            maiúsculas, minúsculas, números e símbolos.
+          </p>
         </SecurityTip>
 
         <InputGroup>
@@ -294,7 +314,9 @@ export const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
               type={showPasswords.current ? "text" : "password"}
               placeholder="Digite sua senha atual"
               value={formData.currentPassword}
-              onChange={(e) => handleInputChange("currentPassword", e.target.value)}
+              onChange={(e) =>
+                handleInputChange("currentPassword", e.target.value)
+              }
               required
             />
             <PasswordToggle
@@ -353,7 +375,9 @@ export const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
               type={showPasswords.confirm ? "text" : "password"}
               placeholder="Confirme sua nova senha"
               value={formData.confirmPassword}
-              onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
+              onChange={(e) =>
+                handleInputChange("confirmPassword", e.target.value)
+              }
               required
             />
             <PasswordToggle

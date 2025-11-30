@@ -5,17 +5,23 @@ import { useToast } from "../hooks/useToast";
 import { GoalCard } from "../components/gamification/GoalCard";
 import * as S from "./GoalsPage.styles";
 import api from "../services/api";
-import { getAllGoals, type GoalCompletionDTO, type GoalDTO, type GoalUpdateResponseDTO } from "../services/goalService";
+import {
+  getAllGoals,
+  type GoalCompletionDTO,
+  type GoalDTO,
+  type GoalUpdateResponseDTO,
+} from "../services/goalService";
 import { useAuth } from "../hooks/useAuth";
 import { useGamification } from "../context/GamificationContext";
 import { Award, Target, TrendingUp, CheckCircle } from "react-feather";
+import type { Achievement, User } from "../context/AuthContext";
 
-type FilterType = 'all' | 'IN_PROGRESS' | 'COMPLETED';
+type FilterType = "all" | "IN_PROGRESS" | "COMPLETED";
 
 export const GoalsPage: React.FC = () => {
   const [goals, setGoals] = useState<GoalDTO[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeFilter, setActiveFilter] = useState<FilterType>('all');
+  const [activeFilter, setActiveFilter] = useState<FilterType>("all");
   const { addToast } = useToast();
   const { updateUserContext } = useAuth();
   const { showLevelUp, showBadgeUnlocked } = useGamification();
@@ -47,11 +53,9 @@ export const GoalsPage: React.FC = () => {
     try {
       setIsLoading(true);
       const goals = await getAllGoals();
-      console.log('Dados recebidos do backend:', goals);
       setGoals(goals);
     } catch (error) {
-      console.error('Erro ao carregar metas:', error);
-      addToast('Erro ao carregar suas metas', 'error');
+      addToast("Erro ao carregar suas metas", "error");
     } finally {
       setIsLoading(false);
     }
@@ -59,31 +63,46 @@ export const GoalsPage: React.FC = () => {
 
   const getNormalizedStatus = (goal: GoalDTO) => {
     if (goal.currentAmount >= goal.targetAmount) {
-        return 'COMPLETED';
+      return "COMPLETED";
     }
     return goal.statusLabel;
   };
 
   const filteredGoals = useMemo(() => {
-      switch (activeFilter) {
-        case 'IN_PROGRESS':
-          return goals.filter(goal => getNormalizedStatus(goal) !== 'COMPLETED');
+    switch (activeFilter) {
+      case "IN_PROGRESS":
+        return goals.filter(
+          (goal) => getNormalizedStatus(goal) !== "COMPLETED"
+        );
 
-        case 'COMPLETED':
-          return goals.filter(goal => getNormalizedStatus(goal) === 'COMPLETED');
+      case "COMPLETED":
+        return goals.filter(
+          (goal) => getNormalizedStatus(goal) === "COMPLETED"
+        );
 
-        default:
-          return goals;
-      }
-    }, [goals, activeFilter]);
+      default:
+        return goals;
+    }
+  }, [goals, activeFilter]);
 
   // Estatísticas calculadas
   const stats = useMemo(() => {
-    const activeGoals = goals.filter(goal => getNormalizedStatus(goal) !== 'COMPLETED');
-    const completedGoals = goals.filter(goal => getNormalizedStatus(goal) === 'COMPLETED');
-    const totalSaved = activeGoals.reduce((sum, goal) => sum + goal.currentAmount, 0);
-    const totalTarget = activeGoals.reduce((sum, goal) => sum + goal.targetAmount, 0);
-    const overallProgress = totalTarget > 0 ? (totalSaved / totalTarget) * 100 : 0;
+    const activeGoals = goals.filter(
+      (goal) => getNormalizedStatus(goal) !== "COMPLETED"
+    );
+    const completedGoals = goals.filter(
+      (goal) => getNormalizedStatus(goal) === "COMPLETED"
+    );
+    const totalSaved = activeGoals.reduce(
+      (sum, goal) => sum + goal.currentAmount,
+      0
+    );
+    const totalTarget = activeGoals.reduce(
+      (sum, goal) => sum + goal.targetAmount,
+      0
+    );
+    const overallProgress =
+      totalTarget > 0 ? (totalSaved / totalTarget) * 100 : 0;
 
     return {
       totalSaved,
@@ -119,7 +138,7 @@ export const GoalsPage: React.FC = () => {
     }
 
     try {
-      const response = await api.post('/goals', {
+      const response = await api.post("/goals", {
         name: goalName.trim(),
         targetAmount: parseFloat(goalTarget),
       });
@@ -128,20 +147,26 @@ export const GoalsPage: React.FC = () => {
       setAddGoalModalOpen(false);
       resetForm();
       addToast("Nova meta criada com sucesso!", "success");
-    } catch (error) {
-        if (error?.response?.data?.details) {
-            addToast(`${error.response.data.details[0]}`, "error");
-        } else {
-            console.error('Erro ao criar meta:', error);
-            addToast("Erro ao criar meta. Tente novamente.", "error");
-        }
+    } catch (error: any) {
+      if (error?.response?.data?.details) {
+        addToast(`${error.response.data.details[0]}`, "error");
+      } else {
+        console.error("Erro ao criar meta:", error);
+        addToast("Erro ao criar meta. Tente novamente.", "error");
+      }
     }
   };
 
   const handleUpdateGoal = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!selectedGoal || !goalName.trim() || !goalTarget || parseFloat(goalTarget) <= 0 || parseFloat(currentAmountEdit) < 0) {
+    if (
+      !selectedGoal ||
+      !goalName.trim() ||
+      !goalTarget ||
+      parseFloat(goalTarget) <= 0 ||
+      parseFloat(currentAmountEdit) < 0
+    ) {
       addToast("Por favor, preencha todos os campos corretamente", "error");
       return;
     }
@@ -158,17 +183,17 @@ export const GoalsPage: React.FC = () => {
       const { updatedGoal, missionCompletion } = response.data;
 
       setGoals((prev) =>
-          prev.map((g) =>
-            g.id === selectedGoal.id
-              ? { ...g, ...updatedGoal }
-              : g
-          )
+        prev.map((g) =>
+          g.id === selectedGoal.id ? { ...g, ...updatedGoal } : g
+        )
       );
 
       setIsEditModalOpen(false);
       resetForm();
 
-      const justCompleted = previousStatus !== 'COMPLETED' && updatedGoal.statusLabel === 'COMPLETED';
+      const justCompleted =
+        previousStatus !== "COMPLETED" &&
+        updatedGoal.statusLabel === "COMPLETED";
 
       if (justCompleted) {
         setCelebrationModalOpen(true);
@@ -177,34 +202,34 @@ export const GoalsPage: React.FC = () => {
       }
 
       if (missionCompletion) {
-          const updateData: Partial<User> & { unlockedBadge?: Achievement } = {
-            totalFinPoints: missionCompletion.totalFinPoints,
-            level: missionCompletion.level,
-          };
+        const updateData: Partial<User> & { unlockedBadge?: Achievement } = {
+          totalFinPoints: missionCompletion.totalFinPoints,
+          level: missionCompletion.level,
+        };
 
-          if (missionCompletion.unlockedBadge) {
-              updateData.unlockedBadge = missionCompletion.unlockedBadge;
-          }
-
-          updateUserContext(updateData);
-
-          if (missionCompletion.didLevelUp && missionCompletion.unlockedBadge) {
-            showBadgeUnlocked(
-              missionCompletion.unlockedBadge,
-              missionCompletion.level,
-              missionCompletion.totalFinPoints,
-            );
-          } else if (missionCompletion.didLevelUp) {
-            showLevelUp(missionCompletion.level);
-          }
-      }
-    } catch (error) {
-        if (error?.response?.data?.details) {
-            addToast(`${error.response.data.details[0]}`, "error");
-        } else {
-            console.error('Erro ao atualizar meta:', error);
-            addToast("Erro ao atualizar meta. Tente novamente.", "error");
+        if (missionCompletion.unlockedBadge) {
+          updateData.unlockedBadge = missionCompletion.unlockedBadge;
         }
+
+        updateUserContext(updateData);
+
+        if (missionCompletion.didLevelUp && missionCompletion.unlockedBadge) {
+          showBadgeUnlocked(
+            missionCompletion.unlockedBadge,
+            missionCompletion.level,
+            missionCompletion.totalFinPoints
+          );
+        } else if (missionCompletion.didLevelUp) {
+          showLevelUp(missionCompletion.level);
+        }
+      }
+    } catch (error: any) {
+      if (error?.response?.data?.details) {
+        addToast(`${error.response.data.details[0]}`, "error");
+      } else {
+        console.error("Erro ao atualizar meta:", error);
+        addToast("Erro ao atualizar meta. Tente novamente.", "error");
+      }
     }
   };
 
@@ -219,7 +244,7 @@ export const GoalsPage: React.FC = () => {
       resetForm();
       addToast("Meta excluída com sucesso", "success");
     } catch (error) {
-      console.error('Erro ao excluir meta:', error);
+      console.error("Erro ao excluir meta:", error);
       addToast("Erro ao excluir meta. Tente novamente.", "error");
     }
   };
@@ -242,14 +267,16 @@ export const GoalsPage: React.FC = () => {
       const { updatedGoal, missionCompletion } = response.data;
 
       setGoals((prev) =>
-        prev.map((goal) => goal.id === selectedGoal.id ? updatedGoal : goal)
+        prev.map((goal) => (goal.id === selectedGoal.id ? updatedGoal : goal))
       );
 
       setAddFundsModalOpen(false);
       resetForm();
 
       const previousStatus = selectedGoal.statusLabel;
-      const justCompleted = previousStatus !== 'COMPLETED' && updatedGoal.statusLabel === 'COMPLETED';
+      const justCompleted =
+        previousStatus !== "COMPLETED" &&
+        updatedGoal.statusLabel === "COMPLETED";
 
       if (justCompleted) {
         setCelebrationModalOpen(true);
@@ -259,32 +286,37 @@ export const GoalsPage: React.FC = () => {
 
       if (missionCompletion) {
         const updateData: Partial<User> & { unlockedBadge?: Achievement } = {
-            totalFinPoints: missionCompletion.totalFinPoints,
-            level: missionCompletion.level,
+          totalFinPoints: missionCompletion.totalFinPoints,
+          level: missionCompletion.level,
         };
 
         if (missionCompletion.unlockedBadge) {
-            updateData.unlockedBadge = missionCompletion.unlockedBadge;
+          updateData.unlockedBadge = {
+            achievementId: Number(missionCompletion.unlockedBadge.id),
+            title: missionCompletion.unlockedBadge.title,
+            icon: missionCompletion.unlockedBadge.icon,
+            unlockedDate: new Date().toISOString(),
+          };
         }
 
         updateUserContext(updateData);
 
         if (missionCompletion.didLevelUp && missionCompletion.unlockedBadge) {
-            showBadgeUnlocked(
-                missionCompletion.unlockedBadge,
-                missionCompletion.level,
-                missionCompletion.totalFinPoints
-            );
+          showBadgeUnlocked(
+            missionCompletion.unlockedBadge,
+            missionCompletion.level,
+            missionCompletion.totalFinPoints
+          );
         } else if (missionCompletion.didLevelUp) {
-            showLevelUp(missionCompletion.level);
+          showLevelUp(missionCompletion.level);
         }
       }
-    } catch (error) {
-        if (error?.response?.data?.details) {
-            addToast(`${error.response.data.details[0]}`, "error");
-        } else {
-            addToast("Erro ao adicionar fundos. Tente novamente.", "error");
-        }
+    } catch (error: any) {
+      if (error?.response?.data?.details) {
+        addToast(`${error.response.data.details[0]}`, "error");
+      } else {
+        addToast("Erro ao adicionar fundos. Tente novamente.", "error");
+      }
     }
   };
 
@@ -310,29 +342,36 @@ export const GoalsPage: React.FC = () => {
 
   const getFilterLabel = (filter: FilterType) => {
     switch (filter) {
-      case 'all': return `Todas (${goals.length})`;
-      case 'IN_PROGRESS': return `Em Andamento (${stats.activeGoals})`;
-      case 'COMPLETED': return `Concluídas (${stats.completedGoals})`;
-      default: return 'Todas';
+      case "all":
+        return `Todas (${goals.length})`;
+      case "IN_PROGRESS":
+        return `Em Andamento (${stats.activeGoals})`;
+      case "COMPLETED":
+        return `Concluídas (${stats.completedGoals})`;
+      default:
+        return "Todas";
     }
   };
 
   const getEmptyStateMessage = (filter: FilterType) => {
     switch (filter) {
-      case 'IN_PROGRESS':
+      case "IN_PROGRESS":
         return {
-          title: 'Nenhuma meta em andamento',
-          description: 'Que tal criar uma nova meta financeira para começar a economizar?'
+          title: "Nenhuma meta em andamento",
+          description:
+            "Que tal criar uma nova meta financeira para começar a economizar?",
         };
-      case 'COMPLETED':
+      case "COMPLETED":
         return {
-          title: 'Nenhuma meta concluída ainda',
-          description: 'Continue trabalhando em suas metas ativas para vê-las aqui!'
+          title: "Nenhuma meta concluída ainda",
+          description:
+            "Continue trabalhando em suas metas ativas para vê-las aqui!",
         };
       default:
         return {
-          title: 'Nenhuma meta criada ainda',
-          description: 'Que tal definir sua primeira meta financeira? Comece pequeno e vá conquistando seus objetivos!'
+          title: "Nenhuma meta criada ainda",
+          description:
+            "Que tal definir sua primeira meta financeira? Comece pequeno e vá conquistando seus objetivos!",
         };
     }
   };
@@ -483,7 +522,8 @@ export const GoalsPage: React.FC = () => {
       >
         <S.ModalContent>
           <p>
-            Você tem certeza que deseja excluir a meta &quot;<strong>{selectedGoal?.name}</strong>&quot;?
+            Você tem certeza que deseja excluir a meta &quot;
+            <strong>{selectedGoal?.name}</strong>&quot;?
           </p>
           <S.ModalDescription>
             Esta ação não pode ser desfeita e todo o progresso será perdido.
@@ -515,7 +555,8 @@ export const GoalsPage: React.FC = () => {
       >
         <S.ModalContent>
           <S.ModalDescription>
-            Adicione dinheiro à meta &quot;<strong>{selectedGoal?.name}</strong>&quot;.
+            Adicione dinheiro à meta &quot;<strong>{selectedGoal?.name}</strong>
+            &quot;.
           </S.ModalDescription>
 
           <S.FormContainer onSubmit={handleAddFunds}>
@@ -556,11 +597,12 @@ export const GoalsPage: React.FC = () => {
         title=""
       >
         <S.CelebrationContainer>
-          <S.LottieContainer>
-            🏆
-          </S.LottieContainer>
+          <S.LottieContainer>🏆</S.LottieContainer>
           <h2>Parabéns!</h2>
-          <p>Você alcançou sua meta financeira! Continue assim e conquiste ainda mais objetivos!</p>
+          <p>
+            Você alcançou sua meta financeira! Continue assim e conquiste ainda
+            mais objetivos!
+          </p>
           <Button onClick={() => setCelebrationModalOpen(false)}>
             Continuar
           </Button>
@@ -574,27 +616,41 @@ export const GoalsPage: React.FC = () => {
         title=""
       >
         <S.CelebrationContainer>
-          <S.LottieContainer>
-            🎊
-          </S.LottieContainer>
+          <S.LottieContainer>🎊</S.LottieContainer>
           <h2>SUBIU DE NÍVEL!</h2>
-          <p>Você chegou ao <strong>Nível {levelUpInfo?.level}</strong>!</p>
-          <p>Total de FinPoints: <strong>{levelUpInfo?.totalFinPoints}</strong></p>
+          <p>
+            Você chegou ao <strong>Nível {levelUpInfo?.level}</strong>!
+          </p>
+          <p>
+            Total de FinPoints: <strong>{levelUpInfo?.totalFinPoints}</strong>
+          </p>
 
           {levelUpInfo?.unlockedBadge && (
-            <div style={{ marginTop: '20px', padding: '15px', background: '#f8f9fa', borderRadius: '8px' }}>
-              <div style={{ fontSize: '48px', marginBottom: '10px' }}>
+            <div
+              style={{
+                marginTop: "20px",
+                padding: "15px",
+                background: "#f8f9fa",
+                borderRadius: "8px",
+              }}
+            >
+              <div style={{ fontSize: "48px", marginBottom: "10px" }}>
                 {levelUpInfo.unlockedBadge.icon}
               </div>
               <h3>Badge Desbloqueado!</h3>
-              <p><strong>{levelUpInfo.unlockedBadge.title}</strong></p>
-              <p style={{ fontSize: '14px', color: '#666' }}>
+              <p>
+                <strong>{levelUpInfo.unlockedBadge.title}</strong>
+              </p>
+              <p style={{ fontSize: "14px", color: "#666" }}>
                 {levelUpInfo.unlockedBadge.description}
               </p>
             </div>
           )}
 
-          <Button onClick={() => setLevelUpModalOpen(false)} style={{ marginTop: '20px' }}>
+          <Button
+            onClick={() => setLevelUpModalOpen(false)}
+            style={{ marginTop: "20px" }}
+          >
             Continuar
           </Button>
         </S.CelebrationContainer>
@@ -645,17 +701,14 @@ export const GoalsPage: React.FC = () => {
 
       {/* BOTÃO DE NOVA META */}
       <S.ActionButtonContainer>
-        <Button
-          variant="primary"
-          onClick={openAddGoalModal}
-        >
+        <Button variant="primary" onClick={openAddGoalModal}>
           + Nova Meta
         </Button>
       </S.ActionButtonContainer>
 
       {/* FILTROS */}
       <S.FilterTabs>
-        {(['all', 'IN_PROGRESS', 'COMPLETED'] as FilterType[]).map((filter) => (
+        {(["all", "IN_PROGRESS", "COMPLETED"] as FilterType[]).map((filter) => (
           <S.FilterTab
             key={filter}
             $active={activeFilter === filter}

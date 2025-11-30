@@ -201,7 +201,6 @@ export const CourseCard: React.FC<CourseCardProps> = ({
       addToast(`Matrícula em "${title}" realizada!`, "success");
       navigate(`/learn/${id}`);
     } catch (error) {
-      console.error("Erro ao se matricular:", error);
       addToast(
         "Ops! Não foi possível realizar a matrícula. Tente novamente.",
         "error"

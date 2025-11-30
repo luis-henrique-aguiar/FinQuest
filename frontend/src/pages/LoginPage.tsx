@@ -34,7 +34,6 @@ const LoginPage: React.FC = () => {
       addToast("Bem-vindo(a) de volta.", "success");
       navigate("/home");
     } catch (error: any) {
-      console.error("Erro no login:", error);
       let errorMessage = "Ocorreu um erro inesperado. Tente novamente.";
       if (
         error.code === "auth/invalid-credential" ||

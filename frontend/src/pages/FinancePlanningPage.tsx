@@ -358,7 +358,7 @@ export const FinancePlanningPage: React.FC = () => {
       setIsTransactionModalOpen(false);
       setEditingTransaction(null);
       addToast("Transação atualizada com sucesso!", "success");
-    } catch (error) {
+    } catch (error: any) {
       if (error?.response?.data?.details) {
         addToast(`${error.response.data.details[0]}`, "error");
       } else {
@@ -366,7 +366,6 @@ export const FinancePlanningPage: React.FC = () => {
           `Erro ao atualizar transação. Por favor, tente novamente.`,
           "error"
         );
-        console.log(error);
       }
     } finally {
       setIsSubmitting(false);

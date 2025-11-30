@@ -443,7 +443,7 @@ export const AvatarEditor: React.FC<AvatarEditorProps> = ({
 
   const handleUseRandomAvatar = () => {
     const randomSeed = Math.random().toString(36).substring(7);
-    const randomAvatar = `https://api.dicebear.com/8.x/avataaars/svg?seed=${randomSeed}`;
+    const randomAvatar = `https://avatar.iran.liara.run/public?username=${randomSeed}`;
     setPreviewUrl(randomAvatar);
     setSelectedFile(null);
     setSelectedOption('random');

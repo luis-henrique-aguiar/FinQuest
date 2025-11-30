@@ -28,7 +28,6 @@ export const MissionsPage: React.FC = () => {
       const data = await getMissionsForUser();
       setMissions(data);
     } catch (error) {
-      console.error("Erro ao carregar missões:", error);
       addToast("Erro ao carregar missões. Tente novamente.", "error");
     } finally {
       setIsLoading(false);

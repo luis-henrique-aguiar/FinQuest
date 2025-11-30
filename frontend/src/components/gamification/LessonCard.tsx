@@ -148,7 +148,6 @@ const NotStartedBadge = styled.div`
 
 export const LessonCard: React.FC<LessonCardProps> = ({ course, onClick }) => {
   if (!course) {
-    console.error("LessonCard: course prop is undefined");
     return null;
   }
 

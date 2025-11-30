@@ -60,8 +60,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       setFirebaseUser(fbUser);
 
       if (fbUser) {
-        console.log("onAuthStateChanged: Logado - UID:", fbUser.uid);
-
         try {
           const response = await api.get(`/users/${fbUser.uid}`);
           const backendUser = response.data;
@@ -78,24 +76,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
             unlockedAchievements: backendUser.unlockedAchievements || [],
           };
 
-          if (import.meta.env.DEV) {
-            const token = await fbUser.getIdToken();
-            console.groupCollapsed(
-              "%c[DEBUG] Token de Autenticação (para Postman)",
-              "color: orange; font-weight: bold;"
-            );
-            console.log(token);
-            console.groupEnd();
-          }
-
           setUser(appUser);
-          console.log("Usuário do backend carregado:", appUser);
         } catch (error) {
           console.error("Erro ao carregar usuário do backend:", error);
           setUser(null);
         }
       } else {
-        console.log("onAuthStateChanged: Deslogado");
         setUser(null);
       }
 
@@ -103,7 +89,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     });
 
     return () => {
-      console.log("Desinscrevendo listener onAuthStateChanged");
       unsubscribe();
     };
   }, []);
@@ -113,20 +98,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     email: string,
     password: string
   ): Promise<void> => {
-    console.log("Iniciando registro...");
-
     try {
-      const response = await api.post("/auth/register", {
+      await api.post("/auth/register", {
         name,
         email,
         password,
       });
 
-      const { uid } = response.data;
-      console.log("Usuário criado no backend:", uid);
-
       await signInWithEmailAndPassword(auth, email, password);
-      console.log("Login automático realizado!");
 
     } catch (error: any) {
       console.error("❌ Erro no registro:", error);
@@ -148,13 +127,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   };
 
   const login = async (email: string, password: string): Promise<void> => {
-    console.log("Tentando fazer login...");
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      console.log("Login bem-sucedido!");
-    } catch (error: any) {
-      console.error("Erro no login:", error);
 
+    } catch (error: any) {
       if (error.code === "auth/user-not-found") {
         throw new Error("Usuário não encontrado.");
       } else if (error.code === "auth/wrong-password") {
@@ -170,24 +146,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   };
 
   const logout = async (): Promise<void> => {
-    console.log("Fazendo logout...");
     try {
       await signOut(auth);
-      console.log("Logout concluído!");
     } catch (error: any) {
-      console.error("Erro no logout:", error);
       throw error;
     }
   };
-
-  /*const updateUserContext = (updatedData: Partial<User>) => {
-    setUser((prevUser) => {
-      if (!prevUser) return null;
-      const newUser = { ...prevUser, ...updatedData };
-      console.log("Usuário atualizado:", newUser);
-      return newUser;
-    });
-  };*/
 
   const updateUserContext = (updatedData: Partial<User> & { unlockedBadge?: Achievement }) => {
     setUser((prevUser) => {
@@ -209,7 +173,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           unlockedAchievements: mergedAchievements
       };
 
-      console.log("Usuário atualizado (Fusão):", newUser);
       return newUser;
     });
   };
