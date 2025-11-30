@@ -246,7 +246,6 @@ export const PasswordToggleIcon = styled.div`
 
   &:hover {
     color: ${({ theme }) => theme.colors.primary};
-    background-color: ${({ theme }) => theme.colors.background};
   }
 `;
 

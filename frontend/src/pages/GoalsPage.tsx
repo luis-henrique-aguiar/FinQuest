@@ -53,7 +53,6 @@ export const GoalsPage: React.FC = () => {
     try {
       setIsLoading(true);
       const goals = await getAllGoals();
-      console.log("Dados recebidos do backend:", goals);
       setGoals(goals);
     } catch (error) {
       console.error("Erro ao carregar metas:", error);

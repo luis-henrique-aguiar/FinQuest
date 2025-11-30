@@ -106,7 +106,7 @@ export const FilterTabs = styled.div`
   gap: ${({ theme }) => theme.spacing.sm};
   margin-bottom: ${({ theme }) => theme.spacing.xl};
   overflow-x: auto;
-  padding-bottom: ${({ theme }) => theme.spacing.xs};
+  padding: ${({ theme }) => theme.spacing.xs};
 
   &::-webkit-scrollbar {
     height: 4px;

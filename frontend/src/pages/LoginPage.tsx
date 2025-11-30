@@ -1,18 +1,25 @@
 import React, { useState, type FormEvent } from "react";
-import { Mail, Lock, ArrowRight, AlertCircle } from "react-feather";
+import {
+  Mail,
+  Lock,
+  ArrowRight,
+  EyeOff,
+  Eye,
+} from "react-feather";
 import { useNavigate } from "react-router-dom";
-import Lottie from "lottie-react";
 import * as S from "./LoginPage.styles";
 import { InputGroup } from "../components/auth/InputGroup";
-import mascotWaveAnimation from "../assets/animations/fox_greetings.json";
 import { useAuth } from "../hooks/useAuth";
 import { useToast } from "../hooks/useToast";
+import {} from "lucide-react";
+import mascotImage from "../assets/images/fox.png";
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
   const { addToast } = useToast();
 
+  const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -34,20 +41,35 @@ const LoginPage: React.FC = () => {
       addToast("Bem-vindo(a) de volta.", "success");
       navigate("/home");
     } catch (error: any) {
-      let errorMessage = "Ocorreu um erro inesperado. Tente novamente.";
-      if (
-        error.code === "auth/invalid-credential" ||
-        error.code === "auth/user-not-found" ||
-        error.code === "auth/wrong-password" ||
-        error.code === "auth/invalid-email"
-      ) {
-        errorMessage = "Email ou senha inválidos. Verifique suas credenciais.";
-      } else if (error.code === "auth/too-many-requests") {
-        errorMessage =
-          "Muitas tentativas de login. Tente novamente mais tarde.";
+      console.error("Erro no login:", error);
+
+      let msg = "Ocorreu um erro inesperado. Tente novamente.";
+
+      if (error instanceof Error && !error.message.includes("Firebase:")) {
+        msg = error.message;
+      } else if (error.code) {
+        switch (error.code) {
+          case "auth/invalid-credential":
+          case "auth/user-not-found":
+          case "auth/wrong-password":
+            msg = "Email ou senha incorretos. Verifique suas credenciais.";
+            break;
+          case "auth/invalid-email":
+            msg = "O formato do email é inválido.";
+            break;
+          case "auth/too-many-requests":
+            msg = "Muitas tentativas falhas. Aguarde alguns instantes.";
+            break;
+          case "auth/network-request-failed":
+            msg = "Erro de conexão. Verifique sua internet.";
+            break;
+          default:
+            msg = "Erro ao autenticar. Tente novamente.";
+        }
       }
-      setError(errorMessage);
-      addToast(errorMessage, "error");
+
+      setError(msg);
+      addToast(msg, "error");
     } finally {
       setIsLoading(false);
     }
@@ -107,7 +129,11 @@ const LoginPage: React.FC = () => {
               repeatType: "loop" as const,
             }}
           >
-            <Lottie animationData={mascotWaveAnimation} loop={true} />
+            <img
+              src={mascotImage}
+              alt="Mascote FinQuest Raposa Exploradora"
+              style={{ width: "80%", height: "auto", objectFit: "contain" }}
+            />
           </S.MascotContainer>
           <h1>Bem-vindo de volta!</h1>
           <p>
@@ -116,14 +142,6 @@ const LoginPage: React.FC = () => {
           </p>
 
           <S.StatsRow>
-            <S.StatItem
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.3 }}
-            >
-              <h3>7d</h3>
-              <p>Ofensiva</p>
-            </S.StatItem>
             <S.StatItem
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -175,7 +193,7 @@ const LoginPage: React.FC = () => {
                 <Lock size={20} />
                 <S.Input
                   id="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -183,21 +201,22 @@ const LoginPage: React.FC = () => {
                   aria-invalid={!!error}
                   aria-describedby="login-error"
                 />
+
+                <S.PasswordToggleIcon
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </S.PasswordToggleIcon>
               </S.InputWrapper>
               <S.ForgotPassword
                 type="button"
-                onClick={() => navigate('/forgot-password')}
+                onClick={() => navigate("/forgot-password")}
               >
                 Esqueceu sua senha?
               </S.ForgotPassword>
             </S.InputGroupStyled>
-
-            {/* Exibe erro geral de login */}
-            {error && (
-              <S.ErrorMessage id="login-error" role="alert">
-                <AlertCircle size={14} /> {error}
-              </S.ErrorMessage>
-            )}
 
             <S.SubmitButtonStyled
               type="submit"

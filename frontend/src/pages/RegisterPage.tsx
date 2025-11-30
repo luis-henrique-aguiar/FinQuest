@@ -63,13 +63,19 @@ const RegisterPage = () => {
     if (!password) {
       newErrors.password = "Senha é obrigatória.";
       isValid = false;
-    } else if (password.length < 6) {
-      newErrors.password = "Senha deve ter no mínimo 6 caracteres.";
-      isValid = false;
-    } else if (passwordStrength < 2 && password.length >= 6) {
-      newErrors.password =
-        "Senha muito fraca. Tente combinar letras maiúsculas, minúsculas, números ou símbolos.";
-      isValid = false;
+    } else {
+      const hasMinLength = password.length >= 6;
+      const hasUpper = /[A-Z]/.test(password);
+      const hasLower = /[a-z]/.test(password);
+      const hasNumber = /\d/.test(password);
+
+      if (!hasMinLength) {
+         newErrors.password = "A senha deve ter no mínimo 6 caracteres.";
+         isValid = false;
+      } else if (!hasUpper || !hasLower || !hasNumber) {
+         newErrors.password = "A senha deve conter pelo menos uma letra maiúscula, uma minúscula e um número.";
+         isValid = false;
+      }
     }
 
     if (!confirmPassword) {
@@ -375,25 +381,6 @@ const RegisterPage = () => {
             {errors.confirmPassword && (
               <S.ErrorMessage id="confirmPassword-error">
                 <AlertCircle size={14} /> {errors.confirmPassword}
-              </S.ErrorMessage>
-            )}
-
-            <S.TermsText>
-              Ao criar conta, você concorda com nossos{" "}
-              <button type="button" onClick={() => navigate("/terms")}>
-                Termos
-              </button>{" "}
-              e{" "}
-              <button type="button" onClick={() => navigate("/privacy")}>
-                Privacidade
-              </button>
-              .
-            </S.TermsText>
-
-            {/* Erro Geral */}
-            {errors.general && (
-              <S.ErrorMessage role="alert">
-                <AlertCircle size={14} /> {errors.general}
               </S.ErrorMessage>
             )}
 
