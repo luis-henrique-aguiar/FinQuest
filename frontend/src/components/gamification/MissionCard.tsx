@@ -12,14 +12,15 @@ interface MissionCardProps {
   mission: MissionProgressDTO;
 }
 
-const CardContainer = styled(motion.div)<{ status: MissionStatus }>`
+const CardContainer = styled(motion.div)<{ $status: MissionStatus }>`
   background: ${({ theme }) => theme.colors.white};
   border-radius: ${({ theme }) => theme.borderRadius.large};
   padding: ${({ theme }) => theme.spacing.lg};
   box-shadow: ${({ theme }) => theme.shadows.medium};
+  /* Note o $status abaixo */
   border: 2px solid
-    ${({ status, theme }) =>
-      status === MissionStatus.COMPLETED
+    ${({ $status, theme }) =>
+      $status === MissionStatus.COMPLETED
         ? theme.colors.success
         : theme.colors.border};
   position: relative;
@@ -27,8 +28,8 @@ const CardContainer = styled(motion.div)<{ status: MissionStatus }>`
   transition: all 0.3s ease;
   cursor: pointer;
 
-  ${({ status, theme }) =>
-    status === MissionStatus.COMPLETED &&
+  ${({ $status, theme }) =>
+    $status === MissionStatus.COMPLETED &&
     `
     background: linear-gradient(135deg, ${theme.colors.success}05 0%, ${theme.colors.success}08 100%);
   `}
@@ -36,8 +37,8 @@ const CardContainer = styled(motion.div)<{ status: MissionStatus }>`
   &:hover {
     transform: scale(1.03);
     box-shadow: ${({ theme }) => theme.shadows.large};
-    border-color: ${({ status, theme }) =>
-      status === MissionStatus.COMPLETED
+    border-color: ${({ $status, theme }) =>
+      $status === MissionStatus.COMPLETED
         ? theme.colors.success
         : theme.colors.primary};
   }
@@ -55,8 +56,8 @@ const Header = styled.div`
 `;
 
 const IconContainer = styled.div<{
-  category: MissionCategory;
-  status: MissionStatus;
+  $category: MissionCategory;
+  $status: MissionStatus;
 }>`
   width: 56px;
   height: 56px;
@@ -65,12 +66,13 @@ const IconContainer = styled.div<{
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  background: ${({ category, status, theme }) => {
-    if (status === MissionStatus.COMPLETED) {
+
+  background: ${({ $category, $status, theme }) => {
+    if ($status === MissionStatus.COMPLETED) {
       return `linear-gradient(135deg, ${theme.colors.success}22 0%, ${theme.colors.success}33 100%)`;
     }
 
-    switch (category) {
+    switch ($category) {
       case MissionCategory.LEARNING:
         return `linear-gradient(135deg, ${theme.colors.primary}22 0%, ${theme.colors.primary}33 100%)`;
       case MissionCategory.BUDGET:
@@ -87,10 +89,10 @@ const IconContainer = styled.div<{
   svg {
     width: 28px;
     height: 28px;
-    color: ${({ category, status, theme }) => {
-      if (status === MissionStatus.COMPLETED) return theme.colors.success;
+    color: ${({ $category, $status, theme }) => {
+      if ($status === MissionStatus.COMPLETED) return theme.colors.success;
 
-      switch (category) {
+      switch ($category) {
         case MissionCategory.LEARNING:
           return theme.colors.primary;
         case MissionCategory.BUDGET:
@@ -156,13 +158,13 @@ const ProgressBar = styled.div`
   overflow: hidden;
 `;
 
-const ProgressFill = styled(motion.div)<{ status: MissionStatus }>`
+const ProgressFill = styled(motion.div)<{ $status: MissionStatus }>`
   height: 100%;
-  background: ${({ status, theme }) => {
-    if (status === MissionStatus.COMPLETED) {
+  background: ${({ $status, theme }) => {
+    if ($status === MissionStatus.COMPLETED) {
       return `linear-gradient(90deg, ${theme.colors.success} 0%, ${theme.colors.success}dd 100%)`;
     }
-    if (status === MissionStatus.IN_PROGRESS) {
+    if ($status === MissionStatus.IN_PROGRESS) {
       return `linear-gradient(90deg, ${theme.colors.primary} 0%, ${theme.colors.accent} 100%)`;
     }
     return theme.colors.textLight;
@@ -198,7 +200,7 @@ const RewardBadge = styled.div`
   }
 `;
 
-const StatusBadge = styled.div<{ status: MissionStatus }>`
+const StatusBadge = styled.div<{ $status: MissionStatus }>`
   padding: ${({ theme }) => theme.spacing.xs} ${({ theme }) => theme.spacing.sm};
   border-radius: ${({ theme }) => theme.borderRadius.pill};
   font-size: 0.75rem;
@@ -206,8 +208,8 @@ const StatusBadge = styled.div<{ status: MissionStatus }>`
   text-transform: uppercase;
   letter-spacing: 0.5px;
 
-  ${({ status, theme }) => {
-    switch (status) {
+  ${({ $status, theme }) => {
+    switch ($status) {
       case MissionStatus.COMPLETED:
         return `
           background: ${theme.colors.success}22;
@@ -272,7 +274,7 @@ const getStatusText = (status: MissionStatus) => {
 export const MissionCard: React.FC<MissionCardProps> = ({ mission }) => {
   return (
     <CardContainer
-      status={mission.status}
+      $status={mission.status}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
@@ -288,7 +290,7 @@ export const MissionCard: React.FC<MissionCardProps> = ({ mission }) => {
       )}
 
       <Header>
-        <IconContainer category={mission.category} status={mission.status}>
+        <IconContainer $category={mission.category} $status={mission.status}>
           {getCategoryIcon(mission.category)}
         </IconContainer>
         <Content>
@@ -306,7 +308,7 @@ export const MissionCard: React.FC<MissionCardProps> = ({ mission }) => {
         </ProgressHeader>
         <ProgressBar>
           <ProgressFill
-            status={mission.status}
+            $status={mission.status}
             initial={{ width: 0 }}
             animate={{ width: `${mission.progressPercentage}%` }}
             transition={{ duration: 0.8, ease: "easeOut" }}
@@ -319,7 +321,7 @@ export const MissionCard: React.FC<MissionCardProps> = ({ mission }) => {
           💎
           <span>+{mission.rewardFinPoints} FinPoints</span>
         </RewardBadge>
-        <StatusBadge status={mission.status}>
+        <StatusBadge $status={mission.status}>
           {getStatusText(mission.status)}
         </StatusBadge>
       </Footer>

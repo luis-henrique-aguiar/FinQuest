@@ -41,7 +41,7 @@ export const LoadingContainer = styled.div`
   }
 `;
 
-export const NotificationCard = styled(motion(Card))`
+export const NotificationCard = styled(motion.create(Card))`
   background-color: ${({ theme }) => theme.colors.highlightYellow};
   border-left: 4px solid ${({ theme }) => theme.colors.highlightYellowBorder};
   padding: ${({ theme }) => theme.spacing.md};
