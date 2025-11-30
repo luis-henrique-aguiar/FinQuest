@@ -55,7 +55,10 @@ export const ProfilePage: React.FC = () => {
       let finalAvatarUrl = newAvatarUrl;
 
       if (file) {
-        finalAvatarUrl = await uploadProfileImageWithCompression(user.uid, file);
+        finalAvatarUrl = await uploadProfileImageWithCompression(
+          user.uid,
+          file
+        );
       }
 
       const updatedUser = await updateUserAvatar(finalAvatarUrl);
@@ -202,10 +205,15 @@ export const ProfilePage: React.FC = () => {
         {hasAchievements ? (
           <S.AchievementsList>
             {recentAchievements.map((achievement) => (
-              <S.Achievement key={achievement.id}>
+              <S.Achievement key={achievement.achievementId}>
                 <S.AchievementIcon>{achievement.icon}</S.AchievementIcon>
                 <S.AchievementInfo>
                   <S.AchievementTitle>{achievement.title}</S.AchievementTitle>
+                  <S.AchievementDescription>
+                    {new Date(achievement.unlockedDate).toLocaleDateString(
+                      "pt-BR"
+                    )}
+                  </S.AchievementDescription>
                 </S.AchievementInfo>
               </S.Achievement>
             ))}

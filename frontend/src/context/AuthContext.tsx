@@ -15,7 +15,7 @@ import FullScreenLoader from "../components/common/FullScreenLoader";
 import api from "../services/api";
 
 export interface Achievement {
-    id: number;
+    achievementId: number;
     title: string;
     icon: string;
     unlockedDate: string;
