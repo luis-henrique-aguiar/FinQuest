@@ -82,17 +82,17 @@ export const Subtitle = styled.p`
   }
 `;
 
-export const ActionButtonContainer = styled.div`
+export const ControlsContainer = styled.div`
   display: flex;
-  justify-content: flex-end;
-  margin-bottom: ${({ theme }) => theme.spacing.md};
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: ${({ theme }) => theme.spacing.xl};
+  gap: ${({ theme }) => theme.spacing.md};
+  flex-wrap: wrap;
 
   @media (max-width: 768px) {
-    justify-content: stretch;
-    
-    button {
-      width: 100%;
-    }
+    flex-direction: column-reverse;
+    align-items: stretch;
   }
 `;
 
@@ -158,9 +158,9 @@ export const StatLabel = styled.div`
 export const FilterTabs = styled.div`
   display: flex;
   gap: ${({ theme }) => theme.spacing.sm};
-  margin-bottom: ${({ theme }) => theme.spacing.xl};
   overflow-x: auto;
-  padding: ${({ theme }) => theme.spacing.sm};
+  padding: ${({ theme }) => theme.spacing.xs};
+  flex: 1;
 
   &::-webkit-scrollbar {
     height: 6px;
@@ -182,6 +182,11 @@ export const FilterTabs = styled.div`
 
   scrollbar-width: thin;
   scrollbar-color: ${({ theme }) => theme.colors.border} ${({ theme }) => theme.colors.background};
+
+  @media (max-width: 768px) {
+    width: 100%;
+    order: 2;
+  }
 `;
 
 export const FilterTab = styled.button<{ $active: boolean }>`

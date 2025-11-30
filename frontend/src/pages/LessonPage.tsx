@@ -216,7 +216,6 @@ const LessonPage = () => {
                 blockquote: ({ children }) => {
                   const content = children?.toString() || "";
 
-                  // 💡 Dicas (contém emoji de lâmpada)
                   if (content.includes("💡")) {
                     return (
                       <S.TipBox>
@@ -228,7 +227,6 @@ const LessonPage = () => {
                     );
                   }
 
-                  // ⚠️ Avisos (contém emoji de alerta)
                   if (
                     content.includes("⚠️") ||
                     content.includes("Atenção") ||
@@ -244,7 +242,6 @@ const LessonPage = () => {
                     );
                   }
 
-                  // ✅ Sucesso (contém emoji de check)
                   if (content.includes("✅")) {
                     return (
                       <S.SuccessBox>
@@ -256,18 +253,17 @@ const LessonPage = () => {
                     );
                   }
 
-                  // Citação padrão
                   return <S.QuoteBox>{children}</S.QuoteBox>;
                 },
 
-                code: ({ inline, children, ...props }: any) => {
+                code: ({ node, inline, children, ...props }: any) => {
                   if (inline) {
                     return <S.InlineCode>{children}</S.InlineCode>;
                   }
                   return <code {...props}>{children}</code>;
                 },
 
-                li: ({ children, ...props }) => {
+                li: ({ node, children, ...props }: any) => {
                   return <S.ListItem {...props}>{children}</S.ListItem>;
                 },
               }}

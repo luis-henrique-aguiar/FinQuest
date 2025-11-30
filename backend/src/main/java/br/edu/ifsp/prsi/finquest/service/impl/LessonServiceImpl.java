@@ -52,6 +52,7 @@ public class LessonServiceImpl implements LessonService {
         this.missionService = missionService;
     }
 
+    @Transactional(readOnly = true)
     public List<QuizQuestionDTO> getLessonQuiz(String lessonId) {
         logger.debug("Buscando quiz da licao: lessonId={}", lessonId);
 
@@ -66,6 +67,7 @@ public class LessonServiceImpl implements LessonService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
     public LessonDetailsDTO getLessonDetails(String lessonId) {
         logger.debug("Buscando detalhes da licao: lessonId={}", lessonId);
 

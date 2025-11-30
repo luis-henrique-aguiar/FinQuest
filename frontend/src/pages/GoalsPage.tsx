@@ -53,8 +53,10 @@ export const GoalsPage: React.FC = () => {
     try {
       setIsLoading(true);
       const goals = await getAllGoals();
+      console.log("Dados recebidos do backend:", goals);
       setGoals(goals);
     } catch (error) {
+      console.error("Erro ao carregar metas:", error);
       addToast("Erro ao carregar suas metas", "error");
     } finally {
       setIsLoading(false);
@@ -71,14 +73,10 @@ export const GoalsPage: React.FC = () => {
   const filteredGoals = useMemo(() => {
     switch (activeFilter) {
       case "IN_PROGRESS":
-        return goals.filter(
-          (goal) => getNormalizedStatus(goal) !== "COMPLETED"
-        );
+        return goals.filter((goal) => getNormalizedStatus(goal) !== "COMPLETED");
 
       case "COMPLETED":
-        return goals.filter(
-          (goal) => getNormalizedStatus(goal) === "COMPLETED"
-        );
+        return goals.filter((goal) => getNormalizedStatus(goal) === "COMPLETED");
 
       default:
         return goals;
@@ -181,11 +179,8 @@ export const GoalsPage: React.FC = () => {
       });
 
       const { updatedGoal, missionCompletion } = response.data;
-
       setGoals((prev) =>
-        prev.map((g) =>
-          g.id === selectedGoal.id ? { ...g, ...updatedGoal } : g
-        )
+        prev.map((g) => (g.id === selectedGoal.id ? { ...g, ...updatedGoal } : g))
       );
 
       setIsEditModalOpen(false);
@@ -208,7 +203,12 @@ export const GoalsPage: React.FC = () => {
         };
 
         if (missionCompletion.unlockedBadge) {
-          updateData.unlockedBadge = missionCompletion.unlockedBadge;
+          updateData.unlockedBadge = {
+            achievementId: Number(missionCompletion.unlockedBadge.id),
+            title: missionCompletion.unlockedBadge.title,
+            icon: missionCompletion.unlockedBadge.icon,
+            unlockedDate: new Date().toISOString(),
+          };
         }
 
         updateUserContext(updateData);
@@ -392,7 +392,7 @@ export const GoalsPage: React.FC = () => {
 
   return (
     <S.PageContainer>
-      {/* Modais... (mantidos iguais) */}
+      {/* Modais... */}
       <Modal
         isOpen={isAddGoalModalOpen}
         onClose={() => setAddGoalModalOpen(false)}
@@ -673,7 +673,7 @@ export const GoalsPage: React.FC = () => {
             <Target size={24} />
           </S.StatIcon>
           <S.StatContent>
-            <S.StatValue>{goals.length}</S.StatValue>
+            <S.StatValue>{goals.length || 0}</S.StatValue>
             <S.StatLabel>Total de Metas</S.StatLabel>
           </S.StatContent>
         </S.StatCard>
@@ -683,7 +683,7 @@ export const GoalsPage: React.FC = () => {
             <TrendingUp size={24} />
           </S.StatIcon>
           <S.StatContent>
-            <S.StatValue>{stats.activeGoals}</S.StatValue>
+            <S.StatValue>{stats.activeGoals || 0}</S.StatValue>
             <S.StatLabel>Em Andamento</S.StatLabel>
           </S.StatContent>
         </S.StatCard>
@@ -693,31 +693,31 @@ export const GoalsPage: React.FC = () => {
             <CheckCircle size={24} />
           </S.StatIcon>
           <S.StatContent>
-            <S.StatValue>{stats.completedGoals}</S.StatValue>
+            <S.StatValue>{stats.completedGoals || 0}</S.StatValue>
             <S.StatLabel>Concluídas</S.StatLabel>
           </S.StatContent>
         </S.StatCard>
       </S.StatsGrid>
 
-      {/* BOTÃO DE NOVA META */}
-      <S.ActionButtonContainer>
+      <S.ControlsContainer>
+        <S.FilterTabs>
+          {(["all", "IN_PROGRESS", "COMPLETED"] as FilterType[]).map(
+            (filter) => (
+              <S.FilterTab
+                key={filter}
+                $active={activeFilter === filter}
+                onClick={() => setActiveFilter(filter)}
+              >
+                {getFilterLabel(filter)}
+              </S.FilterTab>
+            )
+          )}
+        </S.FilterTabs>
+
         <Button variant="primary" onClick={openAddGoalModal}>
           + Nova Meta
         </Button>
-      </S.ActionButtonContainer>
-
-      {/* FILTROS */}
-      <S.FilterTabs>
-        {(["all", "IN_PROGRESS", "COMPLETED"] as FilterType[]).map((filter) => (
-          <S.FilterTab
-            key={filter}
-            $active={activeFilter === filter}
-            onClick={() => setActiveFilter(filter)}
-          >
-            {getFilterLabel(filter)}
-          </S.FilterTab>
-        ))}
-      </S.FilterTabs>
+      </S.ControlsContainer>
 
       {/* GRID DE METAS */}
       {filteredGoals.length > 0 ? (

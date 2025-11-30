@@ -6,7 +6,7 @@ import {
   type CourseDetailsDTO,
 } from "../services/courseService";
 import { LessonListItem } from "../components/course/LessonListItem";
-import { useToast } from "../hooks/useToast"; 
+import { useToast } from "../hooks/useToast";
 import Button from "../components/common/Button";
 import * as S from "./CourseDetailsPage.styles";
 
@@ -85,7 +85,9 @@ export const CourseDetailsPage: React.FC = () => {
           <ArrowLeft size={20} />
         </S.BackButton>
         <S.HeaderContent>
-          <S.CourseIcon>📚</S.CourseIcon>
+          <S.CourseIcon>
+            <BookOpen size={24} />
+          </S.CourseIcon>
           <div>
             <S.CourseTitle>{courseDetails.title}</S.CourseTitle>
             <S.CourseDescription>

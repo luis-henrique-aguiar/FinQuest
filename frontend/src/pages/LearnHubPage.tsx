@@ -1,16 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import { BookOpen, Award, TrendingUp, Filter } from 'react-feather';
-import { CourseCard } from '../components/gamification/CourseCard';
-import { getCoursesForUser, type CourseProgressDTO } from '../services/courseService';
-import { useToast } from '../hooks/useToast';
-import * as S from './LearnHubPage.styles';
+import React, { useState, useEffect } from "react";
+import { BookOpen, Award, TrendingUp, Filter } from "react-feather";
+import { CourseCard } from "../components/gamification/CourseCard";
+import {
+  getCoursesForUser,
+  type CourseProgressDTO,
+} from "../services/courseService";
+import { useToast } from "../hooks/useToast";
+import * as S from "./LearnHubPage.styles";
 
-type FilterType = 'all' | 'in-progress' | 'completed' | 'not-started';
+type FilterType = "all" | "in-progress" | "completed" | "not-started";
 
 export const LearnHubPage: React.FC = () => {
   const [courses, setCourses] = useState<CourseProgressDTO[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeFilter, setActiveFilter] = useState<FilterType>('all');
+  const [activeFilter, setActiveFilter] = useState<FilterType>("all");
   const { addToast } = useToast();
 
   useEffect(() => {
@@ -20,8 +23,11 @@ export const LearnHubPage: React.FC = () => {
         const data = await getCoursesForUser();
         setCourses(data);
       } catch (error) {
-        console.error('Falha ao carregar cursos', error);
-        addToast('Não foi possível carregar os cursos. Tente novamente.', 'error');
+        console.error("Falha ao carregar cursos", error);
+        addToast(
+          "Não foi possível carregar os cursos. Tente novamente.",
+          "error"
+        );
       } finally {
         setIsLoading(false);
       }
@@ -32,13 +38,13 @@ export const LearnHubPage: React.FC = () => {
 
   const filteredCourses = courses.filter((course) => {
     const progress = course.progress ?? 0;
-    
+
     switch (activeFilter) {
-      case 'in-progress':
+      case "in-progress":
         return progress > 0 && progress < 100;
-      case 'completed':
+      case "completed":
         return progress === 100;
-      case 'not-started':
+      case "not-started":
         return progress === 0;
       default:
         return true;
@@ -74,7 +80,8 @@ export const LearnHubPage: React.FC = () => {
             Trilhas de Conhecimento
           </S.Title>
           <S.Subtitle>
-            Escolha um curso para começar sua jornada e desbloquear novas conquistas!
+            Escolha um curso para começar sua jornada e desbloquear novas
+            conquistas!
           </S.Subtitle>
         </S.HeaderContent>
       </S.Header>
@@ -120,28 +127,29 @@ export const LearnHubPage: React.FC = () => {
         </S.FilterHeader>
         <S.FilterTabs>
           <S.FilterTab
-            $active={activeFilter === 'all'}
-            onClick={() => setActiveFilter('all')}
+            $active={activeFilter === "all"}
+            onClick={() => setActiveFilter("all")}
           >
             Todos ({courses.length})
           </S.FilterTab>
           <S.FilterTab
-            $active={activeFilter === 'in-progress'}
-            onClick={() => setActiveFilter('in-progress')}
+            $active={activeFilter === "in-progress"}
+            onClick={() => setActiveFilter("in-progress")}
           >
             Em Progresso ({stats.inProgress})
           </S.FilterTab>
           <S.FilterTab
-            $active={activeFilter === 'completed'}
-            onClick={() => setActiveFilter('completed')}
+            $active={activeFilter === "completed"}
+            onClick={() => setActiveFilter("completed")}
           >
             Concluídos ({stats.completed})
           </S.FilterTab>
           <S.FilterTab
-            $active={activeFilter === 'not-started'}
-            onClick={() => setActiveFilter('not-started')}
+            $active={activeFilter === "not-started"}
+            onClick={() => setActiveFilter("not-started")}
           >
-            Não Iniciados ({courses.filter(c => (c.progress ?? 0) === 0).length})
+            Não Iniciados (
+            {courses.filter((c) => (c.progress ?? 0) === 0).length})
           </S.FilterTab>
         </S.FilterTabs>
       </S.FilterSection>
@@ -164,18 +172,18 @@ export const LearnHubPage: React.FC = () => {
           <BookOpen size={64} />
           <h3>Nenhum curso encontrado</h3>
           <p>
-            {activeFilter === 'all'
-              ? 'Não há cursos disponíveis no momento.'
+            {activeFilter === "all"
+              ? "Não há cursos disponíveis no momento."
               : `Você não tem cursos ${
-                  activeFilter === 'in-progress'
-                    ? 'em progresso'
-                    : activeFilter === 'completed'
-                    ? 'concluídos'
-                    : 'não iniciados'
+                  activeFilter === "in-progress"
+                    ? "em progresso"
+                    : activeFilter === "completed"
+                    ? "concluídos"
+                    : "não iniciados"
                 }.`}
           </p>
-          {activeFilter !== 'all' && (
-            <S.ResetFilterButton onClick={() => setActiveFilter('all')}>
+          {activeFilter !== "all" && (
+            <S.ResetFilterButton onClick={() => setActiveFilter("all")}>
               Ver Todos os Cursos
             </S.ResetFilterButton>
           )}
