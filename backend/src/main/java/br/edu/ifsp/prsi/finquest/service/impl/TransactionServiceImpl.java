@@ -24,14 +24,19 @@ import java.util.Collections;
 public class TransactionServiceImpl implements TransactionService {
 
     private final TransactionRepository transactionRepository;
+    private final MissionServiceImpl missionService;
 
-    public TransactionServiceImpl(TransactionRepository transactionRepository) {
+    public TransactionServiceImpl(
+            TransactionRepository transactionRepository,
+            MissionServiceImpl missionService
+    ) {
         this.transactionRepository = transactionRepository;
+        this.missionService = missionService;
     }
 
     @Transactional
     @Override
-    public TransactionDTO createTransaction(String userId, CreateTransactionDTO dto) {
+    public TransactionResponseDTO createTransaction(String userId, CreateTransactionDTO dto) {
         Transaction transaction = new Transaction();
         transaction.setUserId(userId);
         transaction.setType(TransactionType.valueOf(dto.type()));
@@ -42,9 +47,13 @@ public class TransactionServiceImpl implements TransactionService {
         transaction.setNotes(dto.notes());
 
         Transaction saved = transactionRepository.save(transaction);
+        TransactionDTO transactionDTO = TransactionDTO.fromEntity(saved);
 
-        return TransactionDTO.fromEntity(saved);
+        MissionCompletionDTO missionCompletion = missionService.processTransactionCreation(userId);
+
+        return new TransactionResponseDTO(transactionDTO, missionCompletion);
     }
+
 
     @Transactional
     @Override

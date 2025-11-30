@@ -2,6 +2,7 @@ package br.edu.ifsp.prsi.finquest.service.impl;
 
 import br.edu.ifsp.prsi.finquest.dto.AchievementDTO;
 import br.edu.ifsp.prsi.finquest.dto.GoalCompletionDTO;
+import br.edu.ifsp.prsi.finquest.dto.MissionCompletionDTO;
 import br.edu.ifsp.prsi.finquest.dto.MissionProgressDTO;
 import br.edu.ifsp.prsi.finquest.model.*;
 import br.edu.ifsp.prsi.finquest.model.enums.MissionStatus;
@@ -90,6 +91,55 @@ public class MissionServiceImpl implements MissionService {
 
         return result;
     }
+
+    @Transactional
+    public MissionCompletionDTO processTransactionCreation(String userId) {
+        logger.info("Processando criacao de transacao para missoes. UserId={}", userId);
+
+        User userBefore = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("Usuario nao encontrado: " + userId));
+
+        int levelBefore = userBefore.getLevel();
+        int pointsBefore = userBefore.getTotalFinPoints();
+
+        // Processa missoes do tipo TRANSACTION_CREATED
+        processRelevantMissions(userId, MissionTriggerType.TRANSACTION_CREATED);
+
+        // Recarrega usuario para verificar mudancas
+        User userAfter = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("Usuario nao encontrado: " + userId));
+
+        // Se nao houve mudanca nos pontos, nenhuma missao foi completada
+        if (userAfter.getTotalFinPoints() == pointsBefore) {
+            logger.debug("Nenhuma missao completada com a transacao. UserId={}", userId);
+            return null;
+        }
+
+        // Calcula resultado
+        int finalLevel = userAfter.getLevel();
+        boolean leveledUp = finalLevel > levelBefore;
+
+        AchievementDTO unlockedBadge = null;
+        if (leveledUp) {
+            Optional<Achievement> badgeOpt = achievementRepository.findByRequiredLevel(finalLevel);
+            if (badgeOpt.isPresent()) {
+                Achievement badge = badgeOpt.get();
+                unlockedBadge = new AchievementDTO(badge);
+                logger.info("Badge desbloqueado: {} - {}", badge.getTitle(), badge.getIcon());
+            }
+        }
+
+        logger.info("Missao completada por transacao. UserId={}, LevelUp={}, NewLevel={}",
+                userId, leveledUp, finalLevel);
+
+        return new MissionCompletionDTO(
+                userAfter.getTotalFinPoints(),
+                finalLevel,
+                leveledUp,
+                unlockedBadge
+        );
+    }
+
 
     private void processRelevantMissions(String userId, MissionTriggerType triggerType) {
         List<Mission> relevantMissions = missionRepository.findByTriggerEventType(triggerType);
