@@ -18,6 +18,15 @@ export interface AchievementDTO {
   requiredLevel: number;
 }
 
+export interface UserProfileDTO {
+  id: string;
+  name: string;
+  email: string;
+  avatarUrl: string | null;
+  level: number;
+  totalFinPoints: number;
+}
+
 export interface GoalCompletionDTO {
   totalFinPoints: number;
   level: number;
@@ -44,4 +53,9 @@ export const getAllGoals = async (): Promise<GoalDTO[]> => {
     console.error('Erro ao buscar missões:', error);
     throw error;
   }
+};
+
+export const updateUserAvatar = async (avatarUrl: string): Promise<UserProfileDTO> => {
+  const response = await api.patch<UserProfileDTO>('/users/avatar', { avatarUrl });
+  return response.data;
 };

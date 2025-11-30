@@ -18,4 +18,6 @@ public interface UserService {
 
     List<AchievementStatusDTO> getAllAchievementsWithStatus(String userId);
 
+    UserDTO updateAvatar(String userId, String avatarUrl);
+
 }

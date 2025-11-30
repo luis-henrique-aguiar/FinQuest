@@ -5,45 +5,17 @@ import { useToast } from "../hooks/useToast";
 import api from "../services/api";
 import Button from "../components/common/Button";
 import FinPoints from "../components/gamification/FinPoints";
-import Badge from "../components/gamification/Badge";
 import ProgressBar from "../components/gamification/ProgressBar";
 import { AvatarEditor } from "../components/profile/AvatarEditor";
 import { EditableField } from "../components/profile/EditableField";
 import { PasswordChangeModal } from "../components/profile/PasswordChangeModal";
-import { calculateLevelProgress, getFinPointsForLevel } from "../utils/levelingSystem";
+import {
+  calculateLevelProgress,
+  getFinPointsForLevel,
+} from "../utils/levelingSystem";
 import * as S from "./ProfilePage.styles";
-
-/*const badges = [
-  { id: 1, level: "gold", icon: "🏆", label: "Mestre do Orçamento", status: "unlocked" },
-  { id: 2, level: "silver", icon: "💸", label: "Poupadora", status: "unlocked" },
-  { id: 3, level: "bronze", icon: "📊", label: "Analista", status: "unlocked" },
-  { id: 4, level: "bronze", icon: "🎯", label: "Focada", status: "unlocked" },
-  { id: 5, level: "bronze", icon: "📱", label: "App User", status: "unlocked" },
-  { id: 6, level: "silver", icon: "🔄", label: "Consistente", status: "locked" },
-  { id: 7, level: "gold", icon: "🚀", label: "Ambiciosa", status: "locked" },
-  { id: 8, level: "bronze", icon: "📚", label: "Estudiosa", status: "locked" },
-] as const;*/
-
-/*const achievements = [
-  {
-    id: 1,
-    title: "Primeira Semana Completa",
-    description: "Manteve uma ofensiva de 7 dias consecutivos",
-    icon: "🔥",
-  },
-  {
-    id: 2,
-    title: "Orçamento Mestre",
-    description: "Criou seu primeiro orçamento mensal completo",
-    icon: "📊",
-  },
-  {
-    id: 3,
-    title: "Economizadora Iniciante",
-    description: "Economizou R$100 em sua primeira meta",
-    icon: "💰",
-  },
-];*/
+import { uploadProfileImageWithCompression } from "../services/storageService";
+import { updateUserAvatar } from "../services/userService";
 
 export const ProfilePage: React.FC = () => {
   const { user, logout, updateUserContext } = useAuth();
@@ -55,9 +27,7 @@ export const ProfilePage: React.FC = () => {
   }
 
   const allAchievements = user.unlockedAchievements || [];
-  const recentAchievements = allAchievements
-      .slice(-3)
-      .reverse();
+  const recentAchievements = allAchievements.slice(-3).reverse();
   const hasAchievements = allAchievements.length > 0;
 
   const progressPercent = calculateLevelProgress(user.totalFinPoints);
@@ -70,8 +40,10 @@ export const ProfilePage: React.FC = () => {
     try {
       const date = new Date(dateString);
       if (isNaN(date.getTime())) return "Data inválida";
-      return date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
-
+      return date.toLocaleDateString("pt-BR", {
+        month: "long",
+        year: "numeric",
+      });
     } catch (error) {
       console.error("Erro ao formatar data de registro:", error);
       return "N/A";
@@ -79,10 +51,26 @@ export const ProfilePage: React.FC = () => {
   };
 
   const handleSaveAvatar = async (newAvatarUrl: string, file?: File) => {
-    if (file) {
-      console.log("Salvando arquivo de imagem:", file);
-    } else {
-      console.log("Salvando avatar URL:", newAvatarUrl);
+    try {
+      let finalAvatarUrl = newAvatarUrl;
+
+      if (file) {
+        finalAvatarUrl = await uploadProfileImageWithCompression(user.uid, file);
+      }
+
+      const updatedUser = await updateUserAvatar(finalAvatarUrl);
+
+      updateUserContext({ avatarUrl: updatedUser.avatarUrl || undefined });
+    } catch (error: any) {
+      console.error("Erro ao salvar avatar:", error);
+
+      if (error.message?.includes("5MB")) {
+        addToast("A imagem deve ter no máximo 5MB", "error");
+      } else {
+        addToast("Erro ao atualizar foto de perfil. Tente novamente.", "error");
+      }
+
+      throw error;
     }
   };
 
@@ -91,19 +79,18 @@ export const ProfilePage: React.FC = () => {
     if (nameTrimmed === user!.name) return;
 
     try {
-      const response = await api.put("/users/name", {
+      await api.put("/users/name", {
         name: nameTrimmed,
       });
 
       updateUserContext({ name: nameTrimmed });
       addToast("Nome atualizado com sucesso!", "success");
-
-    } catch (error) {
+    } catch (error: any) {
       if (error?.response?.data?.details) {
-          addToast(`${error.response.data.details[0]}`, "error");
+        addToast(`${error.response.data.details[0]}`, "error");
       } else {
-          console.log(error);
-          addToast("Erro ao atualizar nome. Tente novamente.", "error");
+        console.log(error);
+        addToast("Erro ao atualizar nome. Tente novamente.", "error");
       }
     }
   };
@@ -113,24 +100,27 @@ export const ProfilePage: React.FC = () => {
     if (emailTrimmed === user!.email) return;
 
     try {
-      const response = await api.put("/users/email", {
+      await api.put("/users/email", {
         email: emailTrimmed,
       });
 
       await logout();
-      addToast("E-mail atualizado com sucesso! Por segurança, você foi desconectado e deve fazer login novamente com seu novo e-mail.", "success");
+      addToast(
+        "E-mail atualizado com sucesso! Por segurança, você foi desconectado e deve fazer login novamente com seu novo e-mail.",
+        "success"
+      );
     } catch (error: any) {
-        console.error("Erro no updateEmail:", error);
+      console.error("Erro no updateEmail:", error);
 
-        let errorMessage = "Erro ao atualizar email. Tente novamente.";
+      let errorMessage = "Erro ao atualizar email. Tente novamente.";
 
-        if (error?.response?.data?.message) {
-          errorMessage = error.response.data.message;
-        } else if (error?.response?.data?.details) {
-          errorMessage = error.response.data.details[0];
-        }
+      if (error?.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error?.response?.data?.details) {
+        errorMessage = error.response.data.details[0];
+      }
 
-        addToast(errorMessage, "error");
+      addToast(errorMessage, "error");
     }
   };
 
@@ -148,10 +138,10 @@ export const ProfilePage: React.FC = () => {
           userLevel={user.level}
           onSave={handleSaveAvatar}
         />
-        
+
         <S.UserName>{user.name}</S.UserName>
         <S.UserTitle>Investidor(a) Iniciante</S.UserTitle>
-        
+
         <S.StatsContainer>
           <FinPoints points={user.totalFinPoints} />
         </S.StatsContainer>
@@ -169,14 +159,14 @@ export const ProfilePage: React.FC = () => {
 
       <S.SettingsSection padding="medium">
         <S.SectionTitle>Informações Pessoais</S.SectionTitle>
-        
+
         <EditableField
           label="Nome"
           value={user.name}
           onSave={handleSaveName}
           placeholder="Seu nome completo"
         />
-        
+
         <EditableField
           label="Email"
           value={user.email || ""}
@@ -184,7 +174,7 @@ export const ProfilePage: React.FC = () => {
           type="email"
           placeholder="seu@email.com"
         />
-        
+
         <S.SettingItem>
           <S.SettingLabel>Senha</S.SettingLabel>
           <span style={{ color: "#666" }}>••••••••</span>
@@ -192,12 +182,12 @@ export const ProfilePage: React.FC = () => {
             variant="outline"
             size="small"
             onClick={() => setIsPasswordModalOpen(true)}
-            style={{ 
-              padding: "6px 12px", 
+            style={{
+              padding: "6px 12px",
               fontSize: "0.8rem",
               display: "flex",
               alignItems: "center",
-              gap: "4px"
+              gap: "4px",
             }}
           >
             <Lock size={14} />
@@ -222,30 +212,31 @@ export const ProfilePage: React.FC = () => {
           </S.AchievementsList>
         ) : (
           <div style={{ padding: "10px", textAlign: "center", color: "#666" }}>
-              Nenhuma conquista desbloqueada ainda. Continue usando o FinQuest para ganhar sua primeira!
+            Nenhuma conquista desbloqueada ainda. Continue usando o FinQuest
+            para ganhar sua primeira!
           </div>
         )}
       </S.AchievementsSection>
 
       <S.SettingsSection padding="medium">
         <S.SectionTitle>Estatísticas da Conta</S.SectionTitle>
-        
+
         <S.SettingItem>
           <S.SettingLabel>Membro desde</S.SettingLabel>
           <span>{formatRegistrationDate(user.registrationAt)}</span>
         </S.SettingItem>
-        
+
         <S.SettingItem>
           <S.SettingLabel>Total de FinPoints</S.SettingLabel>
           <span>{user.totalFinPoints.toLocaleString()}</span>
         </S.SettingItem>
-        
+
         <S.SettingItem>
           <S.SettingLabel>Nível Atual</S.SettingLabel>
           <span>Nível {user.level}</span>
         </S.SettingItem>
 
-        <div style={{ marginTop: "1rem", paddingTop: "1rem", borderTop: "1px solid #eee" }}>
+        <div style={{ marginTop: "1rem", paddingTop: "1rem" }}>
           <Button variant="outline" fullWidth onClick={logout}>
             Sair da Conta
           </Button>

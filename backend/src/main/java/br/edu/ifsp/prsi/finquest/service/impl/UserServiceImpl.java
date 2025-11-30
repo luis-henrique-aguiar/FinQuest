@@ -59,6 +59,22 @@ public class UserServiceImpl implements UserService {
     }
 
     @Transactional
+    @Override
+    public UserDTO updateAvatar(String userId, String avatarUrl) {
+        logger.info("Atualizando avatar do usuario: userId={}", userId);
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("Usuario nao encontrado: " + userId));
+
+        user.setAvatarUrl(avatarUrl);
+        User savedUser = userRepository.save(user);
+
+        logger.info("Avatar atualizado com sucesso: userId={}", userId);
+
+        return UserDTO.convertToDTO(savedUser);
+    }
+
+    @Transactional
     public UserDTO updateEmail(String userId, UpdateUserEmailDTO request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado."));
