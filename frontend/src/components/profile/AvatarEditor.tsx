@@ -1,6 +1,6 @@
 import React, { useState, useRef } from "react";
 import styled, { keyframes } from "styled-components";
-import { Camera, Upload, User, Shuffle, Check, X } from "react-feather";
+import { Camera, Upload, User, Shuffle, Check } from "react-feather";
 import { Modal } from "../common/Modal";
 import Button from "../common/Button";
 import { useToast } from "../../hooks/useToast";
@@ -12,16 +12,6 @@ interface AvatarEditorProps {
   userLevel: number;
   onSave: (newAvatarUrl: string, file?: File) => Promise<void>;
 }
-
-const shimmer = keyframes`
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-`;
-
-const pulse = keyframes`
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-`;
 
 const float = keyframes`
   0%, 100% { transform: translateY(0); }

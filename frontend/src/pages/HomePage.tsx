@@ -7,8 +7,9 @@ import { useToast } from '../hooks/useToast';
 import Button from '../components/common/Button';
 import { MissionCard } from '../components/gamification/MissionCard';
 import { LessonCard } from '../components/gamification/LessonCard'; 
-import { DailyGoalItem } from '../components/home/DailyGoalItem';
+import { GoalSummaryCard } from '../components/gamification/GoalSummaryCard';
 import { getHomeData } from '../services/homeService';
+import { getAllGoals, type GoalDTO } from '../services/goalService';
 import { MissionStatus, type MissionProgressDTO } from '../services/missionService';
 import { type CourseProgressDTO } from '../services/courseService';
 import * as S from './HomePage.styles';
@@ -21,6 +22,7 @@ export const HomePage: React.FC = () => {
 
   const [missions, setMissions] = useState<MissionProgressDTO[]>([]);
   const [courses, setCourses] = useState<CourseProgressDTO[]>([]);
+  const [goals, setGoals] = useState<GoalDTO[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const userName = user?.name ? user.name.split(' ')[0] : 'Viajante';
@@ -33,9 +35,21 @@ export const HomePage: React.FC = () => {
   const loadHomeData = async () => {
     try {
       setIsLoading(true);
-      const data = await getHomeData();
-      setMissions(data.missions);
-      setCourses(data.courses);
+      
+      const [homeData, goalsData] = await Promise.all([
+        getHomeData(),
+        getAllGoals()
+      ]);
+
+      setMissions(homeData.missions);
+      setCourses(homeData.courses);
+      
+      const activeGoals = goalsData
+        .filter(g => g.statusLabel !== 'COMPLETED')
+        .slice(0, 3);
+        
+      setGoals(activeGoals);
+
     } catch (error) {
       console.error('Erro ao carregar dados da home:', error);
       addToast('Erro ao carregar dados. Tente novamente.', 'error');
@@ -44,38 +58,19 @@ export const HomePage: React.FC = () => {
     }
   };
 
-  // Filtra missões recomendadas (em progresso ou não iniciadas)
+  // Filtra missões recomendadas
   const recommendedMissions = missions
     .filter(
       (m) =>
         m.status === MissionStatus.IN_PROGRESS ||
         m.status === MissionStatus.NOT_STARTED
     )
-    .slice(0, 3); // Mostra apenas as 3 primeiras
+    .slice(0, 3);
 
-  // Filtra cursos em progresso ou não iniciados
+  // Filtra cursos ativos
   const activeCourses = courses
     .filter((c) => c.progress === null || (c.progress > 0 && c.progress < 100))
     .slice(0, 3);
-
-  // Estatísticas para "metas diárias" (simuladas por enquanto)
-  const dailyGoals = [
-    {
-      id: 1,
-      title: 'Completar uma lição',
-      progress: missions.filter((m) => m.status === MissionStatus.COMPLETED).length > 0 ? 1 : 0,
-      total: 1,
-    },
-    {
-      id: 2,
-      title: 'Explorar 3 missões',
-      progress: Math.min(
-        missions.filter((m) => m.status === MissionStatus.IN_PROGRESS).length,
-        3
-      ),
-      total: 3,
-    },
-  ];
 
   const stats = {
     totalMissions: missions.length,
@@ -160,18 +155,26 @@ export const HomePage: React.FC = () => {
         </S.StatCard>
       </S.StatsGrid>
 
-      {/* Seção de Metas Diárias */}
-      <S.DailyGoalsSection>
-        <S.SectionTitle>Metas Diárias 🎯</S.SectionTitle>
-        {dailyGoals.map((goal) => (
-          <DailyGoalItem
-            key={goal.id}
-            title={goal.title}
-            progress={goal.progress}
-            total={goal.total}
-          />
-        ))}
-      </S.DailyGoalsSection>
+      {goals.length > 0 && (
+        <S.MissionsSection>
+          <S.SectionHeader>
+            <S.SectionTitle>Minhas Metas 🎯</S.SectionTitle>
+            <S.ViewAllLink onClick={() => navigate('/goals')}>
+              Ver todas
+            </S.ViewAllLink>
+          </S.SectionHeader>
+
+          <S.CoursesGrid>
+            {goals.map((goal) => (
+              <GoalSummaryCard 
+                key={goal.id} 
+                goal={goal} 
+                onClick={() => navigate('/goals')}
+              />
+            ))}
+          </S.CoursesGrid>
+        </S.MissionsSection>
+      )}
 
       {/* Seção de Cursos em Progresso */}
       {activeCourses.length > 0 && (
@@ -213,8 +216,8 @@ export const HomePage: React.FC = () => {
         </S.MissionsSection>
       )}
 
-      {/* Estado vazio se não houver conteúdo */}
-      {activeCourses.length === 0 && recommendedMissions.length === 0 && (
+      {/* Estado vazio se não houver conteúdo principal */}
+      {activeCourses.length === 0 && recommendedMissions.length === 0 && goals.length === 0 && (
         <S.EmptyState>
           <Book size={64} />
           <h3>Comece sua jornada!</h3>
