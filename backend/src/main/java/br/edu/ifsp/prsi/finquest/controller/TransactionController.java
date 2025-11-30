@@ -77,7 +77,7 @@ public class TransactionController {
     @PostMapping
     public ResponseEntity<TransactionResponseDTO> createTransaction(
             @AuthenticationPrincipal UserDetails userDetails,
-            @RequestBody CreateTransactionDTO dto
+            @Valid @RequestBody CreateTransactionDTO dto
     ) {
         String userId = userDetails.getUsername();
         TransactionResponseDTO response = transactionService.createTransaction(userId, dto);

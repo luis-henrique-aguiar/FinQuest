@@ -32,15 +32,18 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final AchievementRepository achievementRepository;
     private final UserAchievementRepository userAchievementRepository;
+    private final FirebaseAuth firebaseAuth;
 
     public UserServiceImpl(
             UserRepository userRepository,
             AchievementRepository achievementRepository,
-            UserAchievementRepository userAchievementRepository
+            UserAchievementRepository userAchievementRepository,
+            FirebaseAuth firebaseAuth
     ) {
         this.userRepository = userRepository;
         this.achievementRepository = achievementRepository;
         this.userAchievementRepository = userAchievementRepository;
+        this.firebaseAuth = firebaseAuth;
     }
 
     @Override
@@ -90,7 +93,7 @@ public class UserServiceImpl implements UserService {
                     .setEmail(newEmail)
                     .setEmailVerified(false);
 
-            FirebaseAuth.getInstance().updateUser(firebaseRequest);
+            this.firebaseAuth.updateUser(firebaseRequest);
 
             user.setEmail(newEmail);
             User updatedUserEntity = userRepository.save(user);
@@ -135,11 +138,10 @@ public class UserServiceImpl implements UserService {
             UserRecord.UpdateRequest firebaseRequest = new UserRecord.UpdateRequest(userId)
                     .setPassword(request.newPassword());
 
-            FirebaseAuth.getInstance().updateUser(firebaseRequest);
-            FirebaseAuth.getInstance().revokeRefreshTokens(userId);
+            this.firebaseAuth.updateUser(firebaseRequest);
+            this.firebaseAuth.revokeRefreshTokens(userId);
 
             logger.info("Senha e tokens do usuário {} atualizados e revogados via Fluxo Híbrido.", userId);
-
         } catch (FirebaseAuthException e) {
             logger.error("Erro ao atualizar senha via Admin SDK para usuário {}: {}", userId, e.getMessage());
             throw new RuntimeException("Erro interno ao atualizar senha.");
