@@ -2,7 +2,7 @@ package br.edu.ifsp.prsi.finquest.model;
 
 import br.edu.ifsp.prsi.finquest.model.enums.UserRole;
 import jakarta.persistence.*;
-import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Objects;
 
 @Entity
@@ -18,11 +18,18 @@ public class User {
     @Column(nullable = false, unique = true)
     private String email;
 
+    @Column(name = "registration_at", nullable = false)
+    private LocalDateTime registrationAt;
+
+    @PrePersist
+    protected void onCreate() {
+        if (this.registrationAt == null) {
+            this.registrationAt = LocalDateTime.now();
+        }
+    }
+
     @Column(name = "total_fin_points")
     private Integer totalFinPoints;
-
-    @Column(precision = 10, scale = 2)
-    private BigDecimal budget;
 
     @Column(name = "avatar_url")
     private String avatarUrl;
@@ -54,15 +61,15 @@ public class User {
 
     public void setEmail(String email) { this.email = email; }
 
+    public LocalDateTime getRegistrationAt() { return registrationAt; }
+
+    public void setRegistrationAt(LocalDateTime registrationDate) { this.registrationAt = registrationDate; }
+
     public int getTotalFinPoints() { return totalFinPoints; }
 
     public void setTotalFinPoints(int totalFinPoints) {
         this.totalFinPoints = totalFinPoints;
     }
-
-    public BigDecimal getBudget() { return budget; }
-
-    public void setBudget(BigDecimal budget) { this.budget = budget; }
 
     public String getAvatarUrl() { return avatarUrl; }
 
@@ -107,7 +114,6 @@ public class User {
                 ", name='" + name + '\'' +
                 ", email='" + email + '\'' +
                 ", totalFinPoints=" + totalFinPoints +
-                ", budget=" + budget +
                 ", avatarUrl='" + avatarUrl + '\'' +
                 ", level=" + level +
                 ", role=" + role +

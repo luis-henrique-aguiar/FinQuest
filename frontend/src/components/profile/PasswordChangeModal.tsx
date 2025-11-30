@@ -4,6 +4,9 @@ import { Eye, EyeOff, Lock } from "react-feather";
 import { Modal } from "../common/Modal";
 import Button from "../common/Button";
 import { useToast } from "../../hooks/useToast";
+import { useAuth } from "../../hooks/useAuth";
+import api from "../../services/api";
+import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "firebase/auth";
 
 interface PasswordChangeModalProps {
   isOpen: boolean;
@@ -170,6 +173,7 @@ export const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
   
   const [isLoading, setIsLoading] = useState(false);
   const { addToast } = useToast();
+  const { firebaseUser, user, logout } = useAuth();
 
   const calculatePasswordStrength = (password: string): number => {
     let strength = 0;
@@ -227,17 +231,40 @@ export const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
 
     setIsLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500)); // Simulação
-      
-      addToast("Senha alterada com sucesso!", "success");
+      const credential = EmailAuthProvider.credential(user.email!, formData.currentPassword);
+      await reauthenticateWithCredential(firebaseUser, credential);
+
+      console.log("Reautenticação no Firebase OK.");
+
+      await api.put("/users/password", {
+        newPassword: formData.newPassword,
+        confirmationPassword: formData.confirmPassword,
+      });
+
+      await logout();
+
+      addToast("Senha alterada com sucesso! Por segurança, você foi desconectado e deve fazer login novamente com sua nova senha.", "success");
       setFormData({ currentPassword: "", newPassword: "", confirmPassword: "" });
       onClose();
-    } catch (error) {
-      console.error("Erro ao alterar senha:", error);
-      addToast("Erro ao alterar senha. Verifique sua senha atual.", "error");
-    } finally {
-      setIsLoading(false);
-    }
+    } catch (error: any) {
+
+    console.log(error);
+        let errorMessage = "Erro ao alterar senha. Tente novamente.";
+
+         if (error?.response?.data?.details) {
+             addToast(`${error.response.data.details[0]}`, "error");
+         } else if (error.response?.data?.message) {
+             errorMessage = error.response.data.message;
+         } else if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+             errorMessage = "A senha atual digitada está incorreta.";
+         } else if (error.code === 'auth/weak-password') {
+             errorMessage = "A nova senha é muito fraca (mínimo 6 caracteres).";
+         }
+
+        addToast(errorMessage, "error");
+      } finally {
+        setIsLoading(false);
+      }
   };
 
   const handleClose = () => {

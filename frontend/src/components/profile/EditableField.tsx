@@ -149,10 +149,10 @@ export const EditableField: React.FC<EditableFieldProps> = ({
     try {
       await onSave(editValue.trim());
       setIsEditing(false);
-      addToast("Informação atualizada com sucesso!", "success");
+      //addToast("Informação atualizada com sucesso!", "success");
     } catch (error) {
       console.error("Erro ao salvar:", error);
-      addToast("Erro ao atualizar informação", "error");
+      //addToast("Erro ao atualizar informação", "error");
     } finally {
       setIsLoading(false);
     }

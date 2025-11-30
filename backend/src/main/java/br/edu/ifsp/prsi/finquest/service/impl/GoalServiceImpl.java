@@ -114,7 +114,7 @@ public class GoalServiceImpl implements GoalService {
         Goal goal = findGoalAndValidateUser(userId, goalId);
         goalRepository.delete(goal);
 
-        return null;
+        return GoalDTO.fromEntity(goal);
     }
 
     @Override
