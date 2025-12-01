@@ -50,7 +50,7 @@ public class MissionServiceImpl implements MissionService {
     @Override
     @Transactional(readOnly = true)
     public List<MissionProgressDTO> getMissionsForUser(String userId) {
-        logger.debug("Buscando missoes para o usuario: userId={}", userId);
+        logger.debug("Buscando painel de missões: userId={}", userId);
 
         validateUserExists(userId);
 
@@ -61,23 +61,25 @@ public class MissionServiceImpl implements MissionService {
                 .map(mission -> new MissionProgressDTO(mission, progressMap.get(mission.getId())))
                 .toList();
 
-        logger.debug("Retornando {} missoes para o usuario: userId={}", result.size(), userId);
+        long completedCount = result.stream()
+                .filter(m -> m.getStatus() == MissionStatus.COMPLETED)
+                .count();
+
+        logger.debug("Painel carregado: userId={}, totalMissões={}, completadas={}",
+                userId, result.size(), completedCount);
 
         return result;
     }
 
     @Transactional
     public void processLessonCompletion(String userId, String lessonId) {
-        logger.info("Processando conclusao de licao: userId={}, lessonId={}", userId, lessonId);
-
+        logger.info("Gatilho de Gamificação: LESSON_COMPLETED. userId={}, lessonId={}", userId, lessonId);
         processRelevantMissions(userId, MissionTriggerType.LESSON_COMPLETED);
-
-        logger.info("Processamento de missoes concluido: userId={}", userId);
     }
 
     @Transactional
     public GoalCompletionDTO processGoalCompletion(String userId, String goalId) {
-        logger.info("Processando conclusao de meta: userId={}, goalId={}", userId, goalId);
+        logger.info("Gatilho de Gamificação: GOAL_COMPLETED. userId={}, goalId={}", userId, goalId);
 
         User user = findUserOrThrow(userId);
         int levelBeforeProcessing = user.getLevel();
@@ -86,65 +88,74 @@ public class MissionServiceImpl implements MissionService {
 
         GoalCompletionDTO result = buildGoalCompletionResult(userId, levelBeforeProcessing);
 
-        logger.info("Processamento de meta concluido: userId={}, levelUp={}",
-                userId, result.didLevelUp());
+        if (result.didLevelUp()) {
+            logger.info("🎉 LEVEL UP (via Meta)! Usuário {} subiu para o nível {}", userId, result.level());
+        }
 
         return result;
     }
 
     @Transactional
     public MissionCompletionDTO processTransactionCreation(String userId) {
-        logger.info("Processando criacao de transacao para missoes. UserId={}", userId);
+        logger.info("Gatilho de Gamificação: TRANSACTION_CREATED. userId={}", userId);
 
-        User userBefore = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("Usuario nao encontrado: " + userId));
-
-        int levelBefore = userBefore.getLevel();
+        User userBefore = findUserOrThrow(userId);
         int pointsBefore = userBefore.getTotalFinPoints();
+        int levelBefore = userBefore.getLevel();
 
-        // Processa missoes do tipo TRANSACTION_CREATED
         processRelevantMissions(userId, MissionTriggerType.TRANSACTION_CREATED);
 
-        // Recarrega usuario para verificar mudancas
-        User userAfter = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("Usuario nao encontrado: " + userId));
+        User userAfter = findUserOrThrow(userId);
 
-        // Se nao houve mudanca nos pontos, nenhuma missao foi completada
-        if (userAfter.getTotalFinPoints() == pointsBefore) {
-            logger.debug("Nenhuma missao completada com a transacao. UserId={}", userId);
+        if (!hasUserProgressed(pointsBefore, userAfter.getTotalFinPoints())) {
+            logger.debug("Nenhuma recompensa gerada neste gatilho. UserId={}", userId);
             return null;
         }
 
-        // Calcula resultado
-        int finalLevel = userAfter.getLevel();
-        boolean leveledUp = finalLevel > levelBefore;
+        return buildTransactionCompletionResult(userAfter, levelBefore);
+    }
 
+    private boolean hasUserProgressed(int pointsBefore, int pointsAfter) {
+        return pointsAfter > pointsBefore;
+    }
+
+    private MissionCompletionDTO buildTransactionCompletionResult(User user, int previousLevel) {
+        int currentLevel = user.getLevel();
+        boolean leveledUp = currentLevel > previousLevel;
         AchievementDTO unlockedBadge = null;
+
         if (leveledUp) {
-            Optional<Achievement> badgeOpt = achievementRepository.findByRequiredLevel(finalLevel);
-            if (badgeOpt.isPresent()) {
-                Achievement badge = badgeOpt.get();
-                unlockedBadge = new AchievementDTO(badge);
-                logger.info("Badge desbloqueado: {} - {}", badge.getTitle(), badge.getIcon());
-            }
+            unlockedBadge = handleLevelUpEvent(user.getId(), currentLevel);
         }
 
-        logger.info("Missao completada por transacao. UserId={}, LevelUp={}, NewLevel={}",
-                userId, leveledUp, finalLevel);
-
         return new MissionCompletionDTO(
-                userAfter.getTotalFinPoints(),
-                finalLevel,
+                user.getTotalFinPoints(),
+                currentLevel,
                 leveledUp,
                 unlockedBadge
         );
     }
 
+    private AchievementDTO handleLevelUpEvent(String userId, int currentLevel) {
+        logger.info("🎉 LEVEL UP (via Transação)! Usuário {} subiu para o nível {}", userId, currentLevel);
+
+        return achievementRepository.findByRequiredLevel(currentLevel)
+                .map(badge -> {
+                    logger.info("🏆 Badge de Nível Desbloqueado: {} para userId={}", badge.getTitle(), userId);
+                    return new AchievementDTO(badge);
+                })
+                .orElse(null);
+    }
 
     private void processRelevantMissions(String userId, MissionTriggerType triggerType) {
         List<Mission> relevantMissions = missionRepository.findByTriggerEventType(triggerType);
 
-        logger.debug("Encontradas {} missoes do tipo {}: userId={}",
+        if (relevantMissions.isEmpty()) {
+            logger.debug("Nenhuma missão configurada para o gatilho {}", triggerType);
+            return;
+        }
+
+        logger.debug("Processando {} missões do tipo {} para userId={}",
                 relevantMissions.size(), triggerType, userId);
 
         for (Mission mission : relevantMissions) {
@@ -156,21 +167,21 @@ public class MissionServiceImpl implements MissionService {
         try {
             updateMissionProgress(userId, mission);
         } catch (Exception e) {
-            logger.error("Erro ao atualizar progresso da missao: missionId={}, userId={}, error={}",
-                    mission.getId(), userId, e.getMessage(), e);
+            logger.error("Falha ao processar missão '{}' ({}) para userId={}. Erro: {}",
+                    mission.getTitle(), mission.getId(), userId, e.getMessage(), e);
         }
     }
 
     private void updateMissionProgress(String userId, Mission mission) {
         if (!isValidMission(mission)) {
+            logger.warn("Missão inválida ignorada: id={}", mission.getId());
             return;
         }
 
         UserMissionProgress progress = findOrCreateProgress(userId, mission);
 
         if (progress.isCompleted()) {
-            logger.debug("Missao ja completada, ignorando: missionId={}, userId={}",
-                    mission.getId(), userId);
+            logger.debug("Missão já completada anteriormente: missionId={}, userId={}", mission.getId(), userId);
             return;
         }
 
@@ -180,37 +191,34 @@ public class MissionServiceImpl implements MissionService {
     }
 
     private boolean isValidMission(Mission mission) {
-        if (mission.getTargetCount() <= 0) {
-            logger.warn("Missao com targetCount invalido, ignorando: missionId={}, targetCount={}",
-                    mission.getId(), mission.getTargetCount());
-            return false;
-        }
-        return true;
+        return mission.getTargetCount() > 0;
     }
 
     private UserMissionProgress findOrCreateProgress(String userId, Mission mission) {
         UserMissionProgressId progressId = new UserMissionProgressId(userId, mission.getId());
 
         return progressRepository.findById(progressId)
-                .orElseGet(() -> createNewProgress(userId, mission, progressId));
+                .orElseGet(() -> {
+                    logger.debug("Iniciando nova missão para usuário: mission='{}'", mission.getTitle());
+                    return createNewProgress(userId, mission, progressId);
+                });
     }
 
     private UserMissionProgress createNewProgress(String userId, Mission mission, UserMissionProgressId progressId) {
-        logger.debug("Criando novo progresso: userId={}, missionId={}", userId, mission.getId());
-
         UserMissionProgress newProgress = new UserMissionProgress(progressId);
         newProgress.setUser(userRepository.getReferenceById(userId));
         newProgress.setMission(mission);
         newProgress.setStatus(MissionStatus.NOT_STARTED);
-
         return newProgress;
     }
 
     private void incrementAndCheckCompletion(UserMissionProgress progress, Mission mission, String userId) {
+        int before = progress.getCurrentCount();
         progress.incrementProgress();
+        int after = progress.getCurrentCount();
 
-        logger.debug("Progresso atualizado: missionId={}, userId={}, progresso={}/{}",
-                mission.getId(), userId, progress.getCurrentCount(), mission.getTargetCount());
+        logger.info("Progresso de Missão: userId={}, mission='{}', progress={} -> {}/{}",
+                userId, mission.getTitle(), before, after, mission.getTargetCount());
 
         if (progress.hasReachedTarget(mission.getTargetCount())) {
             completeMission(progress, userId, mission);
@@ -220,13 +228,14 @@ public class MissionServiceImpl implements MissionService {
     private void completeMission(UserMissionProgress progress, String userId, Mission mission) {
         progress.complete();
 
-        logger.info("Missao completada: missionId={}, missionTitle='{}', userId={}",
-                mission.getId(), mission.getTitle(), userId);
+        logger.info("✅ MISSÃO COMPLETADA: '{}' (ID: {}). Recompensa: +{} FinPoints. UserId={}",
+                mission.getTitle(), mission.getId(), mission.getRewardFinPoints(), userId);
 
         boolean leveledUp = userService.addFinPoints(userId, mission.getRewardFinPoints());
 
-        logger.info("Recompensa concedida: finPoints={}, levelUp={}, userId={}",
-                mission.getRewardFinPoints(), leveledUp, userId);
+        if (leveledUp) {
+            logger.info("A missão '{}' causou um Level Up no userId={}", mission.getTitle(), userId);
+        }
     }
 
     private GoalCompletionDTO buildGoalCompletionResult(String userId, int levelBeforeProcessing) {
@@ -251,17 +260,14 @@ public class MissionServiceImpl implements MissionService {
         Optional<Achievement> badgeOpt = achievementRepository.findByRequiredLevel(level);
 
         if (badgeOpt.isPresent()) {
-            Achievement badge = badgeOpt.get();
-            logger.info("Badge desbloqueado: level={}, badgeTitle='{}'", level, badge.getTitle());
-            return new AchievementDTO(badge);
+            return new AchievementDTO(badgeOpt.get());
         }
-
-        logger.warn("Nenhum badge encontrado para o nivel: level={}", level);
         return null;
     }
 
     private void validateUserExists(String userId) {
         if (!userRepository.existsById(userId)) {
+            logger.warn("Tentativa de buscar missões para usuário inexistente: {}", userId);
             throw new EntityNotFoundException("Usuario nao encontrado: " + userId);
         }
     }

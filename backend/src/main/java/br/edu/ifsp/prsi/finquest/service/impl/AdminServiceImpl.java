@@ -45,7 +45,8 @@ public class AdminServiceImpl implements AdminService {
     @Override
     @Transactional(readOnly = true)
     public AdminStatsDTO getSystemStats() {
-        logger.info("Gerando estatisticas do sistema");
+        logger.info("Iniciando cálculo de estatísticas do sistema (Dashboard Admin)");
+        long startTime = System.currentTimeMillis();
 
         long totalUsers = userRepository.count();
         long activeUsers = countActiveUsers();
@@ -54,8 +55,10 @@ public class AdminServiceImpl implements AdminService {
         double averageFinPoints = getAverageFinPoints();
         int highestLevel = getHighestLevel();
 
-        logger.info("Estatisticas geradas: totalUsers={}, activeUsers={}, lessonsCompleted={}, missionsCompleted={}",
-                totalUsers, activeUsers, totalLessonsCompleted, totalMissionsCompleted);
+        long duration = System.currentTimeMillis() - startTime;
+
+        logger.info("Estatísticas geradas em {}ms: [Users: Total={}, Active={}] [Gamification: Lessons={}, Missions={}] [AvgPoints={}, MaxLevel={}]",
+                duration, totalUsers, activeUsers, totalLessonsCompleted, totalMissionsCompleted, averageFinPoints, highestLevel);
 
         return new AdminStatsDTO(
                 totalUsers,
@@ -70,13 +73,15 @@ public class AdminServiceImpl implements AdminService {
     @Override
     @Transactional(readOnly = true)
     public Page<UserSummaryDTO> getAllUsers(Pageable pageable) {
-        logger.debug("Buscando usuarios: page={}, size={}", pageable.getPageNumber(), pageable.getPageSize());
+        logger.debug("Listando usuários: page={}, size={}, sort={}",
+                pageable.getPageNumber(), pageable.getPageSize(), pageable.getSort());
 
         Page<User> users = userRepository.findAll(pageable);
 
         Page<UserSummaryDTO> result = users.map(this::buildUserSummary);
 
-        logger.debug("Usuarios encontrados: total={}, page={}", result.getTotalElements(), pageable.getPageNumber());
+        logger.debug("Página carregada: {}/{} usuários retornados.",
+                result.getNumberOfElements(), result.getTotalElements());
 
         return result;
     }
@@ -84,22 +89,24 @@ public class AdminServiceImpl implements AdminService {
     @Transactional
     @Override
     public void promoteUserToAdmin(String targetUserId, String adminUserId) {
-        logger.info("Tentativa de promocao: targetUserId={}, requestedBy={}",
+        logger.warn("AUDITORIA: Solicitação de promoção de privilégio. Target={}, Requester={}",
                 targetUserId, adminUserId);
 
         User targetUser = userRepository.findById(targetUserId)
-                .orElseThrow(() -> new EntityNotFoundException("Usuario nao encontrado: " + targetUserId));
+                .orElseThrow(() -> {
+                    logger.warn("Falha na promoção: Usuário alvo não encontrado. Target={}", targetUserId);
+                    return new EntityNotFoundException("Usuario nao encontrado: " + targetUserId);
+                });
 
         if (targetUser.getRole() == UserRole.ADMIN) {
-            logger.warn("Usuario ja e admin: targetUserId={}", targetUserId);
+            logger.warn("Ação redundante: Usuário {} já possui role ADMIN. Requisição ignorada.", targetUserId);
             throw new BusinessException("Usuario ja possui role ADMIN.");
         }
 
         targetUser.setRole(UserRole.ADMIN);
         userRepository.save(targetUser);
 
-        logger.info("Usuario promovido a admin: targetUserId={}, promotedBy={}",
-                targetUserId, adminUserId);
+        logger.info("SUCESSO: Usuário {} promovido a ADMIN por {}.", targetUserId, adminUserId);
     }
 
     private UserSummaryDTO buildUserSummary(User user) {

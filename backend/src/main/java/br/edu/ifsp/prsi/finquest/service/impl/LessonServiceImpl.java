@@ -52,36 +52,45 @@ public class LessonServiceImpl implements LessonService {
         this.missionService = missionService;
     }
 
+    @Override
     @Transactional(readOnly = true)
     public List<QuizQuestionDTO> getLessonQuiz(String lessonId) {
-        logger.debug("Buscando quiz da licao: lessonId={}", lessonId);
+        logger.debug("Iniciando busca de quiz: lessonId={}", lessonId);
 
         List<Question> questions = questionRepository.findAllByLessonIdOrderByOrderAsc(lessonId);
 
         if (questions.isEmpty()) {
+            logger.warn("Quiz vazio ou inexistente para a lição: lessonId={}", lessonId);
             throw new EntityNotFoundException("Nenhuma questao encontrada para a licao: " + lessonId);
         }
+
+        logger.debug("Quiz carregado com sucesso: lessonId={}, totalQuestions={}", lessonId, questions.size());
 
         return questions.stream()
                 .map(this::mapQuestionToDTO)
                 .toList();
     }
 
+    @Override
     @Transactional(readOnly = true)
     public LessonDetailsDTO getLessonDetails(String lessonId) {
-        logger.debug("Buscando detalhes da licao: lessonId={}", lessonId);
+        logger.debug("Carregando detalhes da lição: lessonId={}", lessonId);
 
         Lesson currentLesson = findLessonOrThrow(lessonId);
 
         String nextLessonId = findAdjacentLessonId(currentLesson, 1);
         String previousLessonId = findAdjacentLessonId(currentLesson, -1);
 
+        logger.debug("Navegação calculada: current={}, prev={}, next={}",
+                lessonId, previousLessonId, nextLessonId);
+
         return new LessonDetailsDTO(currentLesson, nextLessonId, previousLessonId);
     }
 
+    @Override
     @Transactional
     public LessonCompletionDTO completeLesson(String lessonId, String userId) {
-        logger.info("Iniciando conclusao de licao: lessonId={}, userId={}", lessonId, userId);
+        logger.info("Solicitação de conclusão de lição: lessonId={}, userId={}", lessonId, userId);
 
         Lesson lesson = findLessonOrThrow(lessonId);
         validateLessonNotCompleted(lessonId, userId);
@@ -89,20 +98,15 @@ public class LessonServiceImpl implements LessonService {
         User userBefore = findUserOrThrow(userId);
         int levelBefore = userBefore.getLevel();
 
-        logger.debug("Estado inicial do usuario: userId={}, level={}, finPoints={}",
-                userId, levelBefore, userBefore.getTotalFinPoints());
-
         saveLessonCompletion(lessonId, userId, lesson);
+
         processMissionProgress(userId, lessonId);
+
         awardLessonPoints(userId, lesson.getRecFinPoints());
 
-        LessonCompletionDTO result = buildCompletionResult(
-                userId,
-                lesson,
-                levelBefore
-        );
+        LessonCompletionDTO result = buildCompletionResult(userId, lesson, levelBefore);
 
-        logger.info("Licao concluida com sucesso: lessonId={}, userId={}, pointsAwarded={}, levelUp={}",
+        logger.info("✅ Lição concluída: lessonId={}, user={}, pontos={}, levelUp={}",
                 lessonId, userId, lesson.getRecFinPoints(), result.didLevelUp());
 
         return result;
@@ -112,8 +116,7 @@ public class LessonServiceImpl implements LessonService {
         UserLessonCompletionId completionId = new UserLessonCompletionId(userId, lessonId);
 
         if (completionRepository.existsById(completionId)) {
-            logger.warn("Tentativa de concluir licao ja finalizada: lessonId={}, userId={}",
-                    lessonId, userId);
+            logger.warn("Tentativa duplicada de concluir lição: lessonId={}, userId={}", lessonId, userId);
             throw new BusinessException("Licao ja concluida.");
         }
     }
@@ -128,33 +131,32 @@ public class LessonServiceImpl implements LessonService {
         completion.setLesson(lesson);
 
         completionRepository.save(completion);
-
-        logger.debug("Registro de conclusao salvo: lessonId={}, userId={}", lessonId, userId);
+        logger.debug("Registro de conclusão salvo no banco: lessonId={}, userId={}", lessonId, userId);
     }
 
     private void processMissionProgress(String userId, String lessonId) {
         try {
             missionService.processLessonCompletion(userId, lessonId);
         } catch (Exception e) {
-            logger.error("Erro ao processar missoes da licao: lessonId={}, userId={}, error={}",
-                    lessonId, userId, e.getMessage(), e);
+            logger.error("Falha ao processar missões para lição {}: {}", lessonId, e.getMessage(), e);
         }
     }
 
     private void awardLessonPoints(String userId, int points) {
         userService.addFinPoints(userId, points);
-        logger.debug("Pontos concedidos: userId={}, points={}", userId, points);
+        logger.debug("Pontos adicionados ao usuário: userId={}, points={}", userId, points);
     }
 
     private LessonCompletionDTO buildCompletionResult(String userId, Lesson lesson, int levelBefore) {
         User updatedUser = findUserOrThrow(userId);
-
         int currentLevel = updatedUser.getLevel();
         boolean leveledUp = currentLevel > levelBefore;
 
-        AchievementDTO unlockedBadge = leveledUp
-                ? findBadgeForLevel(currentLevel)
-                : null;
+        AchievementDTO unlockedBadge = null;
+        if (leveledUp) {
+            logger.info("🎉 LEVEL UP (via Lição)! Usuário {} subiu para o nível {}", userId, currentLevel);
+            unlockedBadge = findBadgeForLevel(currentLevel);
+        }
 
         int courseProgress = updateCourseProgress(userId, lesson.getCourse().getId());
 
@@ -172,7 +174,7 @@ public class LessonServiceImpl implements LessonService {
         long totalLessons = lessonRepository.countByCourseId(courseId);
 
         if (totalLessons == 0) {
-            logger.warn("Curso sem licoes cadastradas: courseId={}", courseId);
+            logger.warn("Inconsistência de dados: Curso {} não possui lições cadastradas.", courseId);
             return 0;
         }
 
@@ -181,8 +183,8 @@ public class LessonServiceImpl implements LessonService {
 
         updateEnrollmentProgress(userId, courseId, progressPercent);
 
-        logger.debug("Progresso do curso atualizado: courseId={}, userId={}, progresso={}%",
-                courseId, userId, progressPercent);
+        logger.info("Progresso do curso atualizado: courseId={}, userId={}, progresso={}% ({}/{})",
+                courseId, userId, progressPercent, completedLessons, totalLessons);
 
         return progressPercent;
     }
@@ -195,14 +197,16 @@ public class LessonServiceImpl implements LessonService {
         UserEnrollmentId enrollmentId = new UserEnrollmentId(userId, courseId);
 
         UserEnrollment enrollment = enrollmentRepository.findById(enrollmentId)
-                .orElseThrow(() -> new EntityNotFoundException(
-                        "Matricula nao encontrada: userId=" + userId + ", courseId=" + courseId));
+                .orElseThrow(() -> {
+                    logger.error("Erro crítico: Usuário {} completou lição sem matrícula no curso {}", userId, courseId);
+                    return new EntityNotFoundException("Matricula nao encontrada: userId=" + userId + ", courseId=" + courseId);
+                });
 
         enrollment.setProgress(progressPercent);
 
         if (progressPercent == 100 && enrollment.getCompletionDate() == null) {
             enrollment.setCompletionDate(LocalDate.now());
-            logger.info("Curso concluido: courseId={}, userId={}", courseId, userId);
+            logger.info("🏆 CURSO CONCLUÍDO! Usuário {} finalizou o curso {}", userId, courseId);
         }
 
         enrollmentRepository.save(enrollment);
@@ -232,7 +236,10 @@ public class LessonServiceImpl implements LessonService {
 
     private Lesson findLessonOrThrow(String lessonId) {
         return lessonRepository.findById(lessonId)
-                .orElseThrow(() -> new EntityNotFoundException("Licao nao encontrada: " + lessonId));
+                .orElseThrow(() -> {
+                    logger.warn("Lição não encontrada: {}", lessonId);
+                    return new EntityNotFoundException("Licao nao encontrada: " + lessonId);
+                });
     }
 
     private User findUserOrThrow(String userId) {
@@ -255,11 +262,11 @@ public class LessonServiceImpl implements LessonService {
 
         if (badgeOpt.isPresent()) {
             Achievement badge = badgeOpt.get();
-            logger.info("Badge desbloqueado: level={}, badgeTitle='{}'", level, badge.getTitle());
+            logger.info("Badge de Nível Desbloqueado: '{}'", badge.getTitle());
             return new AchievementDTO(badge);
         }
 
-        logger.warn("Nenhum badge encontrado para o nivel: level={}", level);
+        logger.debug("Nenhum badge configurado para o nível {}", level);
         return null;
     }
 }

@@ -15,5 +15,13 @@ spring:
   security:
     user:
       password: ignored
+
 server:
   port: 8080
+
+logging:
+  level:
+    root: INFO
+    br.edu.ifsp.prsi.finquest: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} %-5level [%X{requestId}] [%X{userId}] %logger{36} - %msg%n"

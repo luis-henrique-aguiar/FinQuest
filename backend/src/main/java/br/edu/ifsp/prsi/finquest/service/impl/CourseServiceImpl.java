@@ -44,9 +44,10 @@ public class CourseServiceImpl implements CourseService {
         this.completionRepository = completionRepository;
     }
 
+    @Override
     @Transactional(readOnly = true)
     public List<CourseProgressDTO> getCoursesForUser(String userId) {
-        logger.debug("Buscando cursos para o usuario: userId={}", userId);
+        logger.debug("Buscando lista de cursos e progresso: userId={}", userId);
 
         Map<String, Integer> progressMap = buildProgressMap(userId);
         List<Course> allCourses = courseRepository.findAll();
@@ -55,17 +56,19 @@ public class CourseServiceImpl implements CourseService {
                 .map(course -> mapToCourseProgressDTO(course, progressMap))
                 .toList();
 
-        logger.debug("Cursos retornados: userId={}, totalCourses={}, enrolledCourses={}",
+        logger.debug("Cursos retornados: userId={}, totalCursos={}, cursosIniciados={}",
                 userId, result.size(), progressMap.size());
 
         return result;
     }
 
+    @Override
     @Transactional(readOnly = true)
     public CourseDetailsDTO getCourseDetailsForUser(String courseId, String userId) {
         logger.debug("Buscando detalhes do curso: courseId={}, userId={}", courseId, userId);
 
         Course course = findCourseOrThrow(courseId);
+
         List<Lesson> lessons = lessonRepository.findAllByCourseIdOrderByLessonOrderAsc(courseId);
         Set<String> completedLessonIds = getCompletedLessonIds(userId, courseId);
 
@@ -73,7 +76,7 @@ public class CourseServiceImpl implements CourseService {
                 .map(lesson -> mapToLessonProgressDTO(lesson, completedLessonIds))
                 .toList();
 
-        logger.debug("Detalhes do curso carregados: courseId={}, totalLessons={}, completedLessons={}",
+        logger.debug("Detalhes carregados: courseId={}, totalLições={}, liçõesCompletas={}",
                 courseId, lessons.size(), completedLessonIds.size());
 
         return new CourseDetailsDTO(
@@ -86,7 +89,6 @@ public class CourseServiceImpl implements CourseService {
 
     private Map<String, Integer> buildProgressMap(String userId) {
         List<UserEnrollment> enrollments = enrollmentRepository.findByIdUserId(userId);
-
         return enrollments.stream()
                 .collect(Collectors.toMap(
                         enrollment -> enrollment.getId().getCourseId(),
@@ -121,6 +123,9 @@ public class CourseServiceImpl implements CourseService {
 
     private Course findCourseOrThrow(String courseId) {
         return courseRepository.findById(courseId)
-                .orElseThrow(() -> new EntityNotFoundException("Curso nao encontrado: " + courseId));
+                .orElseThrow(() -> {
+                    logger.warn("Curso não encontrado: id={}", courseId);
+                    return new EntityNotFoundException("Curso nao encontrado: " + courseId);
+                });
     }
 }

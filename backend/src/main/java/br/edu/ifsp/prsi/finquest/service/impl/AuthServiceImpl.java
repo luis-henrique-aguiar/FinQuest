@@ -15,8 +15,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-
 @Service
 public class AuthServiceImpl implements AuthService {
 
@@ -33,18 +31,21 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public RegisterResponseDTO register(RegisterRequestDTO request) {
-        logger.info("Iniciando registro de usuario: email={}", request.email());
+        logger.info("Iniciando processo de registro: email='{}', nome='{}'", request.email(), request.name());
 
         validateEmailNotInUse(request.email());
 
         UserRecord firebaseUser = null;
 
         try {
+            logger.debug("Passo 1/2: Criando usuário no Firebase Auth...");
             firebaseUser = createFirebaseUser(request);
+
+            logger.debug("Passo 2/2: Persistindo usuário no banco local...");
             User savedUser = createLocalUser(firebaseUser, request);
 
-            logger.info("Usuario registrado com sucesso: userId={}, email={}",
-                    savedUser.getId(), savedUser.getEmail());
+            logger.info("Usuário registrado com sucesso! userId={}, firebaseUid={}, email={}",
+                    savedUser.getId(), firebaseUser.getUid(), savedUser.getEmail());
 
             return new RegisterResponseDTO(
                     firebaseUser.getUid(),
@@ -53,10 +54,12 @@ public class AuthServiceImpl implements AuthService {
             );
 
         } catch (FirebaseAuthException e) {
+            logger.error("Falha na integração com Firebase: code={}, msg={}", e.getErrorCode(), e.getMessage());
             handleFirebaseError(firebaseUser, e);
             throw new BusinessException("Erro ao criar usuario: " + e.getMessage());
 
         } catch (Exception e) {
+            logger.error("Erro crítico inesperado durante o registro: {}", e.getMessage(), e);
             handleUnexpectedError(firebaseUser, e);
             throw new BusinessException("Erro ao registrar usuario.");
         }
@@ -64,12 +67,14 @@ public class AuthServiceImpl implements AuthService {
 
     private void validateEmailNotInUse(String email) {
         if (userRepository.existsByEmail(email)) {
-            logger.warn("Tentativa de registro com email ja cadastrado: email={}", email);
+            logger.warn("Bloqueio de Registro: Tentativa de uso de e-mail já cadastrado. Email={}", email);
             throw new BusinessException("Email ja cadastrado.");
         }
     }
 
     private UserRecord createFirebaseUser(RegisterRequestDTO request) throws FirebaseAuthException {
+        long startTime = System.currentTimeMillis();
+
         UserRecord.CreateRequest firebaseRequest = new UserRecord.CreateRequest()
                 .setEmail(request.email())
                 .setPassword(request.password())
@@ -78,7 +83,8 @@ public class AuthServiceImpl implements AuthService {
 
         UserRecord firebaseUser = firebaseAuth.createUser(firebaseRequest);
 
-        logger.debug("Usuario criado no Firebase: firebaseUid={}", firebaseUser.getUid());
+        logger.debug("Usuário criado no Firebase em {}ms. UID: {}",
+                (System.currentTimeMillis() - startTime), firebaseUser.getUid());
 
         return firebaseUser;
     }
@@ -94,24 +100,21 @@ public class AuthServiceImpl implements AuthService {
         newUser.setRole(UserRole.USER);
 
         User savedUser = userRepository.save(newUser);
-
-        logger.debug("Usuario criado no banco local: userId={}", savedUser.getId());
+        logger.debug("Usuário salvo no MySQL. ID: {}", savedUser.getId());
 
         return savedUser;
     }
 
     private void handleFirebaseError(UserRecord firebaseUser, FirebaseAuthException e) {
-        logger.error("Erro ao criar usuario no Firebase: error={}", e.getMessage());
-
         if (firebaseUser != null) {
+            logger.warn("Iniciando compensação (Rollback) por erro no Firebase...");
             rollbackFirebaseUser(firebaseUser.getUid());
         }
     }
 
     private void handleUnexpectedError(UserRecord firebaseUser, Exception e) {
-        logger.error("Erro inesperado no registro: error={}", e.getMessage(), e);
-
         if (firebaseUser != null) {
+            logger.warn("Iniciando compensação completa (Rollback) por erro inesperado...");
             rollbackFirebaseUser(firebaseUser.getUid());
             rollbackLocalUser(firebaseUser.getUid());
         }
@@ -120,20 +123,22 @@ public class AuthServiceImpl implements AuthService {
     private void rollbackFirebaseUser(String firebaseUid) {
         try {
             firebaseAuth.deleteUser(firebaseUid);
-            logger.info("Rollback Firebase executado: firebaseUid={}", firebaseUid);
+            logger.info("🔄 Rollback Firebase: Usuário {} removido com sucesso.", firebaseUid);
         } catch (FirebaseAuthException deleteError) {
-            logger.error("Erro no rollback do Firebase: firebaseUid={}, error={}",
+            logger.error("❌ FALHA NO ROLLBACK FIREBASE: Não foi possível remover o usuário {}. Erro: {}",
                     firebaseUid, deleteError.getMessage());
         }
     }
 
     private void rollbackLocalUser(String userId) {
         try {
-            userRepository.deleteById(userId);
-            logger.info("Rollback banco local executado: userId={}", userId);
+            if (userRepository.existsById(userId)) {
+                userRepository.deleteById(userId);
+                logger.info("🔄 Rollback MySQL: Usuário {} removido com sucesso.", userId);
+            }
         } catch (Exception deleteError) {
-            logger.error("Erro no rollback do banco local: userId={}, error={}",
-                    userId, deleteError.getMessage());
+            logger.error("❌ FALHA NO ROLLBACK MYSQL: Não foi possível remover o usuário {}. Erro: {}",
+                    userId, deleteError.getMessage(), deleteError);
         }
     }
 }
