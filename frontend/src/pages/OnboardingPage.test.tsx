@@ -12,10 +12,12 @@ vi.mock('react-router-dom', async () => {
     return { ...actual, useNavigate: () => mockedNavigate };
 });
 
-const Wrapper = ({ children: any }) => (
-    <BrowserRouter>
-        <ThemeProvider theme={lightTheme}>{children}</ThemeProvider>
-    </BrowserRouter>
+const Wrapper = ({ children }: { children: React.ReactNode }) => (
+  <BrowserRouter>
+    <ThemeProvider theme={lightTheme}>
+      {children}
+    </ThemeProvider>
+  </BrowserRouter>
 );
 
 describe('OnboardingPage Component', () => {

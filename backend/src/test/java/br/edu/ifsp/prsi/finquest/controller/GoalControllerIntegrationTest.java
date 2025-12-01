@@ -301,4 +301,135 @@ class GoalControllerIntegrationTest {
                 .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].id").value("g-progress-2"));
     }
+
+    @Test
+    @DisplayName("CRUD: Deve buscar uma meta específica pelo ID (GET /goals/{id})")
+    @WithMockUser(username = "user123")
+    void shouldGetSingleGoal() throws Exception {
+        // 1. Criar meta
+        Goal goal = new Goal();
+        goal.setId("my-goal-id");
+        goal.setUserId(testUser.getId());
+        goal.setName("Meta Específica");
+        goal.setTargetAmount(new BigDecimal("500.00"));
+        goalRepository.save(goal);
+
+        // 2. Buscar
+        mockMvc.perform(get("/goals/{id}", "my-goal-id")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value("my-goal-id"))
+                .andExpect(jsonPath("$.name").value("Meta Específica"));
+    }
+
+    @Test
+    @DisplayName("CRUD: Deve atualizar metadados da meta (Nome/Alvo) (PUT /goals/{id})")
+    @WithMockUser(username = "user123")
+    void shouldUpdateGoalMetadata() throws Exception {
+        // 1. Criar meta original
+        Goal goal = new Goal();
+        goal.setId("update-goal-id");
+        goal.setUserId(testUser.getId());
+        goal.setName("Nome Antigo");
+        goal.setTargetAmount(new BigDecimal("100.00"));
+        goalRepository.save(goal);
+
+        // 2. JSON de atualização (Mudando nome e alvo)
+        String updateJson = """
+            {
+                "name": "Nome Novo",
+                "targetAmount": 200.00,
+                "currentAmount": 0.00
+            }
+            """;
+
+        // 3. Chamada PUT
+        mockMvc.perform(put("/goals/{id}", "update-goal-id")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(updateJson))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.updatedGoal.name").value("Nome Novo"))
+                .andExpect(jsonPath("$.updatedGoal.targetAmount").value(200.0));
+
+        // 4. Validação no Banco
+        Goal updated = goalRepository.findById("update-goal-id").orElseThrow();
+        assertThat(updated.getName()).isEqualTo("Nome Novo");
+        assertThat(updated.getTargetAmount()).isEqualByComparingTo("200.00");
+    }
+
+    @Test
+    @DisplayName("Filtros: Deve listar metas separadas por status (Completed vs InProgress)")
+    @WithMockUser(username = "user123")
+    void shouldFilterGoalsByStatus() throws Exception {
+        // Criar meta Concluída
+        Goal completed = new Goal();
+        completed.setId("g1");
+        completed.setUserId(testUser.getId());
+        completed.setName("Concluída");
+        completed.setTargetAmount(BigDecimal.TEN);
+        completed.setCurrentAmount(BigDecimal.TEN);
+        completed.setStatus(GoalStatus.COMPLETED);
+        goalRepository.save(completed);
+
+        // Criar meta Em Andamento
+        Goal inProgress = new Goal();
+        inProgress.setId("g2");
+        inProgress.setUserId(testUser.getId());
+        inProgress.setName("Andando");
+        inProgress.setTargetAmount(BigDecimal.TEN);
+        inProgress.setCurrentAmount(BigDecimal.ZERO);
+        inProgress.setStatus(GoalStatus.IN_PROGRESS);
+        goalRepository.save(inProgress);
+
+        // Testar Endpoint /completed
+        mockMvc.perform(get("/goals/completed"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", org.hamcrest.Matchers.hasSize(1)))
+                .andExpect(jsonPath("$[0].id").value("g1"));
+
+        // Testar Endpoint /inprogress
+        mockMvc.perform(get("/goals/inprogress"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", org.hamcrest.Matchers.hasSize(1)))
+                .andExpect(jsonPath("$[0].id").value("g2"));
+    }
+
+    @Test
+    @DisplayName("CRUD: Deve buscar uma meta específica pelo ID (GET /goals/{id})")
+    @WithMockUser(username = "user123")
+    void shouldGetGoalById() throws Exception {
+        // Cenário
+        Goal goal = new Goal();
+        goal.setId("my-goal");
+        goal.setUserId(testUser.getId());
+        goal.setName("Meta Única");
+        goal.setTargetAmount(BigDecimal.TEN);
+        goalRepository.save(goal);
+
+        // Ação & Validação
+        mockMvc.perform(get("/goals/{id}", "my-goal")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value("my-goal"))
+                .andExpect(jsonPath("$.name").value("Meta Única"));
+    }
+
+    @Test
+    @DisplayName("Segurança: Não deve permitir ver meta de outro usuário (GET /goals/{id})")
+    @WithMockUser(username = "hacker123")
+    void shouldDenyAccessToOthersGoal() throws Exception {
+        // Cenário: Meta do user123
+        Goal goal = new Goal();
+        goal.setId("private-goal");
+        goal.setUserId(testUser.getId()); // Dono é user123
+        goal.setName("Segredo");
+        goal.setTargetAmount(BigDecimal.TEN);
+        goalRepository.save(goal);
+
+        // Ação: Hacker tenta ver
+        mockMvc.perform(get("/goals/{id}", "private-goal")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isConflict()) // BusinessException -> 409 (ou 404/403 dependendo da sua impl)
+                .andExpect(jsonPath("$.message").exists());
+    }
 }

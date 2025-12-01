@@ -94,7 +94,7 @@ class TransactionControllerIntegrationTest {
                 "amount": 50.00,
                 "description": "Erro",
                 "category": "Teste",
-                "date": "30/11/2025" 
+                "date": "30/11/2025"
             }
             """;
 
@@ -392,6 +392,68 @@ class TransactionControllerIntegrationTest {
         mockMvc.perform(get("/transactions/daily" + params))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.expenses", hasSize(0)));
+    }
+
+    @Test
+    @DisplayName("Coverage: Deve retornar Overview com datas padrão (Mês atual) quando sem parâmetros")
+    @WithMockUser(username = "user123")
+    void shouldReturnOverviewWithDefaultDates() throws Exception {
+        // Cenário: Transação HOJE (dentro do default) e transação 2 MESES ATRÁS (fora)
+        LocalDate today = LocalDate.now();
+        createTransaction("INCOME", "1000.00", today); // Deve somar
+        createTransaction("INCOME", "5000.00", today.minusMonths(2)); // Deve ignorar
+
+        // Ação: Chamar SEM query params (?startDate=...)
+        // Isso força o backend a entrar no 'if (startDate == null)'
+        mockMvc.perform(get("/transactions/overview")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                // Deve considerar apenas os 1000.00 do mês atual
+                .andExpect(jsonPath("$.totalIncome").value(1000.0));
+    }
+
+    @Test
+    @DisplayName("Coverage: Deve retornar Todas as Transações quando sem parâmetros de data")
+    @WithMockUser(username = "user123")
+    void shouldReturnAllTransactionsWithoutDateFilters() throws Exception {
+        // Cenário: Transações em datas muito diferentes
+        createTransaction("EXPENSE", "50.00", LocalDate.now());
+        createTransaction("EXPENSE", "50.00", LocalDate.now().minusYears(1));
+
+        // Ação: Chamar getAll sem datas
+        // Isso testa o 'else' do ternário no controller: transactionService.getAllTransactions(userId)
+        mockMvc.perform(get("/transactions")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", org.hamcrest.Matchers.hasSize(2)));
+    }
+
+    @Test
+    @DisplayName("Coverage: Overview deve calcular Taxa de Economia (SavingsRate) corretamente")
+    @WithMockUser(username = "user123")
+    void shouldCalculateSavingsRate() throws Exception {
+        // Cenário: Ganhou 1000, Gastou 200. Sobrou 800.
+        // Taxa de economia esperada: (800 / 1000) * 100 = 80%
+        LocalDate today = LocalDate.now();
+        createTransaction("INCOME", "1000.00", today);
+        createTransaction("EXPENSE", "200.00", today);
+
+        mockMvc.perform(get("/transactions/overview"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.savingsRate").value(80.0));
+    }
+
+    @Test
+    @DisplayName("Coverage: Overview deve tratar divisão por zero na Taxa de Economia")
+    @WithMockUser(username = "user123")
+    void shouldHandleZeroIncomeInSavingsRate() throws Exception {
+        // Cenário: Gastou 100, mas não ganhou nada (Renda 0)
+        // Evita ArithmeticException /NaN
+        createTransaction("EXPENSE", "100.00", LocalDate.now());
+
+        mockMvc.perform(get("/transactions/overview"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.savingsRate").value(0));
     }
 
     // --- Helpers ---
