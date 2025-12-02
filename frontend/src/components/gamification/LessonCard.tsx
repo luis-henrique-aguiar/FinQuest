@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
 import styled from "styled-components";
 import { motion } from "framer-motion";
 import { Book } from "react-feather";
-import type { CourseProgressDTO } from "../../services/courseService";
+import { useToast } from "../../hooks/useToast";
+import { enrollInCourse, type CourseProgressDTO } from "../../services/courseService";
 
 interface LessonCardProps {
   course: CourseProgressDTO;
@@ -17,6 +18,11 @@ const CardContainer = styled(motion.div)`
   cursor: pointer;
   transition: all 0.3s ease;
   border: 2px solid ${({ theme }) => theme.colors.border};
+  
+  /* Layout Flexível para alinhar o rodapé */
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 
   &:hover {
     transform: scale(1.03);
@@ -62,6 +68,11 @@ const Title = styled.h3`
   font-size: 1.125rem;
   font-weight: ${({ theme }) => theme.typography.fontWeight.semiBold};
   color: ${({ theme }) => theme.colors.textDark};
+  /* Limita a 2 linhas */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 `;
 
 const Description = styled.p`
@@ -69,14 +80,23 @@ const Description = styled.p`
   font-size: 0.875rem;
   color: ${({ theme }) => theme.colors.textMedium};
   line-height: 1.5;
+  /* Limita a 3 linhas */
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 `;
 
+const CardFooter = styled.div`
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: ${({ theme }) => theme.spacing.md};
+  padding-top: ${({ theme }) => theme.spacing.md};
+`;
+
 const ProgressSection = styled.div`
-  margin-top: ${({ theme }) => theme.spacing.md};
+  width: 100%;
 `;
 
 const ProgressBar = styled.div`
@@ -108,10 +128,10 @@ const ProgressText = styled.div`
 `;
 
 const StatusBadge = styled.div<{ $completed: boolean }>`
-  padding: ${({ theme }) => theme.spacing.xs} ${({ theme }) => theme.spacing.sm};
+  padding: 2px 8px;
   border-radius: ${({ theme }) => theme.borderRadius.pill};
-  font-size: 0.75rem;
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semiBold};
+  font-size: 0.7rem;
+  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
   text-transform: uppercase;
   letter-spacing: 0.5px;
 
@@ -128,7 +148,7 @@ const StatusBadge = styled.div<{ $completed: boolean }>`
 `;
 
 const NotStartedBadge = styled.div`
-  padding: ${({ theme }) => theme.spacing.xs} ${({ theme }) => theme.spacing.sm};
+  padding: 4px 8px;
   border-radius: ${({ theme }) => theme.borderRadius.pill};
   font-size: 0.75rem;
   font-weight: ${({ theme }) => theme.typography.fontWeight.semiBold};
@@ -138,22 +158,101 @@ const NotStartedBadge = styled.div`
   color: ${({ theme }) => theme.colors.textMedium};
   display: flex;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.xs};
+  gap: 6px;
+  width: fit-content;
+`;
 
-  svg {
-    width: 14px;
-    height: 14px;
+const ActionButton = styled.button<{ $variant: "primary" | "outline" }>`
+  width: 100%;
+  padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.md}`};
+  border-radius: ${({ theme }) => theme.borderRadius.medium};
+  font-size: ${({ theme }) => theme.typography.fontSize.button};
+  font-family: ${({ theme }) => theme.typography.fontFamily.body};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.semiBold};
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 2px solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  ${({ $variant, theme }) => {
+    if ($variant === "primary") {
+      return `
+        background-color: ${theme.colors.primary};
+        color: white;
+        border-color: ${theme.colors.primary};
+
+        &:hover:not(:disabled) {
+          background-color: ${theme.colors.primary}dd;
+          transform: translateY(-1px);
+        }
+
+        &:active:not(:disabled) {
+          transform: translateY(0);
+        }
+      `;
+    } else {
+      return `
+        background-color: transparent;
+        color: ${theme.colors.primary};
+        border-color: ${theme.colors.primary};
+
+        &:hover:not(:disabled) {
+          background-color: ${theme.colors.primary}10;
+          transform: translateY(-1px);
+        }
+
+        &:active:not(:disabled) {
+          transform: translateY(0);
+        }
+      `;
+    }
+  }}
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 `;
 
 export const LessonCard: React.FC<LessonCardProps> = ({ course, onClick }) => {
-  if (!course) {
-    return null;
-  }
+  const { addToast } = useToast();
+  const [isEnrolling, setIsEnrolling] = useState(false);
+
+  if (!course) return null;
 
   const progress = typeof course.progress === "number" ? course.progress : 0;
   const isCompleted = progress === 100;
   const isNotStarted = progress === 0;
+  
+  const isEnrolled = course.progress !== null && course.progress !== undefined;
+
+  const getButtonText = () => {
+    if (!isEnrolled) return "Iniciar Curso";
+    if (isCompleted) return "Revisar Curso";
+    return "Continuar";
+  };
+
+  const handleButtonClick = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    if (isEnrolled) {
+      onClick();
+      return;
+    }
+
+    setIsEnrolling(true);
+    try {
+      await enrollInCourse(course.id);
+      addToast(`Matrícula realizada em ${course.title}!`, "success");
+      onClick();
+    } catch (error) {
+      addToast("Erro ao realizar matrícula.", "error");
+    } finally {
+      setIsEnrolling(false);
+    }
+  };
 
   return (
     <CardContainer
@@ -161,42 +260,57 @@ export const LessonCard: React.FC<LessonCardProps> = ({ course, onClick }) => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
+      whileHover={{ scale: 1.02 }}
     >
       <Header>
         <IconContainer>{course.icon || "📚"}</IconContainer>
         <Content>
           <Title>{course.title || "Curso sem título"}</Title>
           <Description>
-            {course.description || "Sem descrição disponível"}
+            {course.description || "Sem descrição disponível para este curso."}
           </Description>
         </Content>
       </Header>
 
-      <ProgressSection>
-        {isNotStarted ? (
-          <NotStartedBadge>
-            <Book size={14} />
-            <span>Começar Curso</span>
-          </NotStartedBadge>
-        ) : (
-          <>
-            <ProgressBar>
-              <ProgressFill
-                $progress={progress}
-                initial={{ width: 0 }}
-                animate={{ width: `${progress}%` }}
-                transition={{ duration: 0.8, ease: "easeOut" }}
-              />
-            </ProgressBar>
-            <ProgressText>
-              <span>{progress}% concluído</span>
-              <StatusBadge $completed={isCompleted}>
-                {isCompleted ? "✓ Concluído" : "Em Progresso"}
-              </StatusBadge>
-            </ProgressText>
-          </>
+      <CardFooter>
+        {/* Barra de Progresso e Status (Somente se matriculado) */}
+        {isEnrolled && (
+          <ProgressSection>
+            {isNotStarted ? (
+              <NotStartedBadge>
+                <Book size={14} />
+                <span>Não Iniciado</span>
+              </NotStartedBadge>
+            ) : (
+              <>
+                <ProgressBar>
+                  <ProgressFill
+                    $progress={progress}
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progress}%` }}
+                    transition={{ duration: 0.8, ease: "easeOut" }}
+                  />
+                </ProgressBar>
+                <ProgressText>
+                  <span>{progress}% concluído</span>
+                  <StatusBadge $completed={isCompleted}>
+                    {isCompleted ? "Concluído" : "Em Progresso"}
+                  </StatusBadge>
+                </ProgressText>
+              </>
+            )}
+          </ProgressSection>
         )}
-      </ProgressSection>
+
+        {/* Botão de Ação Principal */}
+        <ActionButton
+          $variant={isEnrolled ? "outline" : "primary"}
+          onClick={handleButtonClick}
+          disabled={isEnrolling}
+        >
+          {isEnrolling ? "Carregando..." : getButtonText()}
+        </ActionButton>
+      </CardFooter>
     </CardContainer>
   );
 };
