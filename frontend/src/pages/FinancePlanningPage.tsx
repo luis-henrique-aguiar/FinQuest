@@ -35,12 +35,16 @@ import {
   EXPENSE_CATEGORIES,
   INCOME_CATEGORIES,
 } from "../services/transactionService";
-import * as S from "./FinancePlanning.styles";
+import * as S from "./FinancePlanningPage.styles";
+import { useGamification } from "../context/GamificationContext";
+import { useAuth } from "../hooks/useAuth";
 
 interface TransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: CreateTransactionDTO | UpdateTransactionDTO) => Promise<void>;
+  onSubmit: (
+    data: CreateTransactionDTO | UpdateTransactionDTO
+  ) => Promise<void>;
   initialData?: Transaction | null;
   isLoading?: boolean;
 }
@@ -94,7 +98,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const data: CreateTransactionDTO | UpdateTransactionDTO = {
       type: formData.type,
       amount: formData.amount,
@@ -140,7 +144,9 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
               <S.Select
                 id="type"
                 value={formData.type}
-                onChange={(e) => handleTypeChange(e.target.value as TransactionType)}
+                onChange={(e) =>
+                  handleTypeChange(e.target.value as TransactionType)
+                }
                 required
                 disabled={isLoading}
               >
@@ -232,20 +238,20 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
           </S.InputGroup>
 
           <S.ModalButtonContainer>
-            <Button 
-              variant="outline" 
-              onClick={onClose} 
+            <Button
+              variant="outline"
+              onClick={onClose}
               type="button"
               disabled={isLoading}
             >
               Cancelar
             </Button>
-            <Button 
-              variant="primary" 
-              type="submit"
-              disabled={isLoading}
-            >
-              {isLoading ? "Salvando..." : initialData ? "Salvar Alterações" : "Adicionar"}
+            <Button variant="primary" type="submit" disabled={isLoading}>
+              {isLoading
+                ? "Salvando..."
+                : initialData
+                ? "Salvar Alterações"
+                : "Adicionar"}
             </Button>
           </S.ModalButtonContainer>
         </S.FormContainer>
@@ -265,18 +271,22 @@ export const FinancePlanningPage: React.FC = () => {
   // Modal states
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"add" | "edit">("add");
-  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
-  const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null);
+  const [editingTransaction, setEditingTransaction] =
+    useState<Transaction | null>(null);
+  const [transactionToDelete, setTransactionToDelete] =
+    useState<Transaction | null>(null);
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
 
   const { addToast } = useToast();
+  const { updateUserContext } = useAuth();
+  const { showLevelUp, showBadgeUnlocked } = useGamification();
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
-    
+
     try {
       const { startDate, endDate } = monthKeyToRange(selectedMonth);
-      
+
       const [transactionsData, overviewData] = await Promise.all([
         getAllTransactions(startDate, endDate),
         getFinancialOverview(startDate, endDate),
@@ -298,15 +308,36 @@ export const FinancePlanningPage: React.FC = () => {
 
   const handleAddTransaction = async (data: CreateTransactionDTO) => {
     setIsSubmitting(true);
-    
+
     try {
-      await createTransaction(data);
+      const response = await createTransaction(data);
+      
+      const { missionCompletion } = response;
+
+      if (missionCompletion) {
+        updateUserContext({
+          totalFinPoints: missionCompletion.totalFinPoints,
+          level: missionCompletion.level,
+        });
+
+        if (missionCompletion.didLevelUp && missionCompletion.unlockedBadge) {
+          showBadgeUnlocked(
+            missionCompletion.unlockedBadge,
+            missionCompletion.level,
+            missionCompletion.totalFinPoints
+          );
+        } else if (missionCompletion.didLevelUp) {
+          showLevelUp(missionCompletion.level);
+        }
+      }
+
       await fetchData();
       setIsTransactionModalOpen(false);
-      
-      const message = data.type === "INCOME"
-        ? "Receita adicionada com sucesso!"
-        : "Despesa adicionada com sucesso!";
+
+      const message =
+        data.type === "INCOME"
+          ? "Receita adicionada com sucesso!"
+          : "Despesa adicionada com sucesso!";
       addToast(message, "success");
     } catch (error) {
       console.error("Erro ao criar transação:", error);
@@ -318,21 +349,23 @@ export const FinancePlanningPage: React.FC = () => {
 
   const handleUpdateTransaction = async (data: UpdateTransactionDTO) => {
     if (!editingTransaction) return;
-    
+
     setIsSubmitting(true);
-    
+
     try {
       await updateTransaction(editingTransaction.id, data);
       await fetchData();
       setIsTransactionModalOpen(false);
       setEditingTransaction(null);
       addToast("Transação atualizada com sucesso!", "success");
-    } catch (error) {
+    } catch (error: any) {
       if (error?.response?.data?.details) {
         addToast(`${error.response.data.details[0]}`, "error");
       } else {
-        addToast(`Erro ao atualizar transação. Por favor, tente novamente.`, "error");
-        console.log(error);
+        addToast(
+          `Erro ao atualizar transação. Por favor, tente novamente.`,
+          "error"
+        );
       }
     } finally {
       setIsSubmitting(false);
@@ -341,9 +374,9 @@ export const FinancePlanningPage: React.FC = () => {
 
   const handleDeleteTransaction = async () => {
     if (!transactionToDelete) return;
-    
+
     setIsSubmitting(true);
-    
+
     try {
       await deleteTransaction(transactionToDelete.id);
       await fetchData();
@@ -358,7 +391,9 @@ export const FinancePlanningPage: React.FC = () => {
     }
   };
 
-  const handleSubmitTransaction = async (data: CreateTransactionDTO | UpdateTransactionDTO) => {
+  const handleSubmitTransaction = async (
+    data: CreateTransactionDTO | UpdateTransactionDTO
+  ) => {
     if (modalMode === "add") {
       await handleAddTransaction(data as CreateTransactionDTO);
     } else {
@@ -395,7 +430,9 @@ export const FinancePlanningPage: React.FC = () => {
       date.setMonth(date.getMonth() + 1);
     }
 
-    const newMonth = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+    const newMonth = `${date.getFullYear()}-${String(
+      date.getMonth() + 1
+    ).padStart(2, "0")}`;
     setSelectedMonth(newMonth);
   };
 
@@ -458,7 +495,8 @@ export const FinancePlanningPage: React.FC = () => {
               Planejamento Financeiro
             </S.Title>
             <S.Subtitle>
-              Acompanhe suas receitas e despesas para manter suas finanças sempre em dia.
+              Acompanhe suas receitas e despesas para manter suas finanças
+              sempre em dia.
             </S.Subtitle>
           </S.HeroContent>
 
@@ -517,11 +555,15 @@ export const FinancePlanningPage: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
             >
-              <S.StatIcon $color={overview.balance >= 0 ? "#28A745" : "#DC3545"}>
+              <S.StatIcon
+                $color={overview.balance >= 0 ? "#28A745" : "#DC3545"}
+              >
                 <DollarSign />
               </S.StatIcon>
               <S.StatContent>
-                <S.StatValue $color={overview.balance >= 0 ? "#28A745" : "#DC3545"}>
+                <S.StatValue
+                  $color={overview.balance >= 0 ? "#28A745" : "#DC3545"}
+                >
                   {formatCurrency(overview.balance)}
                 </S.StatValue>
                 <S.StatLabel>Saldo</S.StatLabel>
@@ -537,9 +579,7 @@ export const FinancePlanningPage: React.FC = () => {
                 <Percent />
               </S.StatIcon>
               <S.StatContent>
-                <S.StatValue>
-                  {overview.savingsRate.toFixed(1)}%
-                </S.StatValue>
+                <S.StatValue>{overview.savingsRate.toFixed(1)}%</S.StatValue>
                 <S.StatLabel>Taxa de Economia</S.StatLabel>
               </S.StatContent>
             </S.StatCard>
@@ -597,7 +637,9 @@ export const FinancePlanningPage: React.FC = () => {
                   </S.TransactionIcon>
 
                   <S.TransactionInfo>
-                    <S.TransactionTitle>{transaction.description}</S.TransactionTitle>
+                    <S.TransactionTitle>
+                      {transaction.description}
+                    </S.TransactionTitle>
                     <S.TransactionMeta>
                       <S.CategoryBadge>{transaction.category}</S.CategoryBadge>
                       <S.DateText>
@@ -637,8 +679,8 @@ export const FinancePlanningPage: React.FC = () => {
               <div className="icon">💸</div>
               <h3>Nenhuma transação registrada</h3>
               <p>
-                Comece a registrar suas receitas e despesas para acompanhar
-                sua saúde financeira neste período.
+                Comece a registrar suas receitas e despesas para acompanhar sua
+                saúde financeira neste período.
               </p>
               <Button
                 variant="primary"

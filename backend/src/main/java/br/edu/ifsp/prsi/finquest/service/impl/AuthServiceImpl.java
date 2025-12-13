@@ -15,8 +15,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-
 @Service
 public class AuthServiceImpl implements AuthService {
 
@@ -32,70 +30,115 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
-    public RegisterResponseDTO register(RegisterRequestDTO registerRequestDTO) throws Exception {
-        logger.info("Iniciando registro de usuário: {}", registerRequestDTO.email());
+    public RegisterResponseDTO register(RegisterRequestDTO request) {
+        logger.info("Iniciando processo de registro: email='{}', nome='{}'", request.email(), request.name());
 
-        if (userRepository.existsByEmail(registerRequestDTO.email())) {
-            throw new BusinessException("Email já cadastrado.");
-        }
+        validateEmailNotInUse(request.email());
 
         UserRecord firebaseUser = null;
 
         try {
-            UserRecord.CreateRequest request = new UserRecord.CreateRequest()
-                    .setEmail(registerRequestDTO.email())
-                    .setPassword(registerRequestDTO.password())
-                    .setDisplayName(registerRequestDTO.name())
-                    .setEmailVerified(false);
+            logger.debug("Passo 1/2: Criando usuário no Firebase Auth...");
+            firebaseUser = createFirebaseUser(request);
 
-            firebaseUser = firebaseAuth.createUser(request);
-            logger.info("Usuário criado no Firebase: {}", firebaseUser.getUid());
+            logger.debug("Passo 2/2: Persistindo usuário no banco local...");
+            User savedUser = createLocalUser(firebaseUser, request);
 
-            User newUser = new User();
-            newUser.setId(firebaseUser.getUid());
-            newUser.setEmail(registerRequestDTO.email());
-            newUser.setName(registerRequestDTO.name());
-            newUser.setAvatarUrl(null);
-            newUser.setTotalFinPoints(0);
-            newUser.setLevel(1);
-            newUser.setRole(UserRole.USER);
-
-            userRepository.save(newUser);
-            logger.info("Usuário salvo no banco de dados: {}", newUser.getId());
+            logger.info("Usuário registrado com sucesso! userId={}, firebaseUid={}, email={}",
+                    savedUser.getId(), firebaseUser.getUid(), savedUser.getEmail());
 
             return new RegisterResponseDTO(
                     firebaseUser.getUid(),
-                    registerRequestDTO.name(),
-                    registerRequestDTO.email()
+                    request.name(),
+                    request.email()
             );
 
         } catch (FirebaseAuthException e) {
-            logger.error("Erro ao criar usuário no Firebase: {}", e.getMessage());
-
-            if (firebaseUser != null) {
-                try {
-                    firebaseAuth.deleteUser(firebaseUser.getUid());
-                    logger.info("Rollback: Usuário deletado do Firebase");
-                } catch (FirebaseAuthException deleteError) {
-                    logger.error("Erro no rollback do Firebase: {}", deleteError.getMessage());
-                }
-            }
-
-            throw new BusinessException("Erro ao criar usuário: " + e.getMessage());
+            logger.error("Falha na integração com Firebase: code={}, msg={}", e.getErrorCode(), e.getMessage());
+            handleFirebaseError(firebaseUser, e);
+            throw new BusinessException("Erro ao criar usuario: " + e.getMessage());
 
         } catch (Exception e) {
-            logger.error("Erro inesperado no registro: {}", e.getMessage());
-            if (firebaseUser != null) {
-                try {
-                    firebaseAuth.deleteUser(firebaseUser.getUid());
-                    userRepository.deleteById(firebaseUser.getUid());
-                    logger.info("Rollback completo: Usuário deletado do Firebase e do banco");
-                } catch (Exception rollbackError) {
-                    logger.error("Erro no rollback: {}", rollbackError.getMessage());
-                }
-            }
+            logger.error("Erro crítico inesperado durante o registro: {}", e.getMessage(), e);
+            handleUnexpectedError(firebaseUser, e);
+            throw new BusinessException("Erro ao registrar usuario.");
+        }
+    }
 
-            throw new BusinessException("Erro ao registrar usuário.");
+    private void validateEmailNotInUse(String email) {
+        if (userRepository.existsByEmail(email)) {
+            logger.warn("Bloqueio de Registro: Tentativa de uso de e-mail já cadastrado. Email={}", email);
+            throw new BusinessException("Email ja cadastrado.");
+        }
+    }
+
+    private UserRecord createFirebaseUser(RegisterRequestDTO request) throws FirebaseAuthException {
+        long startTime = System.currentTimeMillis();
+
+        UserRecord.CreateRequest firebaseRequest = new UserRecord.CreateRequest()
+                .setEmail(request.email())
+                .setPassword(request.password())
+                .setDisplayName(request.name())
+                .setEmailVerified(false);
+
+        UserRecord firebaseUser = firebaseAuth.createUser(firebaseRequest);
+
+        logger.debug("Usuário criado no Firebase em {}ms. UID: {}",
+                (System.currentTimeMillis() - startTime), firebaseUser.getUid());
+
+        return firebaseUser;
+    }
+
+    private User createLocalUser(UserRecord firebaseUser, RegisterRequestDTO request) {
+        User newUser = new User();
+        newUser.setId(firebaseUser.getUid());
+        newUser.setEmail(request.email());
+        newUser.setName(request.name());
+        newUser.setAvatarUrl(null);
+        newUser.setTotalFinPoints(0);
+        newUser.setLevel(1);
+        newUser.setRole(UserRole.USER);
+
+        User savedUser = userRepository.save(newUser);
+        logger.debug("Usuário salvo no MySQL. ID: {}", savedUser.getId());
+
+        return savedUser;
+    }
+
+    private void handleFirebaseError(UserRecord firebaseUser, FirebaseAuthException e) {
+        if (firebaseUser != null) {
+            logger.warn("Iniciando compensação (Rollback) por erro no Firebase...");
+            rollbackFirebaseUser(firebaseUser.getUid());
+        }
+    }
+
+    private void handleUnexpectedError(UserRecord firebaseUser, Exception e) {
+        if (firebaseUser != null) {
+            logger.warn("Iniciando compensação completa (Rollback) por erro inesperado...");
+            rollbackFirebaseUser(firebaseUser.getUid());
+            rollbackLocalUser(firebaseUser.getUid());
+        }
+    }
+
+    private void rollbackFirebaseUser(String firebaseUid) {
+        try {
+            firebaseAuth.deleteUser(firebaseUid);
+            logger.info("🔄 Rollback Firebase: Usuário {} removido com sucesso.", firebaseUid);
+        } catch (FirebaseAuthException deleteError) {
+            logger.error("❌ FALHA NO ROLLBACK FIREBASE: Não foi possível remover o usuário {}. Erro: {}",
+                    firebaseUid, deleteError.getMessage());
+        }
+    }
+
+    private void rollbackLocalUser(String userId) {
+        try {
+            if (userRepository.existsById(userId)) {
+                userRepository.deleteById(userId);
+                logger.info("🔄 Rollback MySQL: Usuário {} removido com sucesso.", userId);
+            }
+        } catch (Exception deleteError) {
+            logger.error("❌ FALHA NO ROLLBACK MYSQL: Não foi possível remover o usuário {}. Erro: {}",
+                    userId, deleteError.getMessage(), deleteError);
         }
     }
 }

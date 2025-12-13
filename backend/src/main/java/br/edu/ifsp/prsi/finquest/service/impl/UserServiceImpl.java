@@ -23,7 +23,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -33,38 +32,68 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final AchievementRepository achievementRepository;
     private final UserAchievementRepository userAchievementRepository;
+    private final FirebaseAuth firebaseAuth;
 
     public UserServiceImpl(
             UserRepository userRepository,
             AchievementRepository achievementRepository,
-            UserAchievementRepository userAchievementRepository
+            UserAchievementRepository userAchievementRepository,
+            FirebaseAuth firebaseAuth
     ) {
         this.userRepository = userRepository;
         this.achievementRepository = achievementRepository;
         this.userAchievementRepository = userAchievementRepository;
+        this.firebaseAuth = firebaseAuth;
     }
 
     @Override
+    @Transactional(readOnly = true)
     public UserDTO findUserById(String id){
-        User user = userRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado para o ID: " + id));
+        logger.debug("Buscando perfil completo do usuário: userId={}", id);
+
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> {
+                    logger.warn("Tentativa de acesso a perfil inexistente: userId={}", id);
+                    return new EntityNotFoundException("Usuário não encontrado para o ID: " + id);
+                });
 
         List<UserAchievement> userAchievements = userAchievementRepository.findByIdUserId(id);
 
         List<UserAchievementDTO> achievementDTOs = userAchievements.stream()
                 .map(UserAchievementDTO::new)
-                .collect(Collectors.toList());
+                .toList();
 
+        logger.debug("Perfil recuperado com sucesso: userId={}, conquistas={}", id, achievementDTOs.size());
         return UserDTO.convertToDTOWithAchievements(user, achievementDTOs);
     }
 
     @Transactional
+    @Override
+    public UserDTO updateAvatar(String userId, String avatarUrl) {
+        logger.info("Solicitação de atualização de avatar: userId={}", userId);
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("Usuario nao encontrado: " + userId));
+
+        user.setAvatarUrl(avatarUrl);
+        User savedUser = userRepository.save(user);
+
+        logger.info("Avatar atualizado e persistido com sucesso: userId={}", userId);
+
+        return UserDTO.convertToDTO(savedUser);
+    }
+
+    @Transactional
     public UserDTO updateEmail(String userId, UpdateUserEmailDTO request) {
+        logger.info("Iniciando processo de alteração de e-mail: userId={}", userId);
+
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado."));
 
         String newEmail = request.email();
 
         if (!user.getEmail().equals(newEmail) && userRepository.existsByEmail(newEmail)) {
+            logger.warn("Tentativa de uso de e-mail já existente: userId={}, email={}", userId, newEmail);
             throw new BusinessException("Este email já está cadastrado no sistema.");
         }
 
@@ -73,44 +102,62 @@ public class UserServiceImpl implements UserService {
                     .setEmail(newEmail)
                     .setEmailVerified(false);
 
-            FirebaseAuth.getInstance().updateUser(firebaseRequest);
+            this.firebaseAuth.updateUser(firebaseRequest);
+            logger.debug("E-mail atualizado no Firebase: userId={}", userId);
 
             user.setEmail(newEmail);
             User updatedUserEntity = userRepository.save(user);
 
+            logger.info("E-mail atualizado com sucesso no sistema local e remoto: userId={}", userId);
             return UserDTO.convertToDTO(updatedUserEntity);
 
         } catch (FirebaseAuthException e) {
             if (e.getErrorCode().equals("email-already-exists")) {
+                logger.warn("Conflito de e-mail no Firebase: userId={}, email={}", userId, newEmail);
                 throw new BusinessException("Este email já está cadastrado no sistema.");
             }
 
-            logger.error("Erro ao atualizar e-mail no Firebase para usuário {}: {}", userId, e.getMessage());
+            logger.error("Erro crítico ao atualizar e-mail no Firebase: userId={}, error={}", userId, e.getMessage(), e);
             throw new RuntimeException("Erro interno ao atualizar e-mail.", e);
         }
     }
 
     @Override
     public UserDTO updateName(String userId, UpdateUserNameDTO request) {
+        logger.info("Atualizando nome de exibição: userId={}, novoNome='{}'", userId, request.name());
+
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado."));
 
         user.setName(request.name());
+        User saved = userRepository.save(user);
 
-        return UserDTO.convertToDTO(userRepository.save(user));
+        logger.debug("Nome atualizado no banco: userId={}", userId);
+        return UserDTO.convertToDTO(saved);
     }
 
     @Override
     public List<AchievementStatusDTO> getAllAchievementsWithStatus(String userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado."));
+        logger.debug("Buscando status de todas as conquistas para: userId={}", userId);
 
-        return achievementRepository.findAllWithStatusByUserId(user.getId());
+        if (!userRepository.existsById(userId)) {
+            throw new EntityNotFoundException("Usuário não encontrado.");
+        }
+
+        List<AchievementStatusDTO> achievements = achievementRepository.findAllWithStatusByUserId(userId);
+
+        long unlockedCount = achievements.stream().filter(AchievementStatusDTO::isUnlocked).count();
+        logger.debug("Conquistas retornadas: total={}, desbloqueadas={}", achievements.size(), unlockedCount);
+
+        return achievements;
     }
 
     @Override
     public void updatePassword(String userId, UpdateUserPasswordDTO request) {
+        logger.info("Iniciando fluxo de alteração de senha: userId={}", userId);
+
         if (!request.newPassword().equals(request.confirmationPassword())) {
+            logger.warn("Falha na validação de senha: confirmação não confere. userId={}", userId);
             throw new BusinessException("A nova senha e a confirmação não coincidem.");
         }
 
@@ -118,61 +165,77 @@ public class UserServiceImpl implements UserService {
             UserRecord.UpdateRequest firebaseRequest = new UserRecord.UpdateRequest(userId)
                     .setPassword(request.newPassword());
 
-            FirebaseAuth.getInstance().updateUser(firebaseRequest);
-            FirebaseAuth.getInstance().revokeRefreshTokens(userId);
+            this.firebaseAuth.updateUser(firebaseRequest);
+            this.firebaseAuth.revokeRefreshTokens(userId);
 
-            logger.info("Senha e tokens do usuário {} atualizados e revogados via Fluxo Híbrido.", userId);
-
+            logger.info("Senha atualizada e tokens revogados com sucesso (Logout forçado): userId={}", userId);
         } catch (FirebaseAuthException e) {
-            logger.error("Erro ao atualizar senha via Admin SDK para usuário {}: {}", userId, e.getMessage());
+            logger.error("Falha ao atualizar senha no Firebase Admin SDK: userId={}, error={}",
+                    userId, e.getMessage(), e);
             throw new RuntimeException("Erro interno ao atualizar senha.");
         }
     }
 
+    @Override
     @Transactional
     public boolean addFinPoints(String userId, int points) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado: " + userId));
+        logger.debug("Adicionando FinPoints: userId={}, points={}", userId, points);
 
-        int oldLevel = user.getLevel();
-        int oldFinPoints = user.getTotalFinPoints();
+        User user = findUserOrThrow(userId);
 
-        user.setTotalFinPoints(oldFinPoints + points);
+        int previousLevel = user.getLevel();
+        int previousPoints = user.getTotalFinPoints();
 
-        int newLevel = LevelingSystem.calculateLevel(user.getTotalFinPoints());
+        int newTotalPoints = previousPoints + points;
+        int newLevel = LevelingSystem.calculateLevel(newTotalPoints);
+
+        user.setTotalFinPoints(newTotalPoints);
         user.setLevel(newLevel);
-
         userRepository.save(user);
 
-        boolean didLevelUp = newLevel > oldLevel;
+        boolean leveledUp = newLevel > previousLevel;
 
-        logger.info("Usuário {} ganhou {} FinPoints. Total: {}. Nível: {} → {}",
-                userId, points, user.getTotalFinPoints(), oldLevel, newLevel);
+        logger.info("Progresso atualizado: userId={}, pontos={}(+{}), nivel={}",
+                userId, newTotalPoints, points, newLevel);
 
-        if (didLevelUp) {
-            logger.info("Usuário {} subiu de nível! {} → {}", userId, oldLevel, newLevel);
-            checkAndGrantLevelBadge(userId, newLevel);
+        if (leveledUp) {
+            logger.info("\uD83C\uDF89 LEVEL UP! Usuário {} subiu do nível {} para o {}",
+                    userId, previousLevel, newLevel);
+            handleLevelUp(userId, previousLevel, newLevel);
         }
 
-        return didLevelUp;
+        return leveledUp;
+    }
+
+    private void handleLevelUp(String userId, int previousLevel, int newLevel) {
+        checkAndGrantLevelBadge(userId, newLevel);
     }
 
     private void checkAndGrantLevelBadge(String userId, int level) {
         Optional<Achievement> badgeOpt = achievementRepository.findByRequiredLevel(level);
 
         if (badgeOpt.isEmpty()) {
-            logger.debug("Nenhum badge encontrado para o nível {}", level);
+            logger.debug("Nenhum badge configurado para o nível {}", level);
             return;
         }
 
         Achievement badge = badgeOpt.get();
 
-        UserAchievementId achievementId = new UserAchievementId(userId, badge.getId());
-        if (userAchievementRepository.existsById(achievementId)) {
-            logger.debug("Usuário {} já possui o badge '{}' (nível {})", userId, badge.getTitle(), level);
+        if (userAlreadyHasBadge(userId, badge.getId())) {
+            logger.debug("Usuário {} já possui o badge '{}' (Nível {})", userId, badge.getTitle(), level);
             return;
         }
 
+        grantBadgeToUser(userId, badge);
+    }
+
+    private boolean userAlreadyHasBadge(String userId, Long badgeId) {
+        UserAchievementId achievementId = new UserAchievementId(userId, badgeId);
+        return userAchievementRepository.existsById(achievementId);
+    }
+
+    private void grantBadgeToUser(String userId, Achievement badge) {
+        UserAchievementId achievementId = new UserAchievementId(userId, badge.getId());
         User user = userRepository.getReferenceById(userId);
 
         UserAchievement userAchievement = new UserAchievement();
@@ -183,7 +246,15 @@ public class UserServiceImpl implements UserService {
 
         userAchievementRepository.save(userAchievement);
 
-        logger.info("Badge '{}' ({}) concedido ao usuário {} por atingir o nível {}",
-                badge.getTitle(), badge.getIcon(), userId, level);
+        logger.info("BADGE CONCEDIDO: userId={}, badge='{}', icon={}",
+                userId, badge.getTitle(), badge.getIcon());
+    }
+
+    private User findUserOrThrow(String userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> {
+                    logger.error("Erro de integridade: Tentativa de operação em usuário inexistente: {}", userId);
+                    return new EntityNotFoundException("Usuario nao encontrado: " + userId);
+                });
     }
 }

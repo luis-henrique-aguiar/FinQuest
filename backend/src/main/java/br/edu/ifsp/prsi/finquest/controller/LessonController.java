@@ -34,8 +34,9 @@ public class LessonController {
     }
 
     @PostMapping("/{lessonId}/complete")
-    public ResponseEntity<LessonCompletionDTO> completeLesson(@PathVariable String lessonId,
-                                                              @AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<LessonCompletionDTO> completeLesson(
+            @PathVariable String lessonId, @AuthenticationPrincipal UserDetails userDetails
+    ) {
         String userId = userDetails.getUsername();
         LessonCompletionDTO reward = lessonService.completeLesson(lessonId, userId);
         return ResponseEntity.ok(reward);

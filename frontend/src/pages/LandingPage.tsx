@@ -1,6 +1,5 @@
 import { motion } from "framer-motion";
 import {
-  CheckCircle,
   Zap,
   TrendingUp,
   Target,
@@ -13,8 +12,11 @@ import * as S from "./LandingPage.styles";
 import { FeatureCard } from "../components/landing/FeatureCard";
 import { ContentSection } from "../components/landing/ContentSection";
 import mascotImage from "../assets/images/fox.png";
+import { useNavigate } from "react-router-dom";
 
 const LandingPage = () => {
+  const navigate = useNavigate();
+
   const floatingAnimation = {
     y: [0, -15, 0],
     transition: {
@@ -32,13 +34,6 @@ const LandingPage = () => {
       title: "Aprenda Jogando",
       text: "Complete missões diárias, ganhe FinPoints e desbloqueie conquistas enquanto domina suas finanças de forma divertida.",
       delay: 0.1,
-    },
-    {
-      icon: <CheckCircle size={40} />,
-      bgColor: "#28A745",
-      title: "Construa Hábitos",
-      text: "Sistema de Ofensiva que te motiva a interagir com suas finanças todos os dias. Quanto mais você pratica, mais recompensas ganha!",
-      delay: 0.2,
     },
     {
       icon: <TrendingUp size={40} />,
@@ -123,7 +118,7 @@ const LandingPage = () => {
               <S.CTAButton
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                // onClick={() => navigate('/register')}
+                onClick={() => navigate("/register")}
               >
                 <PlayCircle size={24} />
                 Começar Grátis Agora
@@ -163,25 +158,6 @@ const LandingPage = () => {
                 <strong>+250 FinPoints</strong>
                 <br />
                 <small>Missão completada!</small>
-              </div>
-            </S.FloatingCard>
-            <S.FloatingCard
-              $delay={1}
-              style={{ bottom: "10%", right: "-10%" }}
-              animate={{
-                y: [0, 15, 0],
-                transition: {
-                  duration: 3,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                },
-              }}
-            >
-              <Award size={24} color="#FFCC00" />
-              <div>
-                <strong>7 dias seguidos</strong>
-                <br />
-                <small>Ofensiva ativa!</small>
               </div>
             </S.FloatingCard>
           </S.HeroVisual>
@@ -224,24 +200,24 @@ const LandingPage = () => {
         features={[
           "Lições de 5-10 minutos cada",
           "Conteúdo gamificado e interativo",
-          "Certificados ao completar trilhas"
+          "Certificados ao completar trilhas",
         ]}
         miniCards={[
-          { 
-            icon: <BookOpen size={20} />, 
-            text: "Lição 1", 
+          {
+            icon: <BookOpen size={20} />,
+            text: "Lição 1",
             value: "Completa!",
-            position: "top-left" 
+            position: "top-left",
           },
-          { 
-            icon: <Zap size={20} />, 
-            text: "+50 FP", 
-            position: "top-right" 
+          {
+            icon: <Zap size={20} />,
+            text: "+50 FP",
+            position: "top-right",
           },
-          { 
-            icon: <Award size={20} />, 
-            text: "3/10 lições", 
-            position: "bottom-left" 
+          {
+            icon: <Award size={20} />,
+            text: "3/10 lições",
+            position: "bottom-left",
           },
         ]}
       />
@@ -257,19 +233,19 @@ const LandingPage = () => {
         features={[
           "Crie metas com prazos personalizados",
           "Acompanhe progresso visual",
-          "Ganhe emblemas ao atingir marcos"
+          "Ganhe emblemas ao atingir marcos",
         ]}
         miniCards={[
-          { 
-            icon: <Target size={20} />, 
-            text: "Meta: PS5", 
+          {
+            icon: <Target size={20} />,
+            text: "Meta: PS5",
             value: "65%",
-            position: "top-right" 
+            position: "top-right",
           },
-          { 
-            icon: <Award size={20} />, 
-            text: "Emblema desbloqueado!", 
-            position: "bottom-right" 
+          {
+            icon: <Award size={20} />,
+            text: "Emblema desbloqueado!",
+            position: "bottom-right",
           },
         ]}
         reverse
@@ -287,20 +263,20 @@ const LandingPage = () => {
         features={[
           "Simule investimentos em CDB, Tesouro e mais",
           "Visualize o efeito dos juros compostos",
-          "Compare diferentes estratégias"
+          "Compare diferentes estratégias",
         ]}
         miniCards={[
-          { 
-            icon: <TrendingUp size={20} />, 
-            text: "Retorno", 
+          {
+            icon: <TrendingUp size={20} />,
+            text: "Retorno",
             value: "+18.5%",
-            position: "top-left" 
+            position: "top-left",
           },
-          { 
-            icon: <Star size={20} />, 
-            text: "R$ 5.240", 
+          {
+            icon: <Star size={20} />,
+            text: "R$ 5.240",
             value: "em 5 anos",
-            position: "bottom-left" 
+            position: "bottom-left",
           },
         ]}
       />

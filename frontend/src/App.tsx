@@ -32,7 +32,7 @@ import LearnHubPage from "./pages/LearnHubPage";
 import { CourseDetailsPage } from "./pages/CourseDetailsPage";
 import ProfilePage from "./pages/ProfilePage";
 import MissionsPage from "./pages/MissionsPage";
-import { FinancePlanningPage } from "./pages/FinancePlanning";
+import { FinancePlanningPage } from "./pages/FinancePlanningPage";
 import GoalsPage from "./pages/GoalsPage";
 import InvestmentSimulatorPage from "./pages/InvestmentSimulatorPage";
 import ReportsPage from "./pages/ReportsPage";

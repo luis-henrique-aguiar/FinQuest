@@ -1,9 +1,5 @@
 import api from './api';
 
-// ============================================================================
-// TYPES & INTERFACES
-// ============================================================================
-
 export type TransactionType = 'INCOME' | 'EXPENSE';
 
 export interface Transaction {
@@ -42,10 +38,30 @@ export interface FinancialOverview {
   recentTransactions: Transaction[];
 }
 
+export interface AchievementDTO {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  requiredLevel: number;
+}
+
+export interface MissionCompletionDTO {
+  totalFinPoints: number;
+  level: number;
+  didLevelUp: boolean;
+  unlockedBadge: AchievementDTO | null;
+}
+
+export interface TransactionResponseDTO {
+  transaction: Transaction;
+  missionCompletion: MissionCompletionDTO | null;
+}
+
 export const createTransaction = async (
   data: CreateTransactionDTO
-): Promise<Transaction> => {
-  const response = await api.post<Transaction>('/transactions', data);
+): Promise<TransactionResponseDTO> => {
+  const response = await api.post<TransactionResponseDTO>('/transactions', data);
   return response.data;
 };
 
@@ -87,6 +103,10 @@ export const getFinancialOverview = async (
   return response.data;
 };
 
+// ============================================================================
+// CONSTANTS
+// ============================================================================
+
 export const EXPENSE_CATEGORIES = [
   'Alimentação',
   'Moradia',
@@ -107,6 +127,10 @@ export const INCOME_CATEGORIES = [
   'Presente',
   'Outros Ganhos',
 ];
+
+// ============================================================================
+// UTILITY FUNCTIONS
+// ============================================================================
 
 export const formatCurrency = (value: number): string => {
   return value.toLocaleString('pt-BR', {

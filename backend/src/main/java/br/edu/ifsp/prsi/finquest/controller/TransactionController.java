@@ -20,9 +20,6 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.util.List;
 
-import java.time.LocalDate;
-import java.util.List;
-
 @RestController
 @RequestMapping("/transactions")
 public class TransactionController {
@@ -78,14 +75,15 @@ public class TransactionController {
     }
 
     @PostMapping
-    public ResponseEntity<TransactionDTO> createTransaction(
+    public ResponseEntity<TransactionResponseDTO> createTransaction(
             @AuthenticationPrincipal UserDetails userDetails,
-            @RequestBody CreateTransactionDTO dto
+            @Valid @RequestBody CreateTransactionDTO dto
     ) {
         String userId = userDetails.getUsername();
-        TransactionDTO created = transactionService.createTransaction(userId, dto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+        TransactionResponseDTO response = transactionService.createTransaction(userId, dto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
+
 
     @PutMapping("/{id}")
     public ResponseEntity<TransactionDTO> updateTransaction(

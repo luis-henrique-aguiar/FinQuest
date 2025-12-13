@@ -7,14 +7,17 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.MDC; // Importante para o contexto
 import org.springframework.context.annotation.Profile;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.stereotype.Component;
-import org.springframework.web.filter.OncePerRequestFilter;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -25,6 +28,7 @@ import java.util.Optional;
 @Profile("!test")
 public class FirebaseTokenFilter extends OncePerRequestFilter {
 
+    private static final Logger logger = LoggerFactory.getLogger(FirebaseTokenFilter.class);
     private final UserRepository userRepository;
 
     public FirebaseTokenFilter(UserRepository userRepository) {
@@ -35,9 +39,11 @@ public class FirebaseTokenFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
+        String path = request.getRequestURI();
         String authorizationHeader = request.getHeader("Authorization");
 
         if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+            logger.debug("Acesso anônimo (sem token) para: {} {}", request.getMethod(), path);
             filterChain.doFilter(request, response);
             return;
         }
@@ -48,24 +54,32 @@ public class FirebaseTokenFilter extends OncePerRequestFilter {
         try {
             decodedToken = FirebaseAuth.getInstance().verifyIdToken(token);
         } catch (Exception e) {
+            logger.warn("Falha na autenticação (Token Inválido) para {}: {}", path, e.getMessage());
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.getWriter().write("{\"error\": \"Token inválido.\"}");
+            response.setContentType("application/json");
+            response.getWriter().write("{\"error\": \"Token inválido ou expirado.\"}");
             return;
         }
 
         String uid = decodedToken.getUid();
+        MDC.put("userId", uid);
 
         List<GrantedAuthority> authorities = new ArrayList<>();
-
         try {
             Optional<br.edu.ifsp.prsi.finquest.model.User> userOpt = userRepository.findById(uid);
+
             if (userOpt.isPresent()) {
                 br.edu.ifsp.prsi.finquest.model.User user = userOpt.get();
-                authorities.add(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()));
+                String role = "ROLE_" + user.getRole().name();
+                authorities.add(new SimpleGrantedAuthority(role));
+
+                logger.debug("Autenticação Sucesso: UID={}, Role={}, Path={}", uid, role, path);
             } else {
+                logger.error("INCONSISTÊNCIA: Usuário autenticado no Firebase mas NÃO ENCONTRADO no banco local! UID={}", uid);
                 authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
             }
         } catch (Exception e) {
+            logger.error("Erro ao buscar permissões do usuário {}: {}", uid, e.getMessage());
             authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
         }
 
@@ -83,6 +97,10 @@ public class FirebaseTokenFilter extends OncePerRequestFilter {
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
-        filterChain.doFilter(request, response);
+        try {
+            filterChain.doFilter(request, response);
+        } finally {
+            MDC.remove("userId");
+        }
     }
 }

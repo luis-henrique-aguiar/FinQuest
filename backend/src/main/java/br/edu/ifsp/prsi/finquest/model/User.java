@@ -29,13 +29,13 @@ public class User {
     }
 
     @Column(name = "total_fin_points")
-    private Integer totalFinPoints;
+    private Integer totalFinPoints = 0;
 
     @Column(name = "avatar_url")
     private String avatarUrl;
 
     @Column(name = "level", nullable = false)
-    private Integer level;
+    private Integer level = 1;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

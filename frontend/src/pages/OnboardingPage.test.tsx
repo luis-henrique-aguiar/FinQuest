@@ -12,12 +12,12 @@ vi.mock('react-router-dom', async () => {
     return { ...actual, useNavigate: () => mockedNavigate };
 });
 
-// Wrapper com Router e Theme
-// eslint-disable-next-line react/prop-types
-const Wrapper = ({ children }) => (
-    <BrowserRouter>
-        <ThemeProvider theme={lightTheme}>{children}</ThemeProvider>
-    </BrowserRouter>
+const Wrapper = ({ children }: { children: React.ReactNode }) => (
+  <BrowserRouter>
+    <ThemeProvider theme={lightTheme}>
+      {children}
+    </ThemeProvider>
+  </BrowserRouter>
 );
 
 describe('OnboardingPage Component', () => {

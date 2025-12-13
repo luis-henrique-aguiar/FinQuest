@@ -15,7 +15,7 @@ import FullScreenLoader from "../components/common/FullScreenLoader";
 import api from "../services/api";
 
 export interface Achievement {
-    id: number;
+    achievementId: number;
     title: string;
     icon: string;
     unlockedDate: string;
@@ -60,8 +60,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       setFirebaseUser(fbUser);
 
       if (fbUser) {
-        console.log("onAuthStateChanged: Logado - UID:", fbUser.uid);
-
         try {
           const response = await api.get(`/users/${fbUser.uid}`);
           const backendUser = response.data;
@@ -78,24 +76,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
             unlockedAchievements: backendUser.unlockedAchievements || [],
           };
 
-          if (import.meta.env.DEV) {
-            const token = await fbUser.getIdToken();
-            console.groupCollapsed(
-              "%c[DEBUG] Token de Autenticação (para Postman)",
-              "color: orange; font-weight: bold;"
-            );
-            console.log(token);
-            console.groupEnd();
-          }
-
           setUser(appUser);
-          console.log("Usuário do backend carregado:", appUser);
         } catch (error) {
           console.error("Erro ao carregar usuário do backend:", error);
           setUser(null);
         }
       } else {
-        console.log("onAuthStateChanged: Deslogado");
         setUser(null);
       }
 
@@ -103,7 +89,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     });
 
     return () => {
-      console.log("Desinscrevendo listener onAuthStateChanged");
       unsubscribe();
     };
   }, []);
@@ -113,23 +98,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     email: string,
     password: string
   ): Promise<void> => {
-    console.log("Iniciando registro...");
-
     try {
-      const response = await api.post("/auth/register", {
+      await api.post("/auth/register", {
         name,
         email,
         password,
       });
 
-      const { uid } = response.data;
-      console.log("Usuário criado no backend:", uid);
-
       await signInWithEmailAndPassword(auth, email, password);
-      console.log("Login automático realizado!");
 
     } catch (error: any) {
-      console.error("❌ Erro no registro:", error);
+      console.error("Erro no registro:", error);
 
       if (error.response?.status === 409) {
         throw new Error("Este email já está cadastrado.");
@@ -149,14 +128,34 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
   const login = async (email: string, password: string): Promise<void> => {
     console.log("Tentando fazer login...");
+    
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      console.log("Login bem-sucedido!");
-    } catch (error: any) {
-      console.error("Erro no login:", error);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const firebaseUser = userCredential.user;
+      
+      console.log("Firebase Auth OK. Verificando backend...");
 
-      if (error.code === "auth/user-not-found") {
-        throw new Error("Usuário não encontrado.");
+      try {
+        await api.get(`/users/${firebaseUser.uid}`);
+        console.log("Backend User OK!");
+        
+      } catch (backendError: any) {
+        console.error("Usuário não encontrado no backend. Fazendo logout do Firebase.");
+        
+        await signOut(auth); 
+        
+        if (backendError.response?.status === 404) {
+           throw new Error("Inconsistência de dados: Usuário não encontrado no banco de dados.");
+        } else {
+           throw new Error("Erro ao conectar com o servidor. Tente novamente.");
+        }
+      }
+
+    } catch (error: any) {
+      console.error("Erro no processo de login:", error);
+
+      if (error.code === "auth/user-not-found" || error.code === "auth/invalid-credential") {
+        throw new Error("Email ou senha incorretos.");
       } else if (error.code === "auth/wrong-password") {
         throw new Error("Senha incorreta.");
       } else if (error.code === "auth/invalid-email") {
@@ -164,30 +163,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       } else if (error.code === "auth/too-many-requests") {
         throw new Error("Muitas tentativas. Tente novamente mais tarde.");
       } else {
-        throw new Error("Erro ao fazer login. Tente novamente.");
+        throw error;
       }
     }
   };
 
   const logout = async (): Promise<void> => {
-    console.log("Fazendo logout...");
     try {
       await signOut(auth);
-      console.log("Logout concluído!");
     } catch (error: any) {
-      console.error("Erro no logout:", error);
       throw error;
     }
   };
-
-  /*const updateUserContext = (updatedData: Partial<User>) => {
-    setUser((prevUser) => {
-      if (!prevUser) return null;
-      const newUser = { ...prevUser, ...updatedData };
-      console.log("Usuário atualizado:", newUser);
-      return newUser;
-    });
-  };*/
 
   const updateUserContext = (updatedData: Partial<User> & { unlockedBadge?: Achievement }) => {
     setUser((prevUser) => {
@@ -209,7 +196,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           unlockedAchievements: mergedAchievements
       };
 
-      console.log("Usuário atualizado (Fusão):", newUser);
       return newUser;
     });
   };

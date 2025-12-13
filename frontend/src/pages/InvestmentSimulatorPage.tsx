@@ -168,7 +168,6 @@ export const InvestmentSimulatorPage: React.FC = () => {
     if (cached) {
       setRatesData(cached);
       setInvestmentOptions(cached.rates);
-      console.log("✅ Usando taxas do cache");
       return;
     }
 

@@ -1,189 +1,218 @@
-import styled from 'styled-components';
+import styled from "styled-components";
 
 export const PageContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.lg};
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: ${({ theme }) => theme.spacing.xl};
+
+  @media (max-width: 768px) {
+    padding: ${({ theme }) => theme.spacing.md};
+  }
 `;
 
-export const PageHeader = styled.div`
-  text-align: center;
-  margin-bottom: ${({ theme }) => theme.spacing.lg};
+export const Header = styled.div`
+  margin-bottom: ${({ theme }) => theme.spacing.xxl};
 `;
 
-export const PageTitle = styled.h1`
-  margin-bottom: ${({ theme }) => theme.spacing.sm};
+export const Title = styled.h1`
   font-size: 2rem;
   font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
   color: ${({ theme }) => theme.colors.textDark};
-  
+  margin: 0 0 ${({ theme }) => theme.spacing.sm};
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.sm};
+
+  svg {
+    color: ${({ theme }) => theme.colors.primary};
+  }
+
   @media (max-width: 768px) {
-    font-size: 1.75rem;
+    font-size: 1.5rem;
   }
 `;
 
-export const PageDescription = styled.p`
+export const Subtitle = styled.p`
+  font-size: 1.125rem;
   color: ${({ theme }) => theme.colors.textMedium};
-  font-size: 1.1rem;
   margin: 0;
-  max-width: 600px;
-  margin: 0 auto;
-  line-height: 1.5;
-  
+  font-family: ${({ theme }) => theme.typography.fontFamily.body};
+
   @media (max-width: 768px) {
     font-size: 1rem;
-    padding: 0 ${({ theme }) => theme.spacing.sm};
   }
 `;
 
-export const ProgressSection = styled.div`
-  margin-bottom: ${({ theme }) => theme.spacing.lg};
-  background: linear-gradient(135deg, ${({ theme }) => theme.colors.primary}11 0%, ${({ theme }) => theme.colors.accent}11 100%);
-  padding: ${({ theme }) => theme.spacing.lg};
+export const StatsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: ${({ theme }) => theme.spacing.lg};
+  margin-bottom: ${({ theme }) => theme.spacing.xxl};
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: ${({ theme }) => theme.spacing.md};
+  }
+`;
+
+export const StatCard = styled.div`
+  background: ${({ theme }) => theme.colors.white};
   border-radius: ${({ theme }) => theme.borderRadius.large};
-  border: 1px solid ${({ theme }) => theme.colors.primary}22;
+  padding: ${({ theme }) => theme.spacing.lg};
+  box-shadow: ${({ theme }) => theme.shadows.small};
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.md};
+  border: 1px solid ${({ theme }) => theme.colors.border};
 `;
 
-export const ProgressHeader = styled.div`
+export const StatIconContainer = styled.div<{ $color: string }>`
+  width: 56px;
+  height: 56px;
+  border-radius: ${({ theme }) => theme.borderRadius.medium};
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: ${({ theme }) => theme.spacing.md};
-  
-  @media (max-width: 480px) {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: ${({ theme }) => theme.spacing.xs};
+  justify-content: center;
+  background: ${({ $color }) => `${$color}22`};
+  flex-shrink: 0;
+
+  svg {
+    width: 28px;
+    height: 28px;
+    color: ${({ $color }) => $color};
   }
 `;
 
-export const ProgressTitle = styled.h3`
-  margin: 0;
-  font-size: 1.25rem;
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semiBold};
-  color: ${({ theme }) => theme.colors.textDark};
+export const StatContent = styled.div`
+  flex: 1;
 `;
 
-export const ProgressStats = styled.span`
-  font-size: 14px;
+export const StatLabel = styled.div`
+  font-size: 0.875rem;
   color: ${({ theme }) => theme.colors.textMedium};
+  margin-bottom: ${({ theme }) => theme.spacing.xs};
   font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  background-color: ${({ theme }) => theme.colors.white};
-  padding: ${({ theme }) => theme.spacing.xs} ${({ theme }) => theme.spacing.sm};
-  border-radius: ${({ theme }) => theme.borderRadius.pill};
-  border: 1px solid ${({ theme }) => theme.colors.background};
+`;
+
+export const StatValue = styled.div`
+  font-size: 1.75rem;
+  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  color: ${({ theme }) => theme.colors.textDark};
+  font-family: ${({ theme }) => theme.typography.fontFamily.heading};
 `;
 
 export const FilterTabs = styled.div`
   display: flex;
   gap: ${({ theme }) => theme.spacing.sm};
-  margin-bottom: ${({ theme }) => theme.spacing.lg};
+  margin-bottom: ${({ theme }) => theme.spacing.xl};
   overflow-x: auto;
-  padding-bottom: ${({ theme }) => theme.spacing.xs};
-  
+  padding: ${({ theme }) => theme.spacing.xs};
+
   &::-webkit-scrollbar {
     height: 4px;
   }
-  
+
   &::-webkit-scrollbar-track {
     background: ${({ theme }) => theme.colors.background};
     border-radius: 2px;
   }
-  
+
   &::-webkit-scrollbar-thumb {
-    background-color: ${({ theme }) => theme.colors.textMedium}33;
-    border-radius: 20px;
-  }
-  
-  @media (max-width: 768px) {
-    padding: 0 ${({ theme }) => theme.spacing.sm};
-    margin-left: -${({ theme }) => theme.spacing.sm};
-    margin-right: -${({ theme }) => theme.spacing.sm};
+    background: ${({ theme }) => theme.colors.border};
+    border-radius: 2px;
   }
 `;
 
 export const FilterTab = styled.button<{ $active: boolean }>`
-  padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.md}`};
-  background-color: ${({ $active, theme }) =>
+  padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.lg}`};
+  border: 2px solid
+    ${({ $active, theme }) =>
+      $active ? theme.colors.primary : theme.colors.border};
+  background: ${({ $active, theme }) =>
     $active ? theme.colors.primary : theme.colors.white};
   color: ${({ $active, theme }) =>
-    $active ? theme.colors.white : theme.colors.textDark};
-  border: 2px solid ${({ $active, theme }) =>
-    $active ? theme.colors.primary : '#e5e7eb'};
+    $active ? theme.colors.white : theme.colors.textMedium};
   border-radius: ${({ theme }) => theme.borderRadius.pill};
   font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  font-family: "Nunito Sans", sans-serif;
   cursor: pointer;
+  transition: all 0.2s ease;
   white-space: nowrap;
-  transition: all 0.3s ease;
+  font-family: ${({ theme }) => theme.typography.fontFamily.body};
   font-size: 0.9rem;
-  min-width: fit-content;
-  
+
   &:hover {
-    background-color: ${({ $active, theme }) =>
-      $active ? theme.colors.primary : theme.colors.primary}11;
     border-color: ${({ theme }) => theme.colors.primary};
-    transform: translateY(-1px);
+    transform: translateY(-2px);
     box-shadow: 0 4px 12px ${({ theme }) => theme.colors.primary}22;
-  }
-  
-  &:active {
-    transform: translateY(0);
+    background: ${({ $active, theme }) =>
+      $active ? theme.colors.primary : `${theme.colors.primary}11`};
   }
 `;
 
 export const MissionsGrid = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.md};
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: ${({ theme }) => theme.spacing.lg};
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
 `;
 
 export const EmptyState = styled.div`
   text-align: center;
-  padding: ${({ theme }) => theme.spacing.xl};
+  padding: ${({ theme }) => theme.spacing.xxl};
   color: ${({ theme }) => theme.colors.textMedium};
-  
-  h3 {
-    margin-bottom: ${({ theme }) => theme.spacing.sm};
-    color: ${({ theme }) => theme.colors.textDark};
+  background: ${({ theme }) => theme.colors.white};
+  border-radius: ${({ theme }) => theme.borderRadius.large};
+  box-shadow: ${({ theme }) => theme.shadows.small};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+
+  svg {
+    margin-bottom: ${({ theme }) => theme.spacing.md};
+    opacity: 0.5;
+    color: ${({ theme }) => theme.colors.textLight};
   }
-  
+
+  h3 {
+    margin: 0 0 ${({ theme }) => theme.spacing.sm};
+    color: ${({ theme }) => theme.colors.textDark};
+    font-size: 1.25rem;
+    font-family: ${({ theme }) => theme.typography.fontFamily.heading};
+  }
+
   p {
     margin: 0;
-    font-size: 1rem;
-  }
-  
-  .emoji {
-    font-size: 3rem;
-    margin-bottom: ${({ theme }) => theme.spacing.md};
-    display: block;
+    font-family: ${({ theme }) => theme.typography.fontFamily.body};
   }
 `;
 
-export const StatsContainer = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+export const LoadingContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: ${({ theme }) => theme.spacing.xxl};
   gap: ${({ theme }) => theme.spacing.md};
-  margin-bottom: ${({ theme }) => theme.spacing.lg};
-`;
+  min-height: 400px;
 
-export const StatCard = styled.div`
-  background: ${({ theme }) => theme.colors.white};
-  padding: ${({ theme }) => theme.spacing.md};
-  border-radius: ${({ theme }) => theme.borderRadius.medium};
-  border: 1px solid ${({ theme }) => theme.colors.background};
-  text-align: center;
-  
-  .stat-value {
-    font-size: 1.5rem;
-    font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
-    color: ${({ theme }) => theme.colors.primary};
-    margin-bottom: ${({ theme }) => theme.spacing.xs};
+  .spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid ${({ theme }) => theme.colors.backgroundAlt};
+    border-top-color: ${({ theme }) => theme.colors.primary};
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
   }
-  
-  .stat-label {
-    font-size: 0.8rem;
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  p {
     color: ${({ theme }) => theme.colors.textMedium};
-    font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+    font-family: ${({ theme }) => theme.typography.fontFamily.body};
   }
 `;

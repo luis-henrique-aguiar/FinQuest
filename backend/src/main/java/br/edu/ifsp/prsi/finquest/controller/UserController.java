@@ -3,6 +3,8 @@ package br.edu.ifsp.prsi.finquest.controller;
 import br.edu.ifsp.prsi.finquest.dto.*;
 import br.edu.ifsp.prsi.finquest.service.UserService;
 import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -13,6 +15,8 @@ import java.util.List;
 @RestController
 @RequestMapping("/users")
 public class UserController {
+
+    private static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
     private final UserService userService;
 
@@ -33,6 +37,17 @@ public class UserController {
     ) {
         String userId = userDetails.getUsername();
         UserDTO updatedUser = userService.updateName(userId, request);
+        return ResponseEntity.ok(updatedUser);
+    }
+
+    @PatchMapping("/avatar")
+    public ResponseEntity<UserDTO> updateAvatar(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @Valid @RequestBody UpdateAvatarDTO dto
+    ) {
+        String userId = userDetails.getUsername();
+        logger.info("PATCH /users/me/avatar - userId={}", userId);
+        UserDTO updatedUser = userService.updateAvatar(userId, dto.avatarUrl());
         return ResponseEntity.ok(updatedUser);
     }
 

@@ -7,10 +7,21 @@ spring:
     password: ${MYSQL_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
+    open-in-view: false
     hibernate:
       ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:update}
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
+  security:
+    user:
+      password: ignored
 
 server:
   port: 8080
+
+logging:
+  level:
+    root: INFO
+    br.edu.ifsp.prsi.finquest: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} %-5level [%X{requestId}] [%X{userId}] %logger{36} - %msg%n"

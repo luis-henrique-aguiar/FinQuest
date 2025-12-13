@@ -1,6 +1,32 @@
 import { motion } from "framer-motion";
 import styled from "styled-components";
 
+export const PasswordToggleIcon = styled.button`
+  position: absolute;
+  right: 1rem;
+  top: 50%; /* Centraliza verticalmente */
+  transform: translateY(-50%); /* Ajuste fino da centralização */
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #6c757d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  z-index: 2;
+
+  &:hover {
+    color: ${({ theme }) => theme.colors.primary};
+  }
+
+  &:focus {
+    outline: none;
+  }
+`;
+
 export const PageContainer = styled.div`
   display: flex;
   min-height: 100vh;
@@ -24,22 +50,27 @@ export const BackgroundShapes = styled.div`
   overflow: hidden;
 `;
 
-export const FloatingShape = styled(motion.div)<{ $color: string; $size: number; $top: string; $left: string }>`
+export const FloatingShape = styled(motion.div)<{
+  $color: string;
+  $size: number;
+  $top: string;
+  $left: string;
+}>`
   position: absolute;
-  width: ${props => props.$size}px;
-  height: ${props => props.$size}px;
-  background: ${props => props.$color};
+  width: ${(props) => props.$size}px;
+  height: ${(props) => props.$size}px;
+  background: ${(props) => props.$color};
   border-radius: 50%;
   filter: blur(100px);
   opacity: 0.2;
-  top: ${props => props.$top};
-  left: ${props => props.$left};
+  top: ${(props) => props.$top};
+  left: ${(props) => props.$left};
 `;
 
 // Left Side - Branding
 export const BrandingSide = styled.div`
   flex: 1;
-  background: linear-gradient(135deg, #007ACC 0%, #28A745 100%);
+  background: linear-gradient(135deg, #007acc 0%, #28a745 100%);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -94,7 +125,8 @@ export const MascotContainer = styled(motion.div)`
   justify-content: center;
   padding: 1rem;
   border: 3px solid rgba(255, 255, 255, 0.3);
-  margin-bottom: 2rem;
+  margin: 0 auto 2rem auto; 
+
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
 
   @media (max-width: 768px) {
@@ -121,7 +153,7 @@ export const StatItem = styled(motion.div)`
 
   h3 {
     font-size: 2.5rem;
-    color: #FFCC00;
+    color: #ffcc00;
     margin: 0;
     font-weight: 800;
 
@@ -144,7 +176,7 @@ export const FormSide = styled.div`
   align-items: center;
   justify-content: center;
   padding: 4rem 2rem;
-  background: #FFFFFF;
+  background: #ffffff;
   position: relative;
   z-index: 1;
 
@@ -172,15 +204,19 @@ export const FormHeader = styled.div`
   }
 
   p {
-    color: #6C757D;
+    color: #6c757d;
     font-size: 1.1rem;
     margin: 0;
   }
 `;
 
 export const DemoCredentials = styled(motion.div)`
-  background: linear-gradient(135deg, rgba(255, 204, 0, 0.1) 0%, rgba(253, 126, 20, 0.1) 100%);
-  border-left: 4px solid #FFCC00;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 204, 0, 0.1) 0%,
+    rgba(253, 126, 20, 0.1) 100%
+  );
+  border-left: 4px solid #ffcc00;
   padding: 1rem 1.5rem;
   border-radius: 12px;
   margin-bottom: 2rem;
@@ -206,11 +242,11 @@ export const DemoCredentials = styled(motion.div)`
     p {
       margin: 0;
       font-size: 0.9rem;
-      color: #6C757D;
-      
+      color: #6c757d;
+
       strong {
         color: #333333;
-        font-family: 'Courier New', monospace;
+        font-family: "Courier New", monospace;
         background: rgba(0, 0, 0, 0.05);
         padding: 2px 6px;
         border-radius: 4px;
@@ -242,11 +278,12 @@ export const InputWrapper = styled.div`
   display: flex;
   align-items: center;
 
-  svg {
+  > svg {
     position: absolute;
     left: 1rem;
     color: #6C757D;
     pointer-events: none;
+    z-index: 1;
   }
 `;
 
@@ -254,20 +291,20 @@ export const Input = styled.input`
   width: 100%;
   padding: 1rem 1rem 1rem 3rem;
   border-radius: 12px;
-  border: 2px solid #E5E7EB;
+  border: 2px solid #e5e7eb;
   font-size: 1rem;
-  font-family: 'Nunito Sans', sans-serif;
+  font-family: "Nunito Sans", sans-serif;
   transition: all 0.3s ease;
-  background: #FFFFFF;
+  background: #ffffff;
 
   &:focus {
     outline: none;
-    border-color: #007ACC;
+    border-color: #007acc;
     box-shadow: 0 0 0 4px rgba(0, 122, 204, 0.15);
   }
 
   &::placeholder {
-    color: #9CA3AF;
+    color: #9ca3af;
   }
 `;
 
@@ -275,8 +312,8 @@ export const SubmitButtonStyled = styled(motion.button)`
   padding: 1.2rem;
   font-size: 1.1rem;
   font-weight: 700;
-  font-family: 'Poppins', sans-serif;
-  background: linear-gradient(135deg, #007ACC 0%, #28A745 100%);
+  font-family: "Poppins", sans-serif;
+  background: linear-gradient(135deg, #007acc 0%, #28a745 100%);
   color: white;
   border: none;
   border-radius: 12px;
@@ -300,7 +337,7 @@ export const SubmitButtonStyled = styled(motion.button)`
 `;
 
 export const ForgotPassword = styled.button`
-  color: #007ACC;
+  color: #007acc;
   font-size: 0.9rem;
   font-weight: 600;
   text-decoration: none;
@@ -310,7 +347,7 @@ export const ForgotPassword = styled.button`
   border: none;
   cursor: pointer;
   padding: 0;
-  font-family: 'Nunito Sans', sans-serif;
+  font-family: "Nunito Sans", sans-serif;
 
   &:hover {
     opacity: 0.8;
@@ -323,25 +360,25 @@ export const Divider = styled.div`
   align-items: center;
   gap: 1rem;
   margin: 1.5rem 0;
-  color: #6C757D;
+  color: #6c757d;
   font-size: 0.9rem;
 
   &::before,
   &::after {
-    content: '';
+    content: "";
     flex: 1;
     height: 1px;
-    background: #E5E7EB;
+    background: #e5e7eb;
   }
 `;
 
 export const SignUpPrompt = styled.div`
   text-align: center;
-  color: #6C757D;
+  color: #6c757d;
   font-size: 1rem;
 
   button {
-    color: #007ACC;
+    color: #007acc;
     font-weight: 600;
     text-decoration: none;
     transition: opacity 0.2s;
@@ -379,7 +416,11 @@ export const Spinner = styled.div`
   animation: spin 1s linear infinite;
 
   @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
   }
 `;

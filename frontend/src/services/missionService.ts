@@ -34,7 +34,6 @@ export const getMissionsForUser = async (): Promise<MissionProgressDTO[]> => {
     const response = await api.get('/missions');
     return response.data;
   } catch (error) {
-    console.error('Erro ao buscar missões:', error);
     throw error;
   }
 };

@@ -16,7 +16,4 @@ public interface UserMissionProgressRepository extends JpaRepository<UserMission
 
     long countByStatus(MissionStatus status);
 
-    @Query("SELECT COUNT(ump) FROM UserMissionProgress ump WHERE ump.status = 'COMPLETED'")
-    long countByStatusCompleted();
-
 }

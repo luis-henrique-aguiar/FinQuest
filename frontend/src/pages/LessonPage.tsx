@@ -26,6 +26,7 @@ import {
 } from "../components/gamification/LessonQuiz";
 import { useAuth } from "../hooks/useAuth";
 import { useGamification } from "../context/GamificationContext";
+import type { Achievement, User } from "../context/AuthContext";
 
 const LessonPage = () => {
   const { courseId, lessonId } = useParams<{
@@ -129,9 +130,21 @@ const LessonPage = () => {
       );
       const rewardData = await completeLesson(lessonId!);
 
-      console.log("🎯 Lesson Completion Data:", rewardData);
+      const updateData: Partial<User> & { unlockedBadge?: Achievement } = {
+        totalFinPoints: rewardData.totalFinPoints,
+        level: rewardData.level,
+      };
 
-      /*if (rewardData.didLevelUp && rewardData.unlockedBadge) {
+      if (rewardData.unlockedBadge) {
+        updateData.unlockedBadge = {
+          achievementId: Number(rewardData.unlockedBadge.id),
+          title: rewardData.unlockedBadge.title,
+          icon: rewardData.unlockedBadge.icon,
+          unlockedDate: new Date().toISOString(),
+        };
+      }
+
+      if (rewardData.didLevelUp && rewardData.unlockedBadge) {
         showBadgeUnlocked(
           rewardData.unlockedBadge,
           rewardData.level,
@@ -139,30 +152,6 @@ const LessonPage = () => {
         );
       } else if (rewardData.didLevelUp) {
         showLevelUp(rewardData.level);
-      }
-
-      updateUserContext({
-        totalFinPoints: rewardData.totalFinPoints,
-        level: rewardData.level,
-      });*/
-
-      const updateData: Partial<User> & { unlockedBadge?: Achievement } = {
-        totalFinPoints: rewardData.totalFinPoints,
-        level: rewardData.level,
-      };
-
-      if (rewardData.unlockedBadge) {
-        updateData.unlockedBadge = rewardData.unlockedBadge;
-      }
-
-      if (rewardData.didLevelUp && rewardData.unlockedBadge) {
-          showBadgeUnlocked(
-              rewardData.unlockedBadge,
-              rewardData.level,
-              rewardData.totalFinPoints
-          );
-      } else if (rewardData.didLevelUp) {
-          showLevelUp(rewardData.level);
       }
 
       updateUserContext(updateData);
@@ -227,7 +216,6 @@ const LessonPage = () => {
                 blockquote: ({ children }) => {
                   const content = children?.toString() || "";
 
-                  // 💡 Dicas (contém emoji de lâmpada)
                   if (content.includes("💡")) {
                     return (
                       <S.TipBox>
@@ -239,7 +227,6 @@ const LessonPage = () => {
                     );
                   }
 
-                  // ⚠️ Avisos (contém emoji de alerta)
                   if (
                     content.includes("⚠️") ||
                     content.includes("Atenção") ||
@@ -255,7 +242,6 @@ const LessonPage = () => {
                     );
                   }
 
-                  // ✅ Sucesso (contém emoji de check)
                   if (content.includes("✅")) {
                     return (
                       <S.SuccessBox>
@@ -267,18 +253,17 @@ const LessonPage = () => {
                     );
                   }
 
-                  // Citação padrão
                   return <S.QuoteBox>{children}</S.QuoteBox>;
                 },
 
-                code: ({ inline, children, ...props }: any) => {
+                code: ({ node, inline, children, ...props }: any) => {
                   if (inline) {
                     return <S.InlineCode>{children}</S.InlineCode>;
                   }
                   return <code {...props}>{children}</code>;
                 },
 
-                li: ({ children, ...props }) => {
+                li: ({ node, children, ...props }: any) => {
                   return <S.ListItem {...props}>{children}</S.ListItem>;
                 },
               }}

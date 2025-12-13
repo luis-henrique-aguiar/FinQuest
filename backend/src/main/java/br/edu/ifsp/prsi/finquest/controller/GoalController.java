@@ -1,7 +1,6 @@
 package br.edu.ifsp.prsi.finquest.controller;
 
 import br.edu.ifsp.prsi.finquest.dto.*;
-import br.edu.ifsp.prsi.finquest.model.Goal;
 import br.edu.ifsp.prsi.finquest.service.GoalService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -22,28 +21,38 @@ public class GoalController {
     }
 
     @PostMapping
-    public ResponseEntity<GoalDTO> createGoal(@RequestBody @Valid RegisterGoalDTO request, @AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<GoalDTO> createGoal(
+            @RequestBody @Valid RegisterGoalDTO request, @AuthenticationPrincipal UserDetails userDetails
+    ) {
         String userId = userDetails.getUsername();
         GoalDTO responseDto = goalService.createGoal(userId, request);
         return ResponseEntity.ok(responseDto);
     }
 
     @PutMapping("/{goalId}")
-    public ResponseEntity<GoalUpdateResponseDTO> updateGoal(@PathVariable("goalId") String idGoal, @RequestBody @Valid UpdateGoalDTO request, @AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<GoalUpdateResponseDTO> updateGoal(
+            @PathVariable("goalId") String idGoal, @RequestBody @Valid UpdateGoalDTO request,
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
         String userId = userDetails.getUsername();
         GoalUpdateResponseDTO responseDto = goalService.updateGoal(userId, idGoal, request);
         return ResponseEntity.ok(responseDto);
     }
 
     @PutMapping("/{goalId}/deposit")
-    public ResponseEntity<GoalUpdateResponseDTO> depositAmount(@PathVariable("goalId") String goalId, @RequestBody @Valid DepositDTO request, @AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<GoalUpdateResponseDTO> depositAmount(
+            @PathVariable("goalId") String goalId, @RequestBody @Valid DepositDTO request,
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
         String userId = userDetails.getUsername();
         GoalUpdateResponseDTO responseDto = goalService.depositAmount(userId, goalId, request.amount());
         return ResponseEntity.ok(responseDto);
     }
 
     @DeleteMapping("/{goalId}")
-    public ResponseEntity<Void> deleteGoal(@PathVariable("goalId") String goalId, @AuthenticationPrincipal UserDetails userDetails){
+    public ResponseEntity<Void> deleteGoal(
+            @PathVariable("goalId") String goalId, @AuthenticationPrincipal UserDetails userDetails
+    ) {
         String userId = userDetails.getUsername();
         goalService.deleteGoal(userId, goalId);
 
@@ -51,7 +60,9 @@ public class GoalController {
     }
 
     @GetMapping("/{goalId}")
-    public ResponseEntity<GoalDTO> getGoal(@PathVariable("goalId") String goalId, @AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<GoalDTO> getGoal(
+            @PathVariable("goalId") String goalId, @AuthenticationPrincipal UserDetails userDetails
+    ) {
         String userId = userDetails.getUsername();
         return ResponseEntity.ok(goalService.findById(userId, goalId));
     }
