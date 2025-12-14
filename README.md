@@ -137,76 +137,90 @@ FinQuest combina:
 
 ### Visão Geral
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                         FRONTEND                            │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │  React + TypeScript + Vite                          │   │
-│  │  - Componentes reutilizáveis                        │   │
-│  │  - Context API (Auth, Toast, Gamification)          │   │
-│  │  │  - Styled Components para estilização            │   │
-│  │  - Framer Motion para animações                     │   │
-│  └─────────────────────────────────────────────────────┘   │
-│                          ▼                                   │
-│              Axios HTTP Client (REST API)                   │
-└─────────────────────────────────────────────────────────────┘
-                          ▼
-┌─────────────────────────────────────────────────────────────┐
-│                  CAMADA DE SEGURANÇA                        │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │  Firebase Authentication                            │   │
-│  │  - JWT Token Validation                             │   │
-│  │  - Role-Based Access Control (USER/ADMIN)           │   │
-│  └─────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
-                          ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    BACKEND (Spring Boot)                    │
-│                                                              │
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │  CONTROLLERS (REST API)                              │  │
-│  │  - TransactionController   - GoalController          │  │
-│  │  - CourseController        - MissionController       │  │
-│  │  - UserController          - AdminController         │  │
-│  └───────────────────┬──────────────────────────────────┘  │
-│                      ▼                                       │
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │  SERVICES (Lógica de Negócio)                        │  │
-│  │  - TransactionService    - GoalService               │  │
-│  │  - CourseService         - MissionService            │  │
-│  │  - UserService           - AdminService              │  │
-│  │                                                       │  │
-│  │  Regras:                                             │  │
-│  │  • Validações de negócio                             │  │
-│  │  • Cálculos financeiros                              │  │
-│  │  • Sistema de gamificação                            │  │
-│  │  • Sistema de eventos (Goal/Lesson Completion)       │  │
-│  └───────────────────┬──────────────────────────────────┘  │
-│                      ▼                                       │
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │  REPOSITORIES (Acesso a Dados)                       │  │
-│  │  - Spring Data JPA                                   │  │
-│  │  - Query Methods                                     │  │
-│  │  - Custom @Query para agregações                     │  │
-│  └───────────────────┬──────────────────────────────────┘  │
-└────────────────────┬─┴──────────────────────────────────────┘
-                     ▼
-┌─────────────────────────────────────────────────────────────┐
-│                   BANCO DE DADOS (MySQL)                    │
-│                                                              │
-│  Entidades Principais:                                      │
-│  • User                  - Usuários do sistema              │
-│  • Transaction           - Transações financeiras           │
-│  • MonthlyBudget         - Orçamentos mensais               │
-│  • Goal                  - Metas financeiras                │
-│  • Course                - Cursos educacionais              │
-│  • Lesson                - Lições de cada curso             │
-│  • Question              - Questões de quiz                 │
-│  • Mission               - Missões gamificadas              │
-│  • UserMissionProgress   - Progresso em missões             │
-│  • Achievement           - Conquistas/Badges                │
-│  • UserAchievement       - Badges desbloqueados             │
-└─────────────────────────────────────────────────────────────┘
+```mermaid
+graph TD
+    %% --- Definição de Estilos (Classes) ---
+    %% Cores mais fortes para contraste no Dark Mode e texto branco forçado
+    classDef actor fill:#E91E63,stroke:#F48FB1,stroke-width:2px,color:#fff;
+    classDef frontend fill:#1565C0,stroke:#90CAF9,stroke-width:2px,color:#fff;
+    classDef external fill:#F57C00,stroke:#FFCC80,stroke-width:2px,color:#fff;
+    classDef backend fill:#2E7D32,stroke:#A5D6A7,stroke-width:2px,color:#fff;
+    classDef security fill:#C62828,stroke:#EF9A9A,stroke-width:2px,color:#fff;
+    classDef db fill:#455A64,stroke:#B0BEC5,stroke-width:2px,color:#fff;
+    classDef default color:#fff;
+
+    %% Atores
+    User((Usuário Final)):::actor
+
+    %% Subgraph: Frontend
+    subgraph Frontend_System [Frontend Application]
+        direction TB
+        UI[Interface React/Web]:::frontend
+        AuthHandler["Auth Handler / Firebase SDK"]:::frontend
+        APIClient["HTTP Client / Axios"]:::frontend
+    end
+    style Frontend_System fill:#0D47A1,stroke:#90CAF9,color:#fff,fill-opacity:0.3
+
+    %% Subgraph: Serviços Externos
+    subgraph External_Services [Infraestrutura Externa]
+        FirebaseAuth[Firebase Authentication]:::external
+    end
+    style External_Services fill:#E65100,stroke:#FFCC80,color:#fff,fill-opacity:0.3
+
+    %% Subgraph: Backend
+    subgraph Backend_System [Backend - Spring Boot API]
+        direction TB
+        
+        %% Camada de Segurança
+        SecurityFilter["Security FilterChain<br/>(JWT Validation)"]:::security
+
+        %% Camada de Apresentação
+        Controllers["REST Controllers<br/>(User, Transaction, Goal, etc.)"]:::backend
+        
+        %% Camada de Negócio
+        subgraph Domain_Layer [Domain & Services]
+            BusinessServices["Services<br/>(TransactionService, GamificationService)"]:::backend
+            Entities[JPA Entities]:::backend
+        end
+        style Domain_Layer fill:#1B5E20,stroke:#A5D6A7,color:#fff,fill-opacity:0.2
+        
+        %% Camada de Acesso a Dados
+        Repositories[JPA Repositories]:::backend
+    end
+    style Backend_System fill:#1B5E20,stroke:#A5D6A7,color:#fff,fill-opacity:0.3
+
+    %% Subgraph: Banco de Dados
+    subgraph Persistence [Persistência]
+        MySQL[(MySQL Database)]:::db
+    end
+    style Persistence fill:#263238,stroke:#B0BEC5,color:#fff,fill-opacity:0.3
+
+    %% ================= RELACIONAMENTOS =================
+
+    %% 1. Interação do Usuário
+    User -->|"1. Interage / Login"| UI
+
+    %% 2. Fluxo de Autenticação
+    UI -->|"2. Solicita Login"| AuthHandler
+    AuthHandler -->|"3. Envia Credenciais"| FirebaseAuth
+    FirebaseAuth -->|"4. Retorna ID Token (JWT)"| AuthHandler
+    AuthHandler -->|"5. Armazena Token"| APIClient
+
+    %% 3. Fluxo de Requisição de Dados
+    UI -->|"6. Ação (ex: Criar Despesa)"| APIClient
+    APIClient -->|"7. HTTPS Request + Bearer Token"| SecurityFilter
+
+    %% 4. Validação no Backend
+    SecurityFilter -.->|"8. Valida Assinatura/Token"| FirebaseAuth
+    SecurityFilter -->|"9. Token Válido (UserDetails)"| Controllers
+
+    %% 5. Processamento Interno
+    Controllers -->|"10. DTOs"| BusinessServices
+    BusinessServices -->|"11. Regras de Negócio + Gamificação"| Repositories
+
+    %% 6. Persistência
+    Repositories -->|"12. SQL Queries"| MySQL
+    MySQL -->|"13. Result Set"| Repositories
 ```
 
 ### Padrões de Projeto Utilizados
@@ -234,31 +248,29 @@ public record TransactionDTO(
 #### 🔒 **Dependency Injection**
 Injeção de dependências gerenciada pelo Spring
 
-#### 🎭 **Strategy Pattern**
-Implementado no sistema de missões (diferentes triggers)
-
-#### 📡 **Observer Pattern**
-Sistema de eventos para missões (GoalCompletedEvent, LessonCompletedEvent)
-
 #### 🏭 **Service Layer Pattern**
 Camada intermediária entre controllers e repositories
 
 ---
 
-## 📄 Licença
+## 📦 Recursos e Documentos
 
-Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
+Abaixo estão os materiais complementares para avaliação do projeto:
+
+[![Documentação API](https://img.shields.io/badge/Documentação_API-PDF-EC1C24?style=for-the-badge&logo=adobeacrobatreader&logoColor=white)](./docs/Documentacao_Tecnica_API_FinQuest.pdf)
+[![Assista ao Vídeo](https://img.shields.io/badge/Assista_ao_Vídeo-Google_Drive-4285F4?style=for-the-badge&logo=google-drive&logoColor=white)](https://drive.google.com/file/d/1eiGSFRzTIaQocQIsbClvT7hl1HeUs4Lx/view?usp=sharing)
 
 ---
 
 ## 👥 Equipe
 
-Desenvolvido por:
-
-- **Luis Henrique Aguiar**
-- **Cristiano Rodrigues de Oliveira**
-- **Érika Santana Alves**
-- **Matheus Mantovani**
-- **João Andolpho**
-
+| Nome Completo | Prontuário |
+| :--- | :---: |
+| **Luis Henrique Aguiar** | AQ302234X |
+| **Cristiano Rodrigues de Oliveira** | AQ3022641 |
+| **Érika Santana Alves** | AQ3022722 |
+| **Matheus Mantovani** | AQ3022927 |
+| **João Andolpho** | AQ3022501 |
 ---
+
+<div align="center"> <sub>FinQuest © 2025 - Educação Financeira para Todos</sub> </div>
