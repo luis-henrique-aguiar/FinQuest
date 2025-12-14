@@ -3,6 +3,7 @@ package br.edu.ifsp.prsi.finquest.controller;
 import br.edu.ifsp.prsi.finquest.dto.*;
 import br.edu.ifsp.prsi.finquest.service.GoalService;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -26,7 +27,7 @@ public class GoalController {
     ) {
         String userId = userDetails.getUsername();
         GoalDTO responseDto = goalService.createGoal(userId, request);
-        return ResponseEntity.ok(responseDto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(responseDto);
     }
 
     @PutMapping("/{goalId}")
