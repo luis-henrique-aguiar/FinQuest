@@ -87,7 +87,7 @@ class GoalControllerIntegrationTest {
         String response = mockMvc.perform(post("/goals")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(createJson))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
 
         // Extrair ID da meta criada

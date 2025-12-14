@@ -1,17 +1,13 @@
 name: CI Pipeline - FinQuest
 
 on:
-  push:
-    branches:
-      - '**'
-      - '!develop'
-      - '!staging'
-      - '!main'
   pull_request:
     branches:
       - develop
-      - staging
       - main
+  push:
+    branches:
+      - develop
   workflow_dispatch:
 
 jobs:
@@ -54,8 +50,11 @@ jobs:
           distribution: "temurin"
           cache: "maven"
 
-      - name: Run Backend Tests with Maven
+      - name: Run Backend Tests
         run: ./mvnw test -B -Dspring.profiles.active=test
+
+      - name: Verify Production Build
+        run: ./mvnw package -DskipTests -P !local -B
 
   test-frontend:
     needs: changes
@@ -76,7 +75,13 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install Frontend Dependencies
-        run: npm install
+        run: npm ci
+
+      - name: Run Lint
+        run: npm run lint --if-present
 
       - name: Run Frontend Tests
-        run: npm test
+        run: npm test --if-present
+
+      - name: Verify Frontend Build
+        run: npm run build
