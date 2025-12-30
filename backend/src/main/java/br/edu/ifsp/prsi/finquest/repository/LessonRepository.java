@@ -19,4 +19,14 @@ public interface LessonRepository extends JpaRepository<Lesson, String> {
 
     long countByCourseId(String courseId);
 
+    // Content Management Queries
+    boolean existsByCourseIdAndLessonOrder(String courseId, Integer lessonOrder);
+
+    @Query("SELECT l FROM Lesson l JOIN FETCH l.course c " +
+           "WHERE l.deletedAt IS NULL " +
+           "AND (:courseId IS NULL OR c.id = :courseId) " +
+           "AND (:isDraft IS NULL OR l.isDraft = :isDraft) " +
+           "ORDER BY c.id ASC, l.lessonOrder ASC")
+    List<Lesson> findAllForAdmin(@Param("courseId") String courseId, @Param("isDraft") Boolean isDraft);
+
 }

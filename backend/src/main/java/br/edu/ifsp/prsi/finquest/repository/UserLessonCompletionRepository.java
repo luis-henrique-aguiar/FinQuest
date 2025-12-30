@@ -47,4 +47,6 @@ public interface UserLessonCompletionRepository extends JpaRepository<UserLesson
 
     long countByUserId(String userId);
 
+    long countByLessonId(String lessonId);
+
 }

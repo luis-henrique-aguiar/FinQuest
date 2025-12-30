@@ -31,6 +31,8 @@ public class LessonServiceImpl implements LessonService {
     private final UserEnrollmentRepository enrollmentRepository;
     private final AchievementRepository achievementRepository;
     private final MissionServiceImpl missionService;
+    private final CourseRepository courseRepository;
+    private final AlternativeRepository alternativeRepository;
 
     public LessonServiceImpl(
             LessonRepository lessonRepository,
@@ -40,7 +42,9 @@ public class LessonServiceImpl implements LessonService {
             UserRepository userRepository,
             UserEnrollmentRepository enrollmentRepository,
             AchievementRepository achievementRepository,
-            MissionServiceImpl missionService
+            MissionServiceImpl missionService,
+            CourseRepository courseRepository,
+            AlternativeRepository alternativeRepository
     ) {
         this.lessonRepository = lessonRepository;
         this.questionRepository = questionRepository;
@@ -50,6 +54,181 @@ public class LessonServiceImpl implements LessonService {
         this.enrollmentRepository = enrollmentRepository;
         this.achievementRepository = achievementRepository;
         this.missionService = missionService;
+        this.courseRepository = courseRepository;
+        this.alternativeRepository = alternativeRepository;
+    }
+
+    // ========================================
+    // Content Management Methods
+    // ========================================
+
+    @Override
+    @Transactional
+    public LessonDetailsDTO createLesson(LessonCreateDTO dto) {
+        logger.info("Criando nova lição: courseId={}, order={}, title={}", 
+            dto.courseId(), dto.lessonOrder(), dto.title());
+
+        // Validate course exists
+        Course course = courseRepository.findById(dto.courseId())
+                .orElseThrow(() -> {
+                    logger.warn("Curso não encontrado: {}", dto.courseId());
+                    return new EntityNotFoundException("Curso não encontrado: " + dto.courseId());
+                });
+
+        // Validate unique (courseId, lessonOrder)
+        if (lessonRepository.existsByCourseIdAndLessonOrder(dto.courseId(), dto.lessonOrder())) {
+            logger.warn("Ordem duplicada: courseId={}, order={}", dto.courseId(), dto.lessonOrder());
+            throw new BusinessException("Já existe uma lição com esta ordem neste curso");
+        }
+
+        // Generate lesson ID in format "M{courseId}-L{order}"
+        String lessonId = String.format("M%s-L%d", dto.courseId(), dto.lessonOrder());
+
+        // Create and save lesson
+        Lesson lesson = new Lesson();
+        lesson.setId(lessonId);
+        lesson.setTitle(dto.title());
+        lesson.setCourse(course);
+        lesson.setLessonOrder(dto.lessonOrder());
+        lesson.setContent(dto.content());
+        lesson.setRecFinPoints(dto.recFinPoints());
+        lesson.setIsDraft(dto.isDraft() != null ? dto.isDraft() : true);
+
+        lessonRepository.save(lesson);
+
+        logger.info("✅ Lição criada com sucesso: id={}", lessonId);
+
+        return new LessonDetailsDTO(lesson, null, null);
+    }
+
+    @Override
+    @Transactional
+    public LessonDetailsDTO updateLesson(String lessonId, LessonUpdateDTO dto) {
+        logger.info("Atualizando lição: lessonId={}", lessonId);
+
+        Lesson lesson = findLessonOrThrow(lessonId);
+
+        // Update only non-null fields
+        if (dto.title() != null) {
+            lesson.setTitle(dto.title());
+        }
+        if (dto.content() != null) {
+            lesson.setContent(dto.content());
+        }
+        if (dto.recFinPoints() != null) {
+            lesson.setRecFinPoints(dto.recFinPoints());
+        }
+        if (dto.isDraft() != null) {
+            lesson.setIsDraft(dto.isDraft());
+        }
+
+        // lastModified is automatically updated by @PreUpdate
+
+        lessonRepository.save(lesson);
+
+        logger.info("✅ Lição atualizada: id={}", lessonId);
+
+        return new LessonDetailsDTO(lesson, null, null);
+    }
+
+    @Override
+    @Transactional
+    public void deleteLesson(String lessonId) {
+        logger.info("Deletando lição: lessonId={}", lessonId);
+
+        Lesson lesson = findLessonOrThrow(lessonId);
+
+        // Check if users have completed this lesson
+        long completionCount = completionRepository.countByLessonId(lessonId);
+        if (completionCount > 0) {
+            logger.warn("Tentativa de deletar lição com {} conclusões", completionCount);
+            throw new BusinessException(
+                String.format("Não é possível deletar esta lição. %d usuário(s) já completaram.", completionCount)
+            );
+        }
+
+        // Soft delete: set deletedAt timestamp
+        lesson.setDeletedAt(LocalDateTime.now());
+        lessonRepository.save(lesson);
+
+        logger.info("✅ Lição deletada (soft delete): id={}", lessonId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<LessonSummaryDTO> getAllLessonsForAdmin(String courseId, Boolean isDraft) {
+        logger.debug("Buscando lições para admin: courseId={}, isDraft={}", courseId, isDraft);
+
+        List<Lesson> lessons = lessonRepository.findAllForAdmin(courseId, isDraft);
+
+        return lessons.stream()
+                .map(lesson -> new LessonSummaryDTO(
+                        lesson.getId(),
+                        lesson.getTitle(),
+                        lesson.getCourse().getId(),
+                        lesson.getCourse().getTitle(),
+                        lesson.getLessonOrder(),
+                        lesson.getIsDraft(),
+                        lesson.getLastModified()
+                ))
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public void updateLessonQuiz(String lessonId, List<QuizCreateDTO> quizDTOs) {
+        logger.info("Atualizando quiz da lição: lessonId={}, totalQuestions={}", lessonId, quizDTOs.size());
+
+        // Verify lesson exists
+        Lesson lesson = findLessonOrThrow(lessonId);
+
+        // Delete existing quiz questions
+        List<Question> existingQuestions = questionRepository.findAllByLessonIdOrderByOrderAsc(lessonId);
+        for (Question q : existingQuestions) {
+            alternativeRepository.deleteAll(q.getAlternatives());
+        }
+        questionRepository.deleteAll(existingQuestions);
+
+        logger.debug("Quiz antigo removido: {} questões deletadas", existingQuestions.size());
+
+        // Create new quiz questions
+        int order = 1;
+        for (QuizCreateDTO dto : quizDTOs) {
+            // Validate options
+            if (dto.options().size() != 4) {
+                throw new BusinessException("Cada questão deve ter exatamente 4 opções");
+            }
+
+            // Validate correctAnswer is one of the option letters
+            boolean validAnswer = dto.options().stream()
+                    .anyMatch(opt -> opt.letter().equals(dto.correctAnswer()));
+            if (!validAnswer) {
+                throw new BusinessException(
+                    "A resposta correta deve ser uma das letras das opções (A, B, C ou D)"
+                );
+            }
+
+            // Create Question
+            Question question = new Question();
+            question.setLesson(lesson);
+            question.setStatement(dto.question());
+            question.setOrder(order++);
+            question.setExplanation(dto.explanation());
+
+            questionRepository.save(question);
+
+            // Create Alternatives
+            for (QuizOptionDTO optionDTO : dto.options()) {
+                Alternative alternative = new Alternative();
+                alternative.setQuestion(question);
+                alternative.setText(optionDTO.text());
+                alternative.setIsCorrect(optionDTO.letter().equals(dto.correctAnswer()));
+
+                alternativeRepository.save(alternative);
+            }
+        }
+
+        logger.info("✅ Quiz atualizado com sucesso: {} questões criadas", quizDTOs.size());
     }
 
     @Override
