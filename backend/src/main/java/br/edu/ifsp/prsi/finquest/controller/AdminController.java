@@ -119,6 +119,37 @@ public class AdminController {
         return ResponseEntity.ok(courses);
     }
 
+    @PostMapping("/courses")
+    public ResponseEntity<CourseSimpleDTO> createCourse(@Valid @RequestBody CourseCreateDTO dto) {
+        logger.info("Admin criando novo curso: {}", dto.id());
+        CourseSimpleDTO course = adminService.createCourse(dto);
+        return ResponseEntity.status(201).body(course);
+    }
+
+    @PutMapping("/courses/{courseId}")
+    public ResponseEntity<CourseSimpleDTO> updateCourse(
+            @PathVariable String courseId,
+            @Valid @RequestBody CourseUpdateDTO dto
+    ) {
+        logger.info("Admin atualizando curso: {}", courseId);
+        CourseSimpleDTO course = adminService.updateCourse(courseId, dto);
+        return ResponseEntity.ok(course);
+    }
+
+    @DeleteMapping("/courses/{courseId}")
+    public ResponseEntity<Void> deleteCourse(@PathVariable String courseId) {
+        logger.warn("Admin deletando curso: {}", courseId);
+        adminService.deleteCourse(courseId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/courses/{courseId}/availability")
+    public ResponseEntity<java.util.Map<String, Boolean>> checkCourseIdAvailability(@PathVariable String courseId) {
+        logger.debug("Verificando disponibilidade do ID do curso: {}", courseId);
+        boolean available = adminService.isCourseIdAvailable(courseId);
+        return ResponseEntity.ok(java.util.Map.of("available", available));
+    }
+
     @GetMapping("/courses/{courseId}/lesson-orders")
     public ResponseEntity<List<Integer>> getOccupiedLessonOrders(@PathVariable String courseId) {
         List<Integer> occupiedOrders = lessonService.getOccupiedLessonOrders(courseId);

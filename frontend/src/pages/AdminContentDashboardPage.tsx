@@ -10,14 +10,17 @@ import {
   FileText,
   CheckCircle,
   Clock,
+  FolderPlus,
 } from "lucide-react";
 import { useToast } from "../hooks/useToast";
 import {
   getCoursesWithLessons,
   deleteLesson,
+  deleteCourse,
   type CourseWithLessons,
   type LessonSummaryDTO,
 } from "../services/contentService";
+import CourseModuleModal from "../components/CourseModuleModal";
 import * as S from "./AdminContentDashboardPage.styles";
 
 const AdminContentDashboardPage: React.FC = () => {
@@ -28,6 +31,8 @@ const AdminContentDashboardPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [expandedCourses, setExpandedCourses] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
+  const [moduleModalOpen, setModuleModalOpen] = useState(false);
+  const [editingModule, setEditingModule] = useState<any | null>(null);
 
   useEffect(() => {
     loadCoursesWithLessons();
@@ -87,6 +92,37 @@ const AdminContentDashboardPage: React.FC = () => {
 
   const handleCollapseAll = () => {
     setExpandedCourses(new Set());
+  };
+
+  const handleCreateModule = () => {
+    setEditingModule(null);
+    setModuleModalOpen(true);
+  };
+
+  const handleEditModule = (course: CourseWithLessons) => {
+    setEditingModule({
+      id: course.id,
+      title: course.title,
+      description: course.description,
+      icon: '📚',
+      recFinPoints: 100,
+    });
+    setModuleModalOpen(true);
+  };
+
+  const handleDeleteModule = async (courseId: string, courseTitle: string) => {
+    if (!window.confirm(`Tem certeza que deseja excluir o módulo "${courseTitle}"?`)) {
+      return;
+    }
+
+    try {
+      await deleteCourse(courseId);
+      addToast("Módulo excluído com sucesso", "success");
+      loadCoursesWithLessons();
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.message || "Erro ao excluir módulo";
+      addToast(errorMessage, "error");
+    }
   };
 
   // Filtrar cursos e lições com base na busca
@@ -212,6 +248,10 @@ const AdminContentDashboardPage: React.FC = () => {
           <S.ActionButton $variant="outline" onClick={handleCollapseAll}>
             Recolher Todos
           </S.ActionButton>
+          <S.ActionButton $variant="primary" onClick={handleCreateModule}>
+            <FolderPlus size={16} />
+            Novo Módulo
+          </S.ActionButton>
           <S.ActionButton $variant="primary" onClick={handleCreateLesson}>
             <Plus size={16} />
             Nova Lição
@@ -263,6 +303,22 @@ const AdminContentDashboardPage: React.FC = () => {
                     {course.lessons.length}{" "}
                     {course.lessons.length === 1 ? "lição" : "lições"}
                   </S.CourseBadge>
+
+                  <S.ModuleActions onClick={(e) => e.stopPropagation()}>
+                    <S.IconButton
+                      onClick={() => handleEditModule(course)}
+                      title="Editar módulo"
+                    >
+                      <Edit2 size={16} />
+                    </S.IconButton>
+                    <S.IconButton
+                      className="danger"
+                      onClick={() => handleDeleteModule(course.id, course.title)}
+                      title="Excluir módulo"
+                    >
+                      <Trash2 size={16} />
+                    </S.IconButton>
+                  </S.ModuleActions>
                 </S.CourseHeader>
 
                 {isExpanded && (
@@ -333,6 +389,13 @@ const AdminContentDashboardPage: React.FC = () => {
           })}
         </S.CoursesContainer>
       )}
+
+      <CourseModuleModal
+        isOpen={moduleModalOpen}
+        onClose={() => setModuleModalOpen(false)}
+        onSuccess={loadCoursesWithLessons}
+        editingCourse={editingModule}
+      />
     </S.PageContainer>
   );
 };

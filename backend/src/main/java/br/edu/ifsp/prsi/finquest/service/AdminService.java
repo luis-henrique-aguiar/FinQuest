@@ -1,7 +1,9 @@
 package br.edu.ifsp.prsi.finquest.service;
 
 import br.edu.ifsp.prsi.finquest.dto.AdminStatsDTO;
+import br.edu.ifsp.prsi.finquest.dto.CourseCreateDTO;
 import br.edu.ifsp.prsi.finquest.dto.CourseSimpleDTO;
+import br.edu.ifsp.prsi.finquest.dto.CourseUpdateDTO;
 import br.edu.ifsp.prsi.finquest.dto.CourseWithLessonsDTO;
 import br.edu.ifsp.prsi.finquest.dto.UserSummaryDTO;
 import org.springframework.data.domain.Page;
@@ -20,5 +22,13 @@ public interface AdminService {
     List<CourseSimpleDTO> getAllCourses();
 
     List<CourseWithLessonsDTO> getAllCoursesWithLessons();
+
+    CourseSimpleDTO createCourse(CourseCreateDTO dto);
+
+    CourseSimpleDTO updateCourse(String courseId, CourseUpdateDTO dto);
+
+    void deleteCourse(String courseId);
+
+    boolean isCourseIdAvailable(String courseId);
 
 }

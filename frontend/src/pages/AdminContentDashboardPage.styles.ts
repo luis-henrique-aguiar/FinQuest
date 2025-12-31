@@ -236,6 +236,12 @@ export const ExpandIcon = styled.div<{ $isExpanded: boolean }>`
   }
 `;
 
+export const ModuleActions = styled.div`
+  display: flex;
+  gap: ${({ theme }) => theme.spacing.xs};
+  margin-left: auto;
+`;
+
 export const LessonsList = styled(motion.div)`
   padding: ${({ theme }) => `0 ${theme.spacing.lg} ${theme.spacing.lg}`};
   border-top: 1px solid ${({ theme }) => theme.colors.border};

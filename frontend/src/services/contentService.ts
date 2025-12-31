@@ -160,6 +160,60 @@ export const getCoursesWithLessons = async (): Promise<CourseWithLessons[]> => {
   }
 };
 
+export interface CourseCreateDTO {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  recFinPoints: number;
+}
+
+export interface CourseUpdateDTO {
+  title?: string;
+  description?: string;
+  icon?: string;
+  recFinPoints?: number;
+}
+
+export const createCourse = async (dto: CourseCreateDTO): Promise<{ id: string; title: string; description: string }> => {
+  try {
+    const response = await api.post('/admin/courses', dto);
+    return response.data;
+  } catch (error) {
+    console.error('Erro ao criar curso:', error);
+    throw error;
+  }
+};
+
+export const updateCourse = async (courseId: string, dto: CourseUpdateDTO): Promise<{ id: string; title: string; description: string }> => {
+  try {
+    const response = await api.put(`/admin/courses/${courseId}`, dto);
+    return response.data;
+  } catch (error) {
+    console.error(`Erro ao atualizar curso ${courseId}:`, error);
+    throw error;
+  }
+};
+
+export const deleteCourse = async (courseId: string): Promise<void> => {
+  try {
+    await api.delete(`/admin/courses/${courseId}`);
+  } catch (error) {
+    console.error(`Erro ao deletar curso ${courseId}:`, error);
+    throw error;
+  }
+};
+
+export const checkCourseIdAvailability = async (courseId: string): Promise<boolean> => {
+  try {
+    const response = await api.get(`/admin/courses/${courseId}/availability`);
+    return response.data.available;
+  } catch (error) {
+    console.error(`Erro ao verificar disponibilidade do curso ${courseId}:`, error);
+    return false;
+  }
+};
+
 export const contentService = {
   getAllLessons,
   getLessonContent,
@@ -171,6 +225,10 @@ export const contentService = {
   getAllCourses,
   getOccupiedLessonOrders,
   getCoursesWithLessons,
+  createCourse,
+  updateCourse,
+  deleteCourse,
+  checkCourseIdAvailability,
 };
 
 export default contentService;
