@@ -23,4 +23,12 @@ public interface LessonService {
 
     void updateLessonQuiz(String lessonId, List<QuizCreateDTO> questions);
 
+    List<Integer> getOccupiedLessonOrders(String courseId);
+
+    void reorderLessons(String courseId, List<LessonReorderDTO> reorders);
+
+    String getLessonContentForAdmin(String lessonId);
+
+    String getLessonContent(String lessonId);
+
 }

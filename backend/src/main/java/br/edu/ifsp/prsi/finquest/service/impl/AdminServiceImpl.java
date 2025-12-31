@@ -1,14 +1,19 @@
 package br.edu.ifsp.prsi.finquest.service.impl;
 
 import br.edu.ifsp.prsi.finquest.dto.AdminStatsDTO;
+import br.edu.ifsp.prsi.finquest.dto.CourseSimpleDTO;
+import br.edu.ifsp.prsi.finquest.dto.CourseWithLessonsDTO;
+import br.edu.ifsp.prsi.finquest.dto.LessonSummaryDTO;
 import br.edu.ifsp.prsi.finquest.dto.UserSummaryDTO;
 import br.edu.ifsp.prsi.finquest.exception.BusinessException;
+import br.edu.ifsp.prsi.finquest.model.Course;
 import br.edu.ifsp.prsi.finquest.model.User;
 import br.edu.ifsp.prsi.finquest.model.UserLessonCompletion;
 import br.edu.ifsp.prsi.finquest.model.enums.MissionStatus;
 import br.edu.ifsp.prsi.finquest.model.enums.UserRole;
 import br.edu.ifsp.prsi.finquest.repository.*;
 import br.edu.ifsp.prsi.finquest.service.AdminService;
+import br.edu.ifsp.prsi.finquest.service.LessonService;
 import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,15 +36,21 @@ public class AdminServiceImpl implements AdminService {
     private final UserRepository userRepository;
     private final UserLessonCompletionRepository lessonCompletionRepository;
     private final UserMissionProgressRepository missionProgressRepository;
+    private final CourseRepository courseRepository;
+    private final LessonService lessonService;
 
     public AdminServiceImpl(
             UserRepository userRepository,
             UserLessonCompletionRepository lessonCompletionRepository,
-            UserMissionProgressRepository missionProgressRepository
+            UserMissionProgressRepository missionProgressRepository,
+            CourseRepository courseRepository,
+            LessonService lessonService
     ) {
         this.userRepository = userRepository;
         this.lessonCompletionRepository = lessonCompletionRepository;
         this.missionProgressRepository = missionProgressRepository;
+        this.courseRepository = courseRepository;
+        this.lessonService = lessonService;
     }
 
     @Override
@@ -107,6 +118,45 @@ public class AdminServiceImpl implements AdminService {
         userRepository.save(targetUser);
 
         logger.info("SUCESSO: Usuário {} promovido a ADMIN por {}.", targetUserId, adminUserId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CourseSimpleDTO> getAllCourses() {
+        logger.debug("Listando todos os cursos disponíveis");
+        
+        List<Course> courses = courseRepository.findAll();
+        
+        logger.debug("Total de {} cursos encontrados", courses.size());
+        
+        return courses.stream()
+                .map(CourseSimpleDTO::new)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CourseWithLessonsDTO> getAllCoursesWithLessons() {
+        logger.info("Fetching all courses with nested lessons for content dashboard");
+        long startTime = System.currentTimeMillis();
+
+        List<Course> courses = courseRepository.findAll();
+
+        List<CourseWithLessonsDTO> result = courses.stream()
+                .map(course -> {
+                    List<LessonSummaryDTO> lessons = lessonService
+                            .getAllLessonsForAdmin(course.getId(), null)
+                            .stream()
+                            .sorted((a, b) -> a.lessonOrder().compareTo(b.lessonOrder()))
+                            .toList();
+                    return new CourseWithLessonsDTO(course, lessons);
+                })
+                .toList();
+
+        long duration = System.currentTimeMillis() - startTime;
+        logger.info("Fetched {} courses with total lessons in {}ms", result.size(), duration);
+
+        return result;
     }
 
     private UserSummaryDTO buildUserSummary(User user) {

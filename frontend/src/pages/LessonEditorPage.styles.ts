@@ -164,6 +164,98 @@ export const Input = styled.input`
   }
 `;
 
+export const Select = styled.select`
+  padding: 12px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.borderRadius.medium};
+  font-size: ${({ theme }) => theme.typography.fontSize.body};
+  color: ${({ theme }) => theme.colors.textDark};
+  background-color: ${({ theme }) => theme.colors.white};
+  transition: all ${({ theme }) => theme.animations.fast};
+  cursor: pointer;
+
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.primary};
+    box-shadow: 0 0 0 3px ${({ theme }) => theme.colors.primary}20;
+  }
+
+  option {
+    padding: 8px;
+  }
+`;
+
+export const OrderInputGroup = styled.div`
+  display: flex;
+  gap: ${({ theme }) => theme.spacing.sm};
+  align-items: flex-start;
+`;
+
+export const OrderInput = styled.input`
+  flex: 1;
+  padding: 12px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.borderRadius.medium};
+  font-size: ${({ theme }) => theme.typography.fontSize.body};
+  color: ${({ theme }) => theme.colors.textDark};
+  background-color: ${({ theme }) => theme.colors.white};
+  transition: all ${({ theme }) => theme.animations.fast};
+
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.primary};
+    box-shadow: 0 0 0 3px ${({ theme }) => theme.colors.primary}20;
+  }
+`;
+
+export const QuickOrderButtons = styled.div`
+  display: flex;
+  gap: ${({ theme }) => theme.spacing.xs};
+`;
+
+export const QuickOrderButton = styled.button`
+  padding: 10px 14px;
+  background-color: ${({ theme }) => theme.colors.backgroundAlt};
+  color: ${({ theme }) => theme.colors.textDark};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.borderRadius.medium};
+  font-size: ${({ theme }) => theme.typography.fontSize.caption};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.semiBold};
+  cursor: pointer;
+  transition: all ${({ theme }) => theme.animations.fast};
+  white-space: nowrap;
+
+  &:hover:not(:disabled) {
+    background-color: ${({ theme }) => theme.colors.primary};
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: ${({ theme }) => theme.shadows.small};
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+export const OrderHint = styled.p`
+  margin: ${({ theme }) => theme.spacing.xs} 0 0 0;
+  font-size: ${({ theme }) => theme.typography.fontSize.caption};
+  color: ${({ theme }) => theme.colors.textMedium};
+  font-style: italic;
+`;
+
+export const OrderWarning = styled.p`
+  margin: ${({ theme }) => theme.spacing.xs} 0 0 0;
+  font-size: ${({ theme }) => theme.typography.fontSize.caption};
+  color: ${({ theme }) => theme.colors.error};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.semiBold};
+`;
+
 export const EditorSection = styled.section`
   flex: 1;
   display: flex;

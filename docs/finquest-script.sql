@@ -37,47 +37,47 @@ VALUES
 ('M4', 'Passos Avançados', 'Aprenda os conteúdos mais avançados das finanças e se torne um investidor de sucesso.', '🚀', 120);
 
 -- 3. INSERÇÃO DAS LIÇÕES (Lista Consolidada e Mapeada)
-INSERT IGNORE INTO lessons (id, course_id, title, rec_fin_points, lesson_order)
+INSERT IGNORE INTO lessons (id, course_id, title, rec_fin_points, lesson_order, content_url, is_draft, last_modified)
 VALUES
 -- M0: Introdução
-('M0-L1', 'M0', ' A História de Alex (E a Sua Também)', 20, 1),
-('M0-L2', 'M0', '"Não Sei Para Onde Meu Dinheiro Vai..."', 30, 2),
-('M0-L3', 'M0', 'Os 3 Pilares da Educação Financeira', 50, 3),
-('M0-L4', 'M0', 'Como o FinQuest Vai Te Ajudar', 20, 4),
+('M0-L1', 'M0', ' A História de Alex (E a Sua Também)', 20, 1, 'lessons/M0-L1.md', false, NOW()),
+('M0-L2', 'M0', '"Não Sei Para Onde Meu Dinheiro Vai..."', 30, 2, 'lessons/M0-L2.md', false, NOW()),
+('M0-L3', 'M0', 'Os 3 Pilares da Educação Financeira', 50, 3, 'lessons/M0-L3.md', false, NOW()),
+('M0-L4', 'M0', 'Como o FinQuest Vai Te Ajudar', 20, 4, 'lessons/M0-L4.md', false, NOW()),
 
 -- M1: A Psicologia do Dinheiro (Mapeamento de Q4 a Q18)
-('M1-L1', 'M1', 'A Disciplina: O Motor da Educação Financeira', 20, 1),
-('M1-L2', 'M1', 'Proteja Seu Dinheiro: A Armadilha do "Dinheiro Fácil"', 30, 2),
-('M1-L3', 'M1', 'O Plano de Virada: Como Sair das Dívidas e Fortalecer sua Mente', 50, 3),
-('M1-L4', 'M1', 'As Armadilhas do Consumo: Por Que Compramos o Que Não Precisamos?', 20, 4),
+('M1-L1', 'M1', 'A Disciplina: O Motor da Educação Financeira', 20, 1, 'lessons/M1-L1.md', false, NOW()),
+('M1-L2', 'M1', 'Proteja Seu Dinheiro: A Armadilha do "Dinheiro Fácil"', 30, 2, 'lessons/M1-L2.md', false, NOW()),
+('M1-L3', 'M1', 'O Plano de Virada: Como Sair das Dívidas e Fortalecer sua Mente', 50, 3, 'lessons/M1-L3.md', false, NOW()),
+('M1-L4', 'M1', 'As Armadilhas do Consumo: Por Que Compramos o Que Não Precisamos?', 20, 4, 'lessons/M1-L4.md', false, NOW()),
 
 -- M2: Primeiros Passos (Mapeamento de Q19 a Q42)
-('M2-L1', 'M2', 'A Importância da Educação Financeira na Sua Vida', 20, 1), -- (Não há questões diretas, mas é a lição de contexto)
-('M2-L2', 'M2', 'Como a Economia Brasileira Funciona: O Jogo do Dinheiro', 30, 2),
-('M2-L3', 'M2', 'O que é a reserva de emergência e qual a sua importância?', 50, 3),
-('M2-L4', 'M2', 'A Inflação: O Inimigo Invisível do Seu Poder de Compra', 20, 4),
-('M2-L5', 'M2', 'A Taxa Selic: O Volante da Economia Brasileira', 20, 5),
-('M2-L6', 'M2', 'Dívidas e Crédito: Ferramentas de Doble Fio', 30, 6),
-('M2-L7', 'M2', 'O Poder dos Juros Compostos', 50, 7), -- (Não há questões diretas, mas está na lista)
-('M2-L8', 'M2', 'A Bolsa de Valores: Tornando-se Sócio de Grandes Empresas', 20, 8),
-('M2-L9', 'M2', 'Quem Manda no Jogo? A Importância dos Órgãos Financeiros', 20, 9), -- (Não há questões diretas)
+('M2-L1', 'M2', 'A Importância da Educação Financeira na Sua Vida', 20, 1, 'lessons/M2-L1.md', false, NOW()),
+('M2-L2', 'M2', 'Como a Economia Brasileira Funciona: O Jogo do Dinheiro', 30, 2, 'lessons/M2-L2.md', false, NOW()),
+('M2-L3', 'M2', 'O que é a reserva de emergência e qual a sua importância?', 50, 3, 'lessons/M2-L3.md', false, NOW()),
+('M2-L4', 'M2', 'A Inflação: O Inimigo Invisível do Seu Poder de Compra', 20, 4, 'lessons/M2-L4.md', false, NOW()),
+('M2-L5', 'M2', 'A Taxa Selic: O Volante da Economia Brasileira', 20, 5, 'lessons/M2-L5.md', false, NOW()),
+('M2-L6', 'M2', 'Dívidas e Crédito: Ferramentas de Doble Fio', 30, 6, 'lessons/M2-L6.md', false, NOW()),
+('M2-L7', 'M2', 'O Poder dos Juros Compostos', 50, 7, 'lessons/M2-L7.md', false, NOW()),
+('M2-L8', 'M2', 'A Bolsa de Valores: Tornando-se Sócio de Grandes Empresas', 20, 8, 'lessons/M2-L8.md', false, NOW()),
+('M2-L9', 'M2', 'Quem Manda no Jogo? A Importância dos Órgãos Financeiros', 20, 9, 'lessons/M2-L9.md', false, NOW()),
 
 -- M3: Aprenda a Investir (Mapeamento de Q43 a Q71)
-('M3-L1', 'M3', 'Entendendo sobre Investimentos', 20, 1),
-('M3-L2', 'M3', 'Batalha dos Iniciantes: Poupança vs. Tesouro Selic', 30, 2),
-('M3-L3', 'M3', 'O Cinto de Segurança do Investidor: Entendendo o FGC', 50, 3),
-('M3-L4', 'M3', 'Renda Extra: O Acelerador da Sua Riqueza', 20, 4),
-('M3-L5', 'M3', 'Identificando o seu perfil investidor', 20, 5),
-('M3-L6', 'M3', 'O Seu Primeiro Salário: O Ponto de Partida da Sua Independência', 30, 6),
-('M3-L7', 'M3', 'LCI e LCA: O "Bônus" da Renda Fixa', 50, 7),
+('M3-L1', 'M3', 'Entendendo sobre Investimentos', 20, 1, 'lessons/M3-L1.md', false, NOW()),
+('M3-L2', 'M3', 'Batalha dos Iniciantes: Poupança vs. Tesouro Selic', 30, 2, 'lessons/M3-L2.md', false, NOW()),
+('M3-L3', 'M3', 'O Cinto de Segurança do Investidor: Entendendo o FGC', 50, 3, 'lessons/M3-L3.md', false, NOW()),
+('M3-L4', 'M3', 'Renda Extra: O Acelerador da Sua Riqueza', 20, 4, 'lessons/M3-L4.md', false, NOW()),
+('M3-L5', 'M3', 'Identificando o seu perfil investidor', 20, 5, 'lessons/M3-L5.md', false, NOW()),
+('M3-L6', 'M3', 'O Seu Primeiro Salário: O Ponto de Partida da Sua Independência', 30, 6, 'lessons/M3-L6.md', false, NOW()),
+('M3-L7', 'M3', 'LCI e LCA: O "Bônus" da Renda Fixa', 50, 7, 'lessons/M3-L7.md', false, NOW()),
 
 -- M4: Passos Avançados (Mapeamento de Q72 a Q97)
-('M4-L1', 'M4', 'Fundos de Investimento: Delegando a Gestão', 20, 1),
-('M4-L2', 'M4', 'Diversificando sua Carteira: O "Almoço Grátis" do Mercado', 30, 2),
-('M4-L3', 'M4', 'O "Cisne Negro": O que Fazer Quando Suas Ações Despencam?', 50, 3),
-('M4-L4', 'M4', 'Investindo no Exterior: A Diversificação Definitiva', 20, 4),
-('M4-L5', 'M4', 'Criptomoedas: O "Velho Oeste" de Alto Risco e Alta Tecnologia', 20, 5),
-('M4-L6', 'M4', 'A Aposentadoria: O "Fim do Jogo" da Riqueza', 30, 6);
+('M4-L1', 'M4', 'Fundos de Investimento: Delegando a Gestão', 20, 1, 'lessons/M4-L1.md', false, NOW()),
+('M4-L2', 'M4', 'Diversificando sua Carteira: O "Almoço Grátis" do Mercado', 30, 2, 'lessons/M4-L2.md', false, NOW()),
+('M4-L3', 'M4', 'O "Cisne Negro": O que Fazer Quando Suas Ações Despencam?', 50, 3, 'lessons/M4-L3.md', false, NOW()),
+('M4-L4', 'M4', 'Investindo no Exterior: A Diversificação Definitiva', 20, 4, 'lessons/M4-L4.md', false, NOW()),
+('M4-L5', 'M4', 'Criptomoedas: O "Velho Oeste" de Alto Risco e Alta Tecnologia', 20, 5, 'lessons/M4-L5.md', false, NOW()),
+('M4-L6', 'M4', 'A Aposentadoria: O "Fim do Jogo" da Riqueza', 30, 6, 'lessons/M4-L6.md', false, NOW());
 
 INSERT IGNORE INTO questions (id, lesson_id, statement, `order`, explanation)
 VALUES

@@ -5,6 +5,7 @@ import br.edu.ifsp.prsi.finquest.exception.BusinessException;
 import br.edu.ifsp.prsi.finquest.model.*;
 import br.edu.ifsp.prsi.finquest.repository.*;
 import br.edu.ifsp.prsi.finquest.service.LessonService;
+import br.edu.ifsp.prsi.finquest.service.StorageService;
 import br.edu.ifsp.prsi.finquest.service.UserService;
 import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
@@ -33,6 +34,7 @@ public class LessonServiceImpl implements LessonService {
     private final MissionServiceImpl missionService;
     private final CourseRepository courseRepository;
     private final AlternativeRepository alternativeRepository;
+    private final StorageService storageService;
 
     public LessonServiceImpl(
             LessonRepository lessonRepository,
@@ -44,7 +46,8 @@ public class LessonServiceImpl implements LessonService {
             AchievementRepository achievementRepository,
             MissionServiceImpl missionService,
             CourseRepository courseRepository,
-            AlternativeRepository alternativeRepository
+            AlternativeRepository alternativeRepository,
+            StorageService storageService
     ) {
         this.lessonRepository = lessonRepository;
         this.questionRepository = questionRepository;
@@ -56,6 +59,7 @@ public class LessonServiceImpl implements LessonService {
         this.missionService = missionService;
         this.courseRepository = courseRepository;
         this.alternativeRepository = alternativeRepository;
+        this.storageService = storageService;
     }
 
     // ========================================
@@ -84,19 +88,29 @@ public class LessonServiceImpl implements LessonService {
         // Generate lesson ID in format "M{courseId}-L{order}"
         String lessonId = String.format("M%s-L%d", dto.courseId(), dto.lessonOrder());
 
+        // Upload content to Firebase Storage
+        String contentUrl;
+        try {
+            contentUrl = storageService.uploadLessonContentFromString(dto.content(), lessonId);
+            logger.debug("Conteúdo enviado para o Storage: url={}", contentUrl);
+        } catch (Exception e) {
+            logger.error("Erro ao fazer upload do conteúdo: {}", e.getMessage(), e);
+            throw new BusinessException("Erro ao fazer upload do conteúdo: " + e.getMessage());
+        }
+
         // Create and save lesson
         Lesson lesson = new Lesson();
         lesson.setId(lessonId);
         lesson.setTitle(dto.title());
         lesson.setCourse(course);
         lesson.setLessonOrder(dto.lessonOrder());
-        lesson.setContent(dto.content());
+        lesson.setContentUrl(contentUrl);
         lesson.setRecFinPoints(dto.recFinPoints());
         lesson.setIsDraft(dto.isDraft() != null ? dto.isDraft() : true);
 
         lessonRepository.save(lesson);
 
-        logger.info("✅ Lição criada com sucesso: id={}", lessonId);
+        logger.info("✅ Lição criada com sucesso: id={}, contentUrl={}", lessonId, contentUrl);
 
         return new LessonDetailsDTO(lesson, null, null);
     }
@@ -113,7 +127,15 @@ public class LessonServiceImpl implements LessonService {
             lesson.setTitle(dto.title());
         }
         if (dto.content() != null) {
-            lesson.setContent(dto.content());
+            // Update content in Firebase Storage
+            try {
+                String updatedUrl = storageService.updateLessonContent(dto.content(), lesson.getContentUrl());
+                lesson.setContentUrl(updatedUrl);
+                logger.debug("Conteúdo atualizado no Storage: url={}", updatedUrl);
+            } catch (Exception e) {
+                logger.error("Erro ao atualizar conteúdo no storage: {}", e.getMessage(), e);
+                throw new BusinessException("Erro ao atualizar conteúdo: " + e.getMessage());
+            }
         }
         if (dto.recFinPoints() != null) {
             lesson.setRecFinPoints(dto.recFinPoints());
@@ -147,11 +169,58 @@ public class LessonServiceImpl implements LessonService {
             );
         }
 
+        // Delete content from Firebase Storage
+        try {
+            storageService.deleteLessonContent(lesson.getContentUrl());
+            logger.debug("Conteúdo removido do Storage");
+        } catch (Exception e) {
+            logger.warn("Erro ao deletar conteúdo do storage: {}", e.getMessage());
+            // Continue with soft delete even if storage deletion fails
+        }
+
         // Soft delete: set deletedAt timestamp
         lesson.setDeletedAt(LocalDateTime.now());
         lessonRepository.save(lesson);
 
         logger.info("✅ Lição deletada (soft delete): id={}", lessonId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public String getLessonContentForAdmin(String lessonId) {
+        logger.debug("Carregando conteúdo da lição para admin: lessonId={}", lessonId);
+
+        Lesson lesson = findLessonOrThrow(lessonId);
+
+        try {
+            String content = storageService.getLessonContent(lesson.getContentUrl());
+            logger.debug("Conteúdo carregado do Firebase Storage: lessonId={}, size={}bytes", 
+                lessonId, content.length());
+            return content;
+        } catch (Exception e) {
+            logger.error("Erro ao carregar conteúdo do storage: lessonId={}, url={}", 
+                lessonId, lesson.getContentUrl(), e);
+            throw new BusinessException("Erro ao carregar conteúdo da lição: " + e.getMessage());
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public String getLessonContent(String lessonId) {
+        logger.debug("Carregando conteúdo da lição para visualização: lessonId={}", lessonId);
+
+        Lesson lesson = findLessonOrThrow(lessonId);
+
+        try {
+            String content = storageService.getLessonContent(lesson.getContentUrl());
+            logger.debug("Conteúdo carregado do Firebase Storage: lessonId={}, size={}bytes", 
+                lessonId, content.length());
+            return content;
+        } catch (Exception e) {
+            logger.error("Erro ao carregar conteúdo do storage: lessonId={}, url={}", 
+                lessonId, lesson.getContentUrl(), e);
+            throw new BusinessException("Erro ao carregar conteúdo da lição: " + e.getMessage());
+        }
     }
 
     @Override
@@ -447,5 +516,54 @@ public class LessonServiceImpl implements LessonService {
 
         logger.debug("Nenhum badge configurado para o nível {}", level);
         return null;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Integer> getOccupiedLessonOrders(String courseId) {
+        logger.debug("Buscando ordens de lição ocupadas para o curso: {}", courseId);
+        
+        List<Lesson> lessons = lessonRepository.findAllByCourseId(courseId);
+        
+        List<Integer> occupiedOrders = lessons.stream()
+                .map(Lesson::getLessonOrder)
+                .sorted()
+                .toList();
+        
+        logger.debug("Ordens ocupadas no curso {}: {}", courseId, occupiedOrders);
+        
+        return occupiedOrders;
+    }
+
+    @Override
+    @Transactional
+    public void reorderLessons(String courseId, List<LessonReorderDTO> reorders) {
+        logger.info("Reordenando lições do curso: courseId={}, total={}", courseId, reorders.size());
+        
+        // Validate course exists
+        courseRepository.findById(courseId)
+                .orElseThrow(() -> {
+                    logger.warn("Curso não encontrado: {}", courseId);
+                    return new EntityNotFoundException("Curso não encontrado: " + courseId);
+                });
+        
+        // Update each lesson order
+        for (LessonReorderDTO reorder : reorders) {
+            Lesson lesson = findLessonOrThrow(reorder.lessonId());
+            
+            // Verify lesson belongs to the course
+            if (!lesson.getCourse().getId().equals(courseId)) {
+                logger.warn("Tentativa de reordenar lição de outro curso: lessonId={}, expectedCourse={}, actualCourse={}",
+                        reorder.lessonId(), courseId, lesson.getCourse().getId());
+                throw new BusinessException("A lição " + reorder.lessonId() + " não pertence ao curso " + courseId);
+            }
+            
+            lesson.setLessonOrder(reorder.newOrder());
+            lessonRepository.save(lesson);
+            
+            logger.debug("Lição reordenada: lessonId={}, newOrder={}", reorder.lessonId(), reorder.newOrder());
+        }
+        
+        logger.info("✅ Reordenação concluída: {} lições atualizadas no curso {}", reorders.size(), courseId);
     }
 }

@@ -3,6 +3,8 @@ package br.edu.ifsp.prsi.finquest.controller;
 import br.edu.ifsp.prsi.finquest.dto.*;
 import br.edu.ifsp.prsi.finquest.service.AdminService;
 import br.edu.ifsp.prsi.finquest.service.LessonService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -20,6 +22,8 @@ import java.util.List;
 @RequestMapping("/admin")
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminController {
+
+    private static final Logger logger = LoggerFactory.getLogger(AdminController.class);
 
     private final AdminService adminService;
     private final LessonService lessonService;
@@ -65,6 +69,13 @@ public class AdminController {
         return ResponseEntity.ok(lessons);
     }
 
+    @GetMapping("/lessons/{lessonId}/content")
+    public ResponseEntity<String> getLessonContent(@PathVariable String lessonId) {
+        logger.debug("Fetching content for lesson: {}", lessonId);
+        String content = lessonService.getLessonContentForAdmin(lessonId);
+        return ResponseEntity.ok(content);
+    }
+
     @PostMapping("/lessons")
     public ResponseEntity<LessonDetailsDTO> createLesson(@Valid @RequestBody LessonCreateDTO dto) {
         LessonDetailsDTO lesson = lessonService.createLesson(dto);
@@ -92,6 +103,34 @@ public class AdminController {
             @Valid @RequestBody List<QuizCreateDTO> questions
     ) {
         lessonService.updateLessonQuiz(lessonId, questions);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/courses")
+    public ResponseEntity<List<CourseSimpleDTO>> getAllCourses() {
+        List<CourseSimpleDTO> courses = adminService.getAllCourses();
+        return ResponseEntity.ok(courses);
+    }
+
+    @GetMapping("/courses-with-lessons")
+    public ResponseEntity<List<CourseWithLessonsDTO>> getAllCoursesWithLessons() {
+        logger.debug("Fetching all courses with lessons for admin content dashboard");
+        List<CourseWithLessonsDTO> courses = adminService.getAllCoursesWithLessons();
+        return ResponseEntity.ok(courses);
+    }
+
+    @GetMapping("/courses/{courseId}/lesson-orders")
+    public ResponseEntity<List<Integer>> getOccupiedLessonOrders(@PathVariable String courseId) {
+        List<Integer> occupiedOrders = lessonService.getOccupiedLessonOrders(courseId);
+        return ResponseEntity.ok(occupiedOrders);
+    }
+
+    @PutMapping("/courses/{courseId}/lessons/reorder")
+    public ResponseEntity<Void> reorderLessons(
+            @PathVariable String courseId,
+            @Valid @RequestBody List<LessonReorderDTO> reorders
+    ) {
+        lessonService.reorderLessons(courseId, reorders);
         return ResponseEntity.ok().build();
     }
 }

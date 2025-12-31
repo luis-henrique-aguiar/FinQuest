@@ -123,6 +123,43 @@ export const saveDraft = async (
   }
 };
 
+export const getAllCourses = async (): Promise<{ id: string; title: string; description: string }[]> => {
+  try {
+    const response = await api.get('/admin/courses');
+    return response.data;
+  } catch (error) {
+    console.error('Erro ao buscar cursos:', error);
+    throw error;
+  }
+};
+
+export const getOccupiedLessonOrders = async (courseId: string): Promise<number[]> => {
+  try {
+    const response = await api.get(`/admin/courses/${courseId}/lesson-orders`);
+    return response.data;
+  } catch (error) {
+    console.error(`Erro ao buscar ordens ocupadas para o curso ${courseId}:`, error);
+    throw error;
+  }
+};
+
+export interface CourseWithLessons {
+  id: string;
+  title: string;
+  description: string;
+  lessons: LessonSummaryDTO[];
+}
+
+export const getCoursesWithLessons = async (): Promise<CourseWithLessons[]> => {
+  try {
+    const response = await api.get('/admin/courses-with-lessons');
+    return response.data;
+  } catch (error) {
+    console.error('Erro ao buscar cursos com lições:', error);
+    throw error;
+  }
+};
+
 export const contentService = {
   getAllLessons,
   getLessonContent,
@@ -131,6 +168,9 @@ export const contentService = {
   deleteLesson,
   updateQuiz,
   saveDraft,
+  getAllCourses,
+  getOccupiedLessonOrders,
+  getCoursesWithLessons,
 };
 
 export default contentService;

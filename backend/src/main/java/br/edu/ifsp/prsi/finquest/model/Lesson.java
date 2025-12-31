@@ -25,8 +25,8 @@ public class Lesson {
     @Column(name = "lesson_order", nullable = false)
     private Integer lessonOrder;
 
-    @Column(columnDefinition = "TEXT", nullable = false)
-    private String content = "";
+    @Column(name = "content_url", nullable = false)
+    private String contentUrl;
 
     @Column(name = "is_draft", nullable = false)
     private Boolean isDraft = true;
@@ -86,12 +86,12 @@ public class Lesson {
         this.lessonOrder = lessonOrder;
     }
 
-    public String getContent() {
-        return content;
+    public String getContentUrl() {
+        return contentUrl;
     }
 
-    public void setContent(String content) {
-        this.content = content;
+    public void setContentUrl(String contentUrl) {
+        this.contentUrl = contentUrl;
     }
 
     public Boolean getIsDraft() {

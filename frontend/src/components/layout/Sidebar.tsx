@@ -16,6 +16,7 @@ import {
   User,
   Shield,
   Wallet,
+  FileEdit,
 } from "lucide-react";
 import { useThemeToggle } from "../../context/ThemeContext";
 import ProgressBar from "../gamification/ProgressBar";
@@ -399,10 +400,17 @@ export const Sidebar: React.FC = () => {
           </NavItem>
 
           {user?.role === "ADMIN" && (
-            <NavItem to="/admin" onClick={() => setIsOpen(false)}>
-              <Shield />
-              <span>Admin</span>
-            </NavItem>
+            <>
+              <Divider />
+              <NavItem to="/admin" onClick={() => setIsOpen(false)}>
+                <Shield />
+                <span>Dashboard Admin</span>
+              </NavItem>
+              <NavItem to="/admin/content" onClick={() => setIsOpen(false)}>
+                <FileEdit />
+                <span>Gerenciar Conteúdo</span>
+              </NavItem>
+            </>
           )}
         </Nav>
 

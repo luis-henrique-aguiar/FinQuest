@@ -9,6 +9,12 @@ import MarkdownStyleGuide from '../components/editor/MarkdownStyleGuide';
 import FullScreenLoader from '../components/common/FullScreenLoader';
 import * as S from './LessonEditorPage.styles';
 
+interface Course {
+  id: string;
+  title: string;
+  description: string;
+}
+
 const LessonEditorPage: React.FC = () => {
   const { addToast } = useToast();
   const navigate = useNavigate();
@@ -17,20 +23,50 @@ const LessonEditorPage: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [showStyleGuide, setShowStyleGuide] = useState(false);
   const [activeView, setActiveView] = useState<'edit' | 'preview' | 'split'>('split');
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [occupiedOrders, setOccupiedOrders] = useState<number[]>([]);
   const [formData, setFormData] = useState({
     title: '',
     courseId: '',
-    lessonOrder: 1,
     content: '',
     recFinPoints: 100,
     isDraft: true,
   });
 
   useEffect(() => {
+    loadCourses();
     if (lessonId) {
       loadLesson();
     }
   }, [lessonId]);
+
+  useEffect(() => {
+    if (formData.courseId) {
+      loadOccupiedOrders(formData.courseId);
+    } else {
+      setOccupiedOrders([]);
+    }
+  }, [formData.courseId]);
+
+  const loadCourses = async () => {
+    try {
+      const coursesData = await contentService.getAllCourses();
+      setCourses(coursesData);
+    } catch (error) {
+      addToast('Erro ao carregar cursos', 'error');
+      console.error('Error loading courses:', error);
+    }
+  };
+
+  const loadOccupiedOrders = async (courseId: string) => {
+    try {
+      const orders = await contentService.getOccupiedLessonOrders(courseId);
+      setOccupiedOrders(orders);
+    } catch (error) {
+      console.error('Error loading occupied orders:', error);
+      setOccupiedOrders([]);
+    }
+  };
 
   const loadLesson = async () => {
     if (!lessonId) return;
@@ -45,7 +81,6 @@ const LessonEditorPage: React.FC = () => {
         setFormData({
           title: lesson.title,
           courseId: lesson.courseId,
-          lessonOrder: lesson.lessonOrder,
           content: content,
           recFinPoints: 100,
           isDraft: lesson.isDraft,
@@ -70,8 +105,8 @@ const LessonEditorPage: React.FC = () => {
       return;
     }
 
-    if (!formData.courseId.trim()) {
-      addToast('O ID do curso é obrigatório', 'error');
+    if (!formData.courseId) {
+      addToast('Selecione um módulo', 'error');
       return;
     }
 
@@ -94,7 +129,15 @@ const LessonEditorPage: React.FC = () => {
           'success'
         );
       } else {
-        await contentService.createLesson(dataToSave);
+        // Calculate next available lesson order
+        const nextOrder = occupiedOrders.length > 0 
+          ? Math.max(...occupiedOrders) + 1 
+          : 1;
+        
+        await contentService.createLesson({
+          ...dataToSave,
+          lessonOrder: nextOrder
+        });
         addToast(
           publish ? 'Lição criada e publicada!' : 'Lição criada como rascunho',
           'success'
@@ -202,34 +245,23 @@ const LessonEditorPage: React.FC = () => {
 
           <S.FormGroup>
             <S.Label>
-              ID do Módulo <S.Required>*</S.Required>
+              Módulo <S.Required>*</S.Required>
             </S.Label>
-            <S.Input
-              type="text"
+            <S.Select
               value={formData.courseId}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
                 setFormData((prev) => ({ ...prev, courseId: e.target.value }))
               }
-              placeholder="Ex: 0, 1, 2..."
-            />
+            >
+              <option value="">Selecione um módulo...</option>
+              {courses.map((course) => (
+                <option key={course.id} value={course.id}>
+                  Módulo {course.id} - {course.title}
+                </option>
+              ))}
+            </S.Select>
           </S.FormGroup>
 
-          <S.FormGroup>
-            <S.Label>
-              Ordem da Lição <S.Required>*</S.Required>
-            </S.Label>
-            <S.Input
-              type="number"
-              value={formData.lessonOrder}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  lessonOrder: parseInt(e.target.value) || 1,
-                }))
-              }
-              min="1"
-            />
-          </S.FormGroup>
 
           <S.FormGroup>
             <S.Label>FinPoints da Lição</S.Label>

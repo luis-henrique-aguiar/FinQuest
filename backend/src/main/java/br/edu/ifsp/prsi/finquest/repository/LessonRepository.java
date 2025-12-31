@@ -29,4 +29,6 @@ public interface LessonRepository extends JpaRepository<Lesson, String> {
            "ORDER BY c.id ASC, l.lessonOrder ASC")
     List<Lesson> findAllForAdmin(@Param("courseId") String courseId, @Param("isDraft") Boolean isDraft);
 
+    List<Lesson> findAllByCourseId(String courseId);
+
 }

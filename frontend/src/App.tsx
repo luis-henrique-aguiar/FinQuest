@@ -38,6 +38,7 @@ import InvestmentSimulatorPage from "./pages/InvestmentSimulatorPage";
 import ReportsPage from "./pages/ReportsPage";
 import AdminDashboardPage from "./pages/AdminDashboardPage";
 import ContentManagementPage from "./pages/ContentManagementPage";
+import AdminContentDashboardPage from "./pages/AdminContentDashboardPage";
 import LessonEditorPage from "./pages/LessonEditorPage";
 import { GamificationProvider } from "./context/GamificationContext";
 
@@ -94,7 +95,7 @@ const AppRoutes = () => {
       <Route element={<AdminRoute />}>
         <Route element={<AppLayout />}>
           <Route path="/admin" element={<AdminDashboardPage />} />
-          <Route path="/admin/content" element={<ContentManagementPage />} />
+          <Route path="/admin/content" element={<AdminContentDashboardPage />} />
           <Route path="/admin/content/new" element={<LessonEditorPage />} />
           <Route path="/admin/content/edit/:lessonId" element={<LessonEditorPage />} />
         </Route>
