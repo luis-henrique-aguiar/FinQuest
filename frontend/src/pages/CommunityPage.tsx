@@ -11,7 +11,10 @@ import {
   PostType as PostTypeEnum
 } from '../services/communityService';
 import PostCard from '../components/community/PostCard';
+import CommentList from '../components/community/CommentList';
 import { useToast } from '../hooks/useToast';
+import type { CommentCreateDTO, CommentDTO } from '../services/communityService';
+import { getCommentsByPostId, createComment } from '../services/communityService';
 
 type FeedType = 'for-you' | 'following' | 'explore';
 
@@ -56,12 +59,14 @@ const CommunityPage: React.FC = () => {
     }
   };
 
+  const [selectedPostForComments, setSelectedPostForComments] = useState<number | null>(null);
+
   const handleCreatePost = () => {
     setShowCreateModal(true);
   };
 
-  const handleCommentClick = (_postId: number) => {
-    // TODO: Open comment modal/section
+  const handleCommentClick = (postId: number) => {
+    setSelectedPostForComments(postId);
   };
 
   const handlePostUpdate = () => {
@@ -183,6 +188,13 @@ const CommunityPage: React.FC = () => {
           onPostCreated={handlePostUpdate}
         />
       )}
+
+      {selectedPostForComments !== null && (
+        <CommentsModal
+          postId={selectedPostForComments}
+          onClose={() => setSelectedPostForComments(null)}
+        />
+      )}
     </Container>
   );
 };
@@ -276,6 +288,54 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ onClose, onPostCreate
           </SubmitButton>
         </ModalFooter>
       </ModalContent>
+    </ModalOverlay>
+  );
+};
+
+// CommentsModal Component
+interface CommentsModalProps {
+  postId: number;
+  onClose: () => void;
+}
+
+const CommentsModal: React.FC<CommentsModalProps> = ({ postId, onClose }) => {
+  const { addToast } = useToast();
+  const [comments, setComments] = useState<CommentDTO[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    loadComments();
+  }, [postId]);
+
+  const loadComments = async () => {
+    setIsLoading(true);
+    try {
+      const response = await getCommentsByPostId(postId);
+      setComments(response.content);
+    } catch (error) {
+      console.error('Error loading comments:', error);
+      addToast('Erro ao carregar comentários', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <ModalOverlay onClick={onClose}>
+      <CommentsModalContent onClick={(e) => e.stopPropagation()}>
+        <ModalHeader>
+          <ModalTitle>💬 Comentários ({comments.length})</ModalTitle>
+          <CloseButton onClick={onClose}>✕</CloseButton>
+        </ModalHeader>
+
+        <CommentsModalBody>
+          {isLoading ? (
+            <LoadingState>Carregando comentários...</LoadingState>
+          ) : (
+            <CommentList comments={comments} postId={postId} onCommentsUpdate={loadComments} />
+          )}
+        </CommentsModalBody>
+      </CommentsModalContent>
     </ModalOverlay>
   );
 };
@@ -618,4 +678,20 @@ const SubmitButton = styled.button`
     opacity: 0.5;
     cursor: not-allowed;
   }
+`;
+
+const CommentsModalContent = styled(ModalContent)`
+  max-width: 700px;
+  max-height: 85vh;
+`;
+
+const CommentsModalBody = styled(ModalBody)`
+  padding: 0;
+  max-height: calc(85vh - 70px);
+  overflow-y: auto;
+`;
+
+const EmptyCommentsState = styled.div`
+  text-align: center;
+  padding: 60px 20px;
 `;
