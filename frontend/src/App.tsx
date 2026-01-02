@@ -40,6 +40,7 @@ import AdminDashboardPage from "./pages/AdminDashboardPage";
 import ContentManagementPage from "./pages/ContentManagementPage";
 import AdminContentDashboardPage from "./pages/AdminContentDashboardPage";
 import LessonEditorPage from "./pages/LessonEditorPage";
+import CommunityPage from "./pages/CommunityPage";
 import { GamificationProvider } from "./context/GamificationContext";
 
 const AppRoutes = () => {
@@ -88,6 +89,7 @@ const AppRoutes = () => {
           <Route path="/goals" element={<GoalsPage />} />
           <Route path="/simulator" element={<InvestmentSimulatorPage />} />
           <Route path="/reports" element={<ReportsPage />} />
+          <Route path="/community" element={<CommunityPage />} />
         </Route>
       </Route>
 

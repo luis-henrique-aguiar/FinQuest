@@ -5,11 +5,15 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.core.env.Environment;
+import org.springframework.data.web.config.EnableSpringDataWebSupport;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
+import static org.springframework.data.web.config.EnableSpringDataWebSupport.PageSerializationMode.VIA_DTO;
+
 @SpringBootApplication
+@EnableSpringDataWebSupport(pageSerializationMode = VIA_DTO)
 public class FinQuestApplication {
 
     private static final Logger logger = LoggerFactory.getLogger(FinQuestApplication.class);

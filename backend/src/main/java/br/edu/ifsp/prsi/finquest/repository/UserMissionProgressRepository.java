@@ -4,7 +4,6 @@ import br.edu.ifsp.prsi.finquest.model.UserMissionProgress;
 import br.edu.ifsp.prsi.finquest.model.UserMissionProgressId;
 import br.edu.ifsp.prsi.finquest.model.enums.MissionStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;

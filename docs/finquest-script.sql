@@ -1390,4 +1390,57 @@ INSERT IGNORE INTO achievement (id, title, icon, required_level) VALUES
 (7, 'Planejador', '🎯', 30),
 (8, 'Visionário', '🚀', 35);
 
+-- ============================================================================
+-- 9. COMMUNITY DATA
+-- ============================================================================
+
+-- Posts de exemplo
+INSERT IGNORE INTO posts (id, author_id, type, category, content, status, reaction_count, comment_count, share_count, created_at, updated_at)
+VALUES
+(1, 'DPMqU5vYQ1Xsq5nIugHyfJYjp512', 'TEXT', 'DICAS', 
+'🎯 Dica do dia: Comece pequeno! Não precisa investir R$ 1.000 de uma vez. Comece com R$ 50 ou R$ 100 e vá aumentando gradualmente. O importante é criar o hábito de investir todo mês.', 
+'ACTIVE', 0, 0, 0, NOW(), NOW()),
+
+(2, 'DPMqU5vYQ1Xsq5nIugHyfJYjp512', 'ACHIEVEMENT', 'CONQUISTAS', 
+'🏆 Acabei de completar o módulo "Primeiros Passos no Mundo das Finanças"! Agora entendo melhor sobre inflação, Taxa Selic e juros compostos. Que jornada incrível! #educacaofinanceira #finquest', 
+'ACTIVE', 0, 0, 0, NOW(), NOW()),
+
+(3, 'DPMqU5vYQ1Xsq5nIugHyfJYjp512', 'TIP', 'DICAS', 
+'💡 Você sabia? O Tesouro Selic rende TODOS OS DIAS úteis, enquanto a poupança só rende uma vez por mês no aniversário. Essa é uma das razões pela qual ele é melhor para sua Reserva de Emergência!', 
+'ACTIVE', 0, 0, 0, NOW(), NOW()),
+
+(4, 'DPMqU5vYQ1Xsq5nIugHyfJYjp512', 'QUESTION', 'PERGUNTAS', 
+'❓ Dúvida: Vocês acham melhor começar investindo em Tesouro Direto ou em CDBs de bancos médios? Tenho R$ 500 para começar minha reserva de emergência. Qual a opinião de vocês?', 
+'ACTIVE', 0, 0, 0, NOW(), NOW()),
+
+(5, 'DPMqU5vYQ1Xsq5nIugHyfJYjp512', 'STORY', 'HISTORIAS', 
+'📖 Minha história: Há 6 meses eu estava no vermelho, com dívidas no cartão e sem saber para onde o dinheiro ia. Depois de começar a usar o FinQuest e aplicar os conceitos dos 3 Pilares, consegui quitar minhas dívidas e já tenho R$ 2.000 de reserva de emergência! Se eu consegui, você também consegue! 💪', 
+'ACTIVE', 0, 0, 0, NOW(), NOW()),
+
+(6, 'DPMqU5vYQ1Xsq5nIugHyfJYjp512', 'TEXT', 'METAS', 
+'🎯 Definindo minhas metas para 2026: 1) Aumentar minha reserva para R$ 10.000. 2) Começar a investir na Bolsa com 10% da renda. 3) Completar todos os módulos do FinQuest. Vamos juntos nessa jornada! #metas2026 #planejamento', 
+'ACTIVE', 0, 0, 0, NOW(), NOW());
+
+-- Comentários de exemplo
+INSERT IGNORE INTO comments (id, post_id, author_id, content, marked_as_useful, reaction_count, created_at, updated_at)
+VALUES
+(1, 1, 'DPMqU5vYQ1Xsq5nIugHyfJYjp512', 
+'Excelente dica! Eu comecei com apenas R$ 30 por mês e hoje já consigo investir R$ 300. O hábito é mais importante que o valor inicial!', 
+false, 0, NOW(), NOW()),
+
+(2, 4, 'DPMqU5vYQ1Xsq5nIugHyfJYjp512', 
+'Para reserva de emergência, o Tesouro Selic é mais indicado pela liquidez diária e segurança máxima. CDBs são bons também, mas verifique se tem liquidez diária e se o banco tem boa classificação de risco.', 
+false, 0, NOW(), NOW()),
+
+(3, 5, 'DPMqU5vYQ1Xsq5nIugHyfJYjp512', 
+'Que história inspiradora! Parabéns pela disciplina e pela virada financeira. Você é um exemplo para todos nós! 👏', 
+false, 0, NOW(), NOW());
+
+-- Replies (comentários aninhados)
+INSERT IGNORE INTO comments (id, post_id, author_id, parent_id, content, marked_as_useful, reaction_count, created_at, updated_at)
+VALUES
+(4, 1, 'DPMqU5vYQ1Xsq5nIugHyfJYjp512', 1, 
+'Concordo totalmente! O importante é não desanimar e manter a consistência. Pequenos passos somam grandes conquistas!', 
+false, 0, NOW(), NOW());
+
 SET FOREIGN_KEY_CHECKS = 1;

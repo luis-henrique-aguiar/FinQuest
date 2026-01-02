@@ -17,6 +17,7 @@ import {
   Shield,
   Wallet,
   FileEdit,
+  Users,
 } from "lucide-react";
 import { useThemeToggle } from "../../context/ThemeContext";
 import ProgressBar from "../gamification/ProgressBar";
@@ -374,6 +375,10 @@ export const Sidebar: React.FC = () => {
           <NavItem to="/learn" onClick={() => setIsOpen(false)}>
             <BookOpen />
             <span>Aprenda</span>
+          </NavItem>
+          <NavItem to="/community" onClick={() => setIsOpen(false)}>
+            <Users />
+            <span>Comunidade</span>
           </NavItem>
           <NavItem to="/planning" onClick={() => setIsOpen(false)}>
             <Wallet />
