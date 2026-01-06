@@ -10,9 +10,10 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.DependsOn;
 import org.springframework.context.annotation.Profile;
-import org.springframework.core.io.ClassPathResource;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 
 @Configuration
 @Profile("!test")
@@ -21,38 +22,32 @@ public class FirebaseConfig {
     private static final Logger logger = LoggerFactory.getLogger(FirebaseConfig.class);
 
     @Bean
-    public FirebaseApp initializeFirebase() throws IOException {
-        logger.info("Inicializando integração com Firebase...");
+    public FirebaseApp firebaseApp() throws IOException {
+        if (FirebaseApp.getApps().isEmpty()) {
+            String firebaseCredentials = System.getenv("FIREBASE_CREDENTIALS");
+            
+            InputStream serviceAccount;
 
-        try {
-            ClassPathResource serviceAccountResource =
-                    new ClassPathResource("finquest-65954-firebase-adminsdk-fbsvc-33095347ec.json");
-
-            if (!serviceAccountResource.exists()) {
-                logger.error("CRÍTICO: Arquivo de credenciais do Firebase NÃO ENCONTRADO no classpath!");
-                throw new IOException("Arquivo de credenciais ausente.");
+            if (firebaseCredentials != null && !firebaseCredentials.isEmpty()) {
+                serviceAccount = new ByteArrayInputStream(firebaseCredentials.getBytes());
+            } else {
+                serviceAccount = getClass().getClassLoader().getResourceAsStream("serviceAccountKey.json");
+                if (serviceAccount == null) {
+                   throw new IOException("Arquivo serviceAccountKey.json não encontrado nem variável FIREBASE_CREDENTIALS definida.");
+                }
             }
 
             FirebaseOptions options = FirebaseOptions.builder()
-                    .setCredentials(GoogleCredentials.fromStream(serviceAccountResource.getInputStream()))
+                    .setCredentials(GoogleCredentials.fromStream(serviceAccount))
                     .build();
 
-            if (FirebaseApp.getApps().isEmpty()) {
-                FirebaseApp app = FirebaseApp.initializeApp(options);
-                logger.info("Firebase Application inicializado com sucesso: {}", app.getName());
-                return app;
-            } else {
-                logger.info("Firebase Application já estava inicializado (reutilizando instância).");
-                return FirebaseApp.getInstance();
-            }
-        } catch (IOException e) {
-            logger.error("FALHA FATAL ao inicializar Firebase: {}", e.getMessage(), e);
-            throw e;
+            return FirebaseApp.initializeApp(options);
         }
+        return FirebaseApp.getInstance();
     }
 
     @Bean
-    @DependsOn("initializeFirebase")
+    @DependsOn("firebaseApp")
     public FirebaseAuth firebaseAuth() {
         return FirebaseAuth.getInstance();
     }
