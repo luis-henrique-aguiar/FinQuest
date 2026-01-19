@@ -23,7 +23,7 @@ import { ToastProvider } from "./context/ToastContext";
 import { AuthProvider } from "./context/AuthContext";
 import LoginPage from "./pages/LoginPage";
 import { ProtectedRoute } from "./layout/ProtectedRoute";
-import { AdminRoute } from "./layout/AdminRoute"; 
+import { AdminRoute } from "./layout/AdminRoute";
 import HomePage from "./pages/HomePage";
 import { PublicOnlyRoute } from "./layout/PublicOnlyRoute";
 import AppLayout from "./components/layout/AppLayout";
@@ -37,6 +37,10 @@ import GoalsPage from "./pages/GoalsPage";
 import InvestmentSimulatorPage from "./pages/InvestmentSimulatorPage";
 import ReportsPage from "./pages/ReportsPage";
 import AdminDashboardPage from "./pages/AdminDashboardPage";
+import ContentManagementPage from "./pages/ContentManagementPage";
+import AdminContentDashboardPage from "./pages/AdminContentDashboardPage";
+import LessonEditorPage from "./pages/LessonEditorPage";
+import CommunityPage from "./pages/CommunityPage";
 import { GamificationProvider } from "./context/GamificationContext";
 
 const AppRoutes = () => {
@@ -85,6 +89,7 @@ const AppRoutes = () => {
           <Route path="/goals" element={<GoalsPage />} />
           <Route path="/simulator" element={<InvestmentSimulatorPage />} />
           <Route path="/reports" element={<ReportsPage />} />
+          <Route path="/community" element={<CommunityPage />} />
         </Route>
       </Route>
 
@@ -92,6 +97,9 @@ const AppRoutes = () => {
       <Route element={<AdminRoute />}>
         <Route element={<AppLayout />}>
           <Route path="/admin" element={<AdminDashboardPage />} />
+          <Route path="/admin/content" element={<AdminContentDashboardPage />} />
+          <Route path="/admin/content/new" element={<LessonEditorPage />} />
+          <Route path="/admin/content/edit/:lessonId" element={<LessonEditorPage />} />
         </Route>
       </Route>
 

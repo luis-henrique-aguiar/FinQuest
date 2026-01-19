@@ -70,3 +70,13 @@ export const completeLesson = async (lessonId: string): Promise<LessonCompletion
     throw error;
   }
 };
+
+export const getLessonContent = async (lessonId: string): Promise<string> => {
+  try {
+    const response = await api.get(`/lessons/${lessonId}/content`);
+    return response.data;
+  } catch (error) {
+    console.error(`Erro ao buscar conteúdo da lição ${lessonId}:`, error);
+    throw error;
+  }
+};

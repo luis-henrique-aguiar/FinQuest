@@ -1,14 +1,21 @@
 package br.edu.ifsp.prsi.finquest.service.impl;
 
 import br.edu.ifsp.prsi.finquest.dto.AdminStatsDTO;
+import br.edu.ifsp.prsi.finquest.dto.CourseCreateDTO;
+import br.edu.ifsp.prsi.finquest.dto.CourseSimpleDTO;
+import br.edu.ifsp.prsi.finquest.dto.CourseUpdateDTO;
+import br.edu.ifsp.prsi.finquest.dto.CourseWithLessonsDTO;
+import br.edu.ifsp.prsi.finquest.dto.LessonSummaryDTO;
 import br.edu.ifsp.prsi.finquest.dto.UserSummaryDTO;
 import br.edu.ifsp.prsi.finquest.exception.BusinessException;
+import br.edu.ifsp.prsi.finquest.model.Course;
 import br.edu.ifsp.prsi.finquest.model.User;
 import br.edu.ifsp.prsi.finquest.model.UserLessonCompletion;
 import br.edu.ifsp.prsi.finquest.model.enums.MissionStatus;
 import br.edu.ifsp.prsi.finquest.model.enums.UserRole;
 import br.edu.ifsp.prsi.finquest.repository.*;
 import br.edu.ifsp.prsi.finquest.service.AdminService;
+import br.edu.ifsp.prsi.finquest.service.LessonService;
 import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,15 +38,24 @@ public class AdminServiceImpl implements AdminService {
     private final UserRepository userRepository;
     private final UserLessonCompletionRepository lessonCompletionRepository;
     private final UserMissionProgressRepository missionProgressRepository;
+    private final CourseRepository courseRepository;
+    private final LessonRepository lessonRepository;
+    private final LessonService lessonService;
 
     public AdminServiceImpl(
             UserRepository userRepository,
             UserLessonCompletionRepository lessonCompletionRepository,
-            UserMissionProgressRepository missionProgressRepository
+            UserMissionProgressRepository missionProgressRepository,
+            CourseRepository courseRepository,
+            LessonRepository lessonRepository,
+            LessonService lessonService
     ) {
         this.userRepository = userRepository;
         this.lessonCompletionRepository = lessonCompletionRepository;
         this.missionProgressRepository = missionProgressRepository;
+        this.courseRepository = courseRepository;
+        this.lessonRepository = lessonRepository;
+        this.lessonService = lessonService;
     }
 
     @Override
@@ -107,6 +123,132 @@ public class AdminServiceImpl implements AdminService {
         userRepository.save(targetUser);
 
         logger.info("SUCESSO: Usuário {} promovido a ADMIN por {}.", targetUserId, adminUserId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CourseSimpleDTO> getAllCourses() {
+        logger.debug("Listando todos os cursos disponíveis");
+        
+        List<Course> courses = courseRepository.findAll();
+        
+        logger.debug("Total de {} cursos encontrados", courses.size());
+        
+        return courses.stream()
+                .map(CourseSimpleDTO::new)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CourseWithLessonsDTO> getAllCoursesWithLessons() {
+        logger.info("Fetching all courses with nested lessons for content dashboard");
+        long startTime = System.currentTimeMillis();
+
+        List<Course> courses = courseRepository.findAll();
+
+        List<CourseWithLessonsDTO> result = courses.stream()
+                .map(course -> {
+                    List<LessonSummaryDTO> lessons = lessonService
+                            .getAllLessonsForAdmin(course.getId(), null)
+                            .stream()
+                            .sorted((a, b) -> a.lessonOrder().compareTo(b.lessonOrder()))
+                            .toList();
+                    return new CourseWithLessonsDTO(course, lessons);
+                })
+                .toList();
+
+        long duration = System.currentTimeMillis() - startTime;
+        logger.info("Fetched {} courses with total lessons in {}ms", result.size(), duration);
+
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public CourseSimpleDTO createCourse(CourseCreateDTO dto) {
+        logger.info("Tentando criar novo curso com ID: {}", dto.id());
+
+        if (courseRepository.existsById(dto.id())) {
+            logger.warn("Falha na criação: Já existe um curso com ID={}", dto.id());
+            throw new BusinessException("Já existe um curso com o ID: " + dto.id());
+        }
+
+        Course course = new Course(
+                dto.id(),
+                dto.title(),
+                dto.description(),
+                dto.icon(),
+                dto.recFinPoints()
+        );
+
+        Course savedCourse = courseRepository.save(course);
+        logger.info("SUCESSO: Curso {} criado com sucesso", savedCourse.getId());
+
+        return new CourseSimpleDTO(savedCourse);
+    }
+
+    @Override
+    @Transactional
+    public CourseSimpleDTO updateCourse(String courseId, CourseUpdateDTO dto) {
+        logger.info("Atualizando curso ID: {}", courseId);
+
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> {
+                    logger.warn("Falha na atualização: Curso não encontrado. ID={}", courseId);
+                    return new EntityNotFoundException("Curso não encontrado: " + courseId);
+                });
+
+        if (dto.title() != null) {
+            course.setTitle(dto.title());
+        }
+        if (dto.description() != null) {
+            course.setDescription(dto.description());
+        }
+        if (dto.icon() != null) {
+            course.setIcon(dto.icon());
+        }
+        if (dto.recFinPoints() != null) {
+            course.setRecFinPoints(dto.recFinPoints());
+        }
+
+        Course updatedCourse = courseRepository.save(course);
+        logger.info("SUCESSO: Curso {} atualizado com sucesso", courseId);
+
+        return new CourseSimpleDTO(updatedCourse);
+    }
+
+    @Override
+    @Transactional
+    public void deleteCourse(String courseId) {
+        logger.warn("AUDITORIA: Tentativa de exclusão de curso. ID={}", courseId);
+
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> {
+                    logger.warn("Falha na exclusão: Curso não encontrado. ID={}", courseId);
+                    return new EntityNotFoundException("Curso não encontrado: " + courseId);
+                });
+
+        long linkedLessonsCount = lessonRepository.countByCourseId(courseId);
+
+        if (linkedLessonsCount > 0) {
+            logger.warn("Falha na exclusão: Curso {} possui {} lições vinculadas", courseId, linkedLessonsCount);
+            throw new BusinessException(
+                    String.format("Não é possível excluir o curso. Existem %d lições vinculadas.", linkedLessonsCount)
+            );
+        }
+
+        courseRepository.delete(course);
+        logger.info("SUCESSO: Curso {} excluído com sucesso", courseId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean isCourseIdAvailable(String courseId) {
+        logger.debug("Verificando disponibilidade do ID: {}", courseId);
+        boolean available = !courseRepository.existsById(courseId);
+        logger.debug("ID {} está {}", courseId, available ? "disponível" : "em uso");
+        return available;
     }
 
     private UserSummaryDTO buildUserSummary(User user) {

@@ -16,6 +16,7 @@ import {
   completeLesson,
   getLessonDetails,
   getLessonQuiz,
+  getLessonContent,
   type LessonDetailsDTO,
 } from "../services/lessonService";
 import Button from "../components/common/Button";
@@ -60,11 +61,7 @@ const LessonPage = () => {
       setIsLoading(true);
       try {
         const detailsPromise = getLessonDetails(lessonId);
-        const filePath = `/lessons/${lessonId}.md`;
-        const contentPromise = fetch(filePath).then((res) => {
-          if (!res.ok) throw new Error(`Lição não encontrada em ${filePath}`);
-          return res.text();
-        });
+        const contentPromise = getLessonContent(lessonId);
         const quizPromise = getLessonQuiz(lessonId);
 
         const [detailsData, contentData, quizData] = await Promise.all([

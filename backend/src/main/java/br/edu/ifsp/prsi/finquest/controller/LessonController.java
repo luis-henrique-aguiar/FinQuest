@@ -41,4 +41,12 @@ public class LessonController {
         LessonCompletionDTO reward = lessonService.completeLesson(lessonId, userId);
         return ResponseEntity.ok(reward);
     }
+
+    @GetMapping("/{lessonId}/content")
+    public ResponseEntity<String> getLessonContent(@PathVariable String lessonId) {
+        String content = lessonService.getLessonContent(lessonId);
+        return ResponseEntity.ok()
+                .contentType(org.springframework.http.MediaType.TEXT_PLAIN)
+                .body(content);
+    }
 }

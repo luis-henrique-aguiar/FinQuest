@@ -2,6 +2,7 @@ package br.edu.ifsp.prsi.finquest.model;
 
 import jakarta.persistence.*;
 
+import java.time.LocalDateTime;
 import java.util.Objects;
 
 @Entity
@@ -23,6 +24,18 @@ public class Lesson {
 
     @Column(name = "lesson_order", nullable = false)
     private Integer lessonOrder;
+
+    @Column(name = "content_url", nullable = false)
+    private String contentUrl;
+
+    @Column(name = "is_draft", nullable = false)
+    private Boolean isDraft = true;
+
+    @Column(name = "last_modified", nullable = false)
+    private LocalDateTime lastModified;
+
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
 
     public Lesson() {}
 
@@ -73,6 +86,48 @@ public class Lesson {
         this.lessonOrder = lessonOrder;
     }
 
+    public String getContentUrl() {
+        return contentUrl;
+    }
+
+    public void setContentUrl(String contentUrl) {
+        this.contentUrl = contentUrl;
+    }
+
+    public Boolean getIsDraft() {
+        return isDraft;
+    }
+
+    public void setIsDraft(Boolean isDraft) {
+        this.isDraft = isDraft;
+    }
+
+    public LocalDateTime getLastModified() {
+        return lastModified;
+    }
+
+    public void setLastModified(LocalDateTime lastModified) {
+        this.lastModified = lastModified;
+    }
+
+    public LocalDateTime getDeletedAt() {
+        return deletedAt;
+    }
+
+    public void setDeletedAt(LocalDateTime deletedAt) {
+        this.deletedAt = deletedAt;
+    }
+
+    @PrePersist
+    protected void onCreate() {
+        lastModified = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        lastModified = LocalDateTime.now();
+    }
+
     @Override
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;
@@ -93,6 +148,9 @@ public class Lesson {
                 ", recFinPoints=" + recFinPoints +
                 ", course=" + course +
                 ", lessonOrder=" + lessonOrder +
+                ", isDraft=" + isDraft +
+                ", lastModified=" + lastModified +
+                ", deletedAt=" + deletedAt +
                 '}';
     }
 }
