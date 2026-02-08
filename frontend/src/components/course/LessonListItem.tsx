@@ -1,7 +1,8 @@
 import React from "react";
-import styled from "styled-components";
 import { motion } from "framer-motion";
-import { CheckCircle, Circle, Lock } from "react-feather";
+import { CheckCircle, Circle, Lock } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 import type { LessonProgressDTO } from "../../services/courseService";
 
 interface LessonListItemProps {
@@ -9,115 +10,6 @@ interface LessonListItemProps {
   isLocked: boolean;
   onClick: () => void;
 }
-
-const ItemContainer = styled(motion.div)<{
-  $isLocked: boolean;
-  $isCompleted: boolean;
-}>`
-  background: ${({ theme }) => theme.colors.white};
-  border-radius: ${({ theme }) => theme.borderRadius.medium};
-  padding: ${({ theme }) => theme.spacing.md};
-  display: flex;
-  align-items: center;
-  gap: ${({ theme }) => theme.spacing.md};
-  cursor: ${({ $isLocked }) => ($isLocked ? "not-allowed" : "pointer")};
-  transition: all 0.3s ease;
-  border: 2px solid ${({ theme }) => theme.colors.border};
-  opacity: ${({ $isLocked }) => ($isLocked ? 0.6 : 1)};
-
-  &:hover {
-    ${({ $isLocked, theme }) =>
-      !$isLocked &&
-      `
-      transform: scale(1.02);
-      box-shadow: ${theme.shadows.medium};
-      border-color: ${theme.colors.primary};
-    `}
-  }
-
-  &:active {
-    ${({ $isLocked }) => !$isLocked && "transform: scale(1.01);"}
-  }
-`;
-
-const IconContainer = styled.div<{ $isCompleted: boolean; $isLocked: boolean }>`
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  background: ${({ $isCompleted, $isLocked, theme }) => {
-    if ($isLocked) return theme.colors.backgroundAlt;
-    if ($isCompleted) return `${theme.colors.success}22`;
-    return `${theme.colors.primary}22`;
-  }};
-
-  svg {
-    color: ${({ $isCompleted, $isLocked, theme }) => {
-      if ($isLocked) return theme.colors.textLight;
-      if ($isCompleted) return theme.colors.success;
-      return theme.colors.primary;
-    }};
-  }
-`;
-
-const Content = styled.div`
-  flex: 1;
-  min-width: 0;
-`;
-
-const Title = styled.h4`
-  margin: 0;
-  font-size: 1rem;
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textDark};
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-`;
-
-const StatusBadge = styled.div<{ $isCompleted: boolean }>`
-  padding: ${({ theme }) => theme.spacing.xs} ${({ theme }) => theme.spacing.sm};
-  border-radius: ${({ theme }) => theme.borderRadius.pill};
-  font-size: 0.75rem;
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semiBold};
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  flex-shrink: 0;
-
-  ${({ $isCompleted, theme }) =>
-    $isCompleted
-      ? `
-        background: ${theme.colors.success}22;
-        color: ${theme.colors.success};
-      `
-      : `
-        background: ${theme.colors.backgroundAlt};
-        color: ${theme.colors.textMedium};
-      `}
-`;
-
-const LockedBadge = styled.div`
-  padding: ${({ theme }) => theme.spacing.xs} ${({ theme }) => theme.spacing.sm};
-  border-radius: ${({ theme }) => theme.borderRadius.pill};
-  font-size: 0.75rem;
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semiBold};
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  background: ${({ theme }) => theme.colors.backgroundAlt};
-  color: ${({ theme }) => theme.colors.textLight};
-  display: flex;
-  align-items: center;
-  gap: ${({ theme }) => theme.spacing.xs};
-  flex-shrink: 0;
-
-  svg {
-    width: 12px;
-    height: 12px;
-  }
-`;
 
 export const LessonListItem: React.FC<LessonListItemProps> = ({
   lesson,
@@ -133,17 +25,29 @@ export const LessonListItem: React.FC<LessonListItemProps> = ({
   };
 
   return (
-    <ItemContainer
-      $isLocked={isLocked}
-      $isCompleted={isCompleted}
-      onClick={handleClick}
+    <motion.div
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.3 }}
       whileHover={!isLocked ? { scale: 1.02 } : undefined}
       whileTap={!isLocked ? { scale: 0.98 } : undefined}
+      onClick={handleClick}
+      className={cn(
+        "bg-white dark:bg-zinc-900 rounded-lg p-4 flex items-center gap-4 border-2 transition-all duration-300",
+        isLocked
+          ? "border-zinc-200 dark:border-zinc-800 opacity-60 cursor-not-allowed"
+          : "border-zinc-200 dark:border-zinc-800 cursor-pointer hover:shadow-md hover:border-primary",
+        isCompleted && "border-green-200 dark:border-green-900/50 bg-green-50/50 dark:bg-green-900/10"
+      )}
     >
-      <IconContainer $isCompleted={isCompleted} $isLocked={isLocked}>
+      <div className={cn(
+        "w-10 h-10 rounded-full flex items-center justify-center shrink-0",
+        isLocked
+          ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-400"
+          : isCompleted
+            ? "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
+            : "bg-primary/10 text-primary"
+      )}>
         {isLocked ? (
           <Lock size={20} />
         ) : isCompleted ? (
@@ -151,22 +55,32 @@ export const LessonListItem: React.FC<LessonListItemProps> = ({
         ) : (
           <Circle size={20} />
         )}
-      </IconContainer>
+      </div>
 
-      <Content>
-        <Title>{lesson.title}</Title>
-      </Content>
+      <div className="flex-1 min-w-0">
+        <h4 className="m-0 text-base font-medium text-zinc-900 dark:text-zinc-100 truncate">
+          {lesson.title}
+        </h4>
+      </div>
 
       {isLocked ? (
-        <LockedBadge>
+        <Badge variant="secondary" className="flex items-center gap-1 bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
           <Lock size={12} />
-          <span>Bloqueada</span>
-        </LockedBadge>
+          <span className="text-xs uppercase tracking-wide font-semibold">Bloqueada</span>
+        </Badge>
       ) : (
-        <StatusBadge $isCompleted={isCompleted}>
+        <Badge
+          variant={isCompleted ? "default" : "secondary"}
+          className={cn(
+            "text-xs uppercase tracking-wide font-semibold",
+            isCompleted
+              ? "bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400"
+              : "bg-zinc-100 text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:text-zinc-400"
+          )}
+        >
           {isCompleted ? "✓ Concluída" : "Disponível"}
-        </StatusBadge>
+        </Badge>
       )}
-    </ItemContainer>
+    </motion.div>
   );
 };

@@ -1,7 +1,9 @@
 import React, { useState } from "react";
-import styled from "styled-components";
 import { Edit2, Check, X, User, Mail } from "react-feather";
 import { useToast } from "../../hooks/useToast";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+
 
 interface EditableFieldProps {
   label: string;
@@ -11,101 +13,6 @@ interface EditableFieldProps {
   disabled?: boolean;
   placeholder?: string;
 }
-
-const FieldContainer = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: ${({ theme }) => theme.spacing.sm} 0;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.background};
-  
-  &:last-child {
-    border-bottom: none;
-  }
-`;
-
-const FieldLabel = styled.span`
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textDark};
-  min-width: 100px;
-`;
-
-const FieldValue = styled.span`
-  color: ${({ theme }) => theme.colors.textMedium};
-  flex: 1;
-  margin: 0 ${({ theme }) => theme.spacing.md};
-`;
-
-const EditInputContainer = styled.div`
-  flex: 1;
-  margin: 0 ${({ theme }) => theme.spacing.md};
-  position: relative;
-  display: flex;
-  align-items: center;
-`;
-
-const EditInput = styled.input`
-  width: 100%;
-  padding: 0.75rem 1rem 0.75rem 3rem;
-  border-radius: 12px;
-  border: 2px solid #e5e7eb;
-  font-size: 0.9rem;
-  font-family: "Nunito Sans", sans-serif;
-  transition: all 0.3s ease;
-  background: #ffffff;
-
-  &:focus {
-    outline: none;
-    border-color: ${({ theme }) => theme.colors.primary};
-    box-shadow: 0 0 0 4px ${({ theme }) => theme.colors.primary}22;
-  }
-
-  &::placeholder {
-    color: #9ca3af;
-  }
-`;
-
-const InputIcon = styled.div`
-  position: absolute;
-  left: 1rem;
-  color: #6c757d;
-  pointer-events: none;
-  z-index: 1;
-`;
-
-const ActionButton = styled.button`
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: ${({ theme }) => theme.spacing.xs};
-  border-radius: ${({ theme }) => theme.borderRadius.small};
-  color: ${({ theme }) => theme.colors.textMedium};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-  
-  &:hover {
-    background-color: ${({ theme }) => theme.colors.background};
-    color: ${({ theme }) => theme.colors.primary};
-  }
-  
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-`;
-
-const ActionsContainer = styled.div`
-  display: flex;
-  gap: ${({ theme }) => theme.spacing.xs};
-`;
-
-const DisabledText = styled.span`
-  color: ${({ theme }) => theme.colors.textMedium};
-  font-size: 0.8rem;
-  font-style: italic;
-`;
 
 export const EditableField: React.FC<EditableFieldProps> = ({
   label,
@@ -136,7 +43,7 @@ export const EditableField: React.FC<EditableFieldProps> = ({
       return;
     }
 
-    // Validação básica para email
+    // Basic email validation
     if (type === "email" && editValue.trim()) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(editValue.trim())) {
@@ -149,10 +56,10 @@ export const EditableField: React.FC<EditableFieldProps> = ({
     try {
       await onSave(editValue.trim());
       setIsEditing(false);
-      //addToast("Informação atualizada com sucesso!", "success");
+      // Success toast should be handled by the parent
     } catch (error) {
       console.error("Erro ao salvar:", error);
-      //addToast("Erro ao atualizar informação", "error");
+      // Error toast should be handled by the parent
     } finally {
       setIsLoading(false);
     }
@@ -176,14 +83,16 @@ export const EditableField: React.FC<EditableFieldProps> = ({
   };
 
   return (
-    <FieldContainer>
-      <FieldLabel>{label}</FieldLabel>
-      
+    <div className="flex justify-between items-center py-3 border-b border-zinc-100 dark:border-zinc-800 last:border-0">
+      <span className="font-medium text-zinc-900 dark:text-zinc-100 min-w-[100px]">{label}</span>
+
       {isEditing ? (
         <>
-          <EditInputContainer>
-            <InputIcon>{getIcon()}</InputIcon>
-            <EditInput
+          <div className="flex-1 mx-4 relative flex items-center">
+            <div className="absolute left-3 text-zinc-400 pointer-events-none z-10">
+              {getIcon()}
+            </div>
+            <Input
               type={type}
               value={editValue}
               onChange={(e) => setEditValue(e.target.value)}
@@ -191,37 +100,50 @@ export const EditableField: React.FC<EditableFieldProps> = ({
               placeholder={placeholder}
               autoFocus
               disabled={isLoading}
+              className="pl-10 h-10 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 focus-visible:ring-primary"
             />
-          </EditInputContainer>
-          <ActionsContainer>
-            <ActionButton
+          </div>
+          <div className="flex gap-2">
+            <Button
+              size="icon"
+              variant="ghost"
               onClick={handleSave}
               disabled={isLoading}
               title="Salvar"
+              className="h-9 w-9 text-green-600 hover:text-green-700 hover:bg-green-50"
             >
-              <Check size={16} />
-            </ActionButton>
-            <ActionButton
+              <Check size={18} />
+            </Button>
+            <Button
+              size="icon"
+              variant="ghost"
               onClick={handleCancel}
               disabled={isLoading}
               title="Cancelar"
+              className="h-9 w-9 text-red-500 hover:text-red-600 hover:bg-red-50"
             >
-              <X size={16} />
-            </ActionButton>
-          </ActionsContainer>
+              <X size={18} />
+            </Button>
+          </div>
         </>
       ) : (
         <>
-          <FieldValue>{value || placeholder}</FieldValue>
+          <span className="text-zinc-500 dark:text-zinc-400 flex-1 mx-4">{value || placeholder}</span>
           {disabled ? (
-            <DisabledText>Não editável</DisabledText>
+            <span className="text-zinc-400 text-sm italic">Não editável</span>
           ) : (
-            <ActionButton onClick={handleEdit} title="Editar">
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={handleEdit}
+              title="Editar"
+              className="h-8 w-8 text-zinc-400 hover:text-primary hover:bg-primary/5"
+            >
               <Edit2 size={16} />
-            </ActionButton>
+            </Button>
           )}
         </>
       )}
-    </FieldContainer>
+    </div>
   );
 };

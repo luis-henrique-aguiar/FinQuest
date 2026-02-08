@@ -1,10 +1,11 @@
 import React, { useState, useRef } from "react";
-import styled, { keyframes } from "styled-components";
 import { Camera, Upload, User, Shuffle, Check } from "react-feather";
 import { Modal } from "../common/Modal";
-import Button from "../common/Button";
-import { useToast } from "../../hooks/useToast";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
+
 
 interface AvatarEditorProps {
   currentAvatar: string;
@@ -12,342 +13,6 @@ interface AvatarEditorProps {
   userLevel: number;
   onSave: (newAvatarUrl: string, file?: File) => Promise<void>;
 }
-
-const float = keyframes`
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-5px); }
-`;
-
-const AvatarContainer = styled.div`
-  position: relative;
-  width: 110px;
-  height: 110px;
-  margin-bottom: ${({ theme }) => theme.spacing.md};
-  cursor: pointer;
-`;
-
-const AvatarImage = styled.img`
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 4px solid ${({ theme }) => theme.colors.white};
-  box-shadow: 
-    0 4px 20px rgba(0, 122, 204, 0.2),
-    0 0 0 3px ${({ theme }) => theme.colors.primary}22;
-  transition: all 0.3s ease;
-`;
-
-const AvatarOverlay = styled.div`
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  background: linear-gradient(
-    135deg,
-    rgba(0, 122, 204, 0.85) 0%,
-    rgba(40, 167, 69, 0.85) 100%
-  );
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: all 0.3s ease;
-  backdrop-filter: blur(2px);
-  
-  ${AvatarContainer}:hover & {
-    opacity: 1;
-  }
-`;
-
-const EditIconWrapper = styled.div`
-  color: white;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-`;
-
-const LevelBadge = styled.div`
-  position: absolute;
-  bottom: 2px;
-  right: -8px;
-  background: linear-gradient(135deg, #007ACC 0%, #005A99 100%);
-  color: white;
-  font-size: 0.7rem;
-  font-weight: 700;
-  padding: 4px 10px;
-  border-radius: 20px;
-  border: 3px solid ${({ theme }) => theme.colors.white};
-  box-shadow: 0 2px 8px rgba(0, 122, 204, 0.4);
-  z-index: 1;
-  animation: ${float} 3s ease-in-out infinite;
-`;
-
-const ModalContent = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.xl};
-  padding: ${({ theme }) => theme.spacing.sm};
-`;
-
-const PreviewSection = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: ${({ theme }) => theme.spacing.md};
-  padding: ${({ theme }) => theme.spacing.lg};
-  background: linear-gradient(
-    135deg,
-    ${({ theme }) => theme.colors.primary}08 0%,
-    ${({ theme }) => theme.colors.secondary}08 100%
-  );
-  border-radius: 20px;
-  position: relative;
-  overflow: hidden;
-
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, #007ACC, #28A745, #FFA500);
-  }
-`;
-
-const PreviewAvatarWrapper = styled(motion.div)`
-  position: relative;
-`;
-
-const PreviewAvatar = styled.img`
-  width: 140px;
-  height: 140px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 4px solid ${({ theme }) => theme.colors.white};
-  box-shadow: 
-    0 8px 32px rgba(0, 122, 204, 0.25),
-    0 0 0 4px ${({ theme }) => theme.colors.primary}22;
-`;
-
-const PreviewBadge = styled.div`
-  position: absolute;
-  bottom: 5px;
-  right: 5px;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #28A745 0%, #20C997 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  border: 3px solid white;
-  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
-`;
-
-const PreviewLabel = styled.p`
-  font-size: 0.875rem;
-  color: ${({ theme }) => theme.colors.textMedium};
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-
-  &::before, &::after {
-    content: '';
-    width: 20px;
-    height: 1px;
-    background: ${({ theme }) => theme.colors.border};
-  }
-`;
-
-const OptionsSection = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.md};
-`;
-
-const SectionTitle = styled.h4`
-  margin: 0;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textMedium};
-  text-transform: uppercase;
-  letter-spacing: 1px;
-`;
-
-const UploadArea = styled(motion.div)<{ $isDragOver: boolean; $hasFile: boolean }>`
-  border: 2px dashed ${({ $isDragOver, $hasFile, theme }) => 
-    $hasFile ? theme.colors.secondary : 
-    $isDragOver ? theme.colors.primary : 
-    theme.colors.border};
-  border-radius: 16px;
-  padding: ${({ theme }) => theme.spacing.xl};
-  text-align: center;
-  background: ${({ $isDragOver, $hasFile, theme }) => 
-    $hasFile ? `${theme.colors.secondary}08` :
-    $isDragOver ? `${theme.colors.primary}08` : 
-    theme.colors.background};
-  transition: all 0.3s ease;
-  cursor: pointer;
-  position: relative;
-  overflow: hidden;
-
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(
-      90deg,
-      transparent,
-      rgba(255, 255, 255, 0.4),
-      transparent
-    );
-    transition: left 0.5s;
-  }
-  
-  &:hover {
-    border-color: ${({ theme }) => theme.colors.primary};
-    background: ${({ theme }) => theme.colors.primary}08;
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(0, 122, 204, 0.15);
-
-    &::before {
-      left: 100%;
-    }
-  }
-`;
-
-const UploadIcon = styled(motion.div)<{ $hasFile: boolean }>`
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: ${({ $hasFile }) => 
-    $hasFile 
-      ? 'linear-gradient(135deg, #28A745 0%, #20C997 100%)'
-      : 'linear-gradient(135deg, #007ACC 0%, #00A3E0 100%)'
-  };
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto ${({ theme }) => theme.spacing.md};
-  color: white;
-  box-shadow: ${({ $hasFile }) => 
-    $hasFile 
-      ? '0 8px 24px rgba(40, 167, 69, 0.35)'
-      : '0 8px 24px rgba(0, 122, 204, 0.35)'
-  };
-`;
-
-const UploadTitle = styled.h5`
-  margin: 0 0 4px 0;
-  font-size: 1rem;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textDark};
-`;
-
-const UploadHint = styled.p`
-  margin: 0;
-  font-size: 0.85rem;
-  color: ${({ theme }) => theme.colors.textMedium};
-`;
-
-const FileInput = styled.input`
-  display: none;
-`;
-
-const OptionsGrid = styled.div`
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: ${({ theme }) => theme.spacing.md};
-
-  @media (max-width: 400px) {
-    grid-template-columns: 1fr;
-  }
-`;
-
-const OptionButton = styled(motion.button)<{ $isActive?: boolean }>`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: ${({ theme }) => theme.spacing.sm};
-  padding: ${({ theme }) => theme.spacing.lg};
-  border: 2px solid ${({ $isActive, theme }) => 
-    $isActive ? theme.colors.primary : theme.colors.border};
-  border-radius: 16px;
-  background: ${({ $isActive, theme }) => 
-    $isActive ? `${theme.colors.primary}08` : theme.colors.white};
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-family: inherit;
-  position: relative;
-  overflow: hidden;
-  
-  &:hover {
-    border-color: ${({ theme }) => theme.colors.primary};
-    background: ${({ theme }) => theme.colors.primary}08;
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(0, 122, 204, 0.15);
-  }
-
-  &:active {
-    transform: translateY(0);
-  }
-`;
-
-const OptionIconWrapper = styled.div<{ $gradient: string }>`
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  background: ${({ $gradient }) => $gradient};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 1.5rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-`;
-
-const OptionLabel = styled.span`
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textDark};
-`;
-
-const OptionHint = styled.span`
-  font-size: 0.75rem;
-  color: ${({ theme }) => theme.colors.textMedium};
-`;
-
-const FooterSection = styled.div`
-  display: flex;
-  gap: ${({ theme }) => theme.spacing.md};
-  padding-top: ${({ theme }) => theme.spacing.md};
-  border-top: 1px solid ${({ theme }) => theme.colors.border};
-
-  @media (max-width: 400px) {
-    flex-direction: column;
-  }
-`;
-
-const StyledButton = styled(Button)`
-  flex: 1;
-  padding: 14px 24px;
-  font-weight: 600;
-  border-radius: 12px;
-`;
 
 export const AvatarEditor: React.FC<AvatarEditorProps> = ({
   currentAvatar,
@@ -362,7 +27,6 @@ export const AvatarEditor: React.FC<AvatarEditorProps> = ({
   const [isDragOver, setIsDragOver] = useState(false);
   const [selectedOption, setSelectedOption] = useState<'upload' | 'initials' | 'random' | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { addToast } = useToast();
 
   const defaultAvatar = `https://api.dicebear.com/8.x/initials/svg?seed=${userName}&backgroundColor=007ACC`;
   const displayAvatar = previewUrl || currentAvatar || defaultAvatar;
@@ -378,7 +42,7 @@ export const AvatarEditor: React.FC<AvatarEditorProps> = ({
     if (file && file.type.startsWith('image/')) {
       // Validar tamanho (5MB)
       if (file.size > 5 * 1024 * 1024) {
-        addToast("A imagem deve ter no máximo 5MB", "error");
+        toast.error("A imagem deve ter no máximo 5MB");
         return;
       }
 
@@ -391,7 +55,7 @@ export const AvatarEditor: React.FC<AvatarEditorProps> = ({
       };
       reader.readAsDataURL(file);
     } else {
-      addToast("Por favor, selecione apenas arquivos de imagem", "error");
+      toast.error("Por favor, selecione apenas arquivos de imagem");
     }
   };
 
@@ -426,9 +90,11 @@ export const AvatarEditor: React.FC<AvatarEditorProps> = ({
     try {
       await onSave(previewUrl, selectedFile || undefined);
       setIsModalOpen(false);
-      addToast("Foto de perfil atualizada com sucesso!", "success");
+      // Success toast handled by parent or hook
+      // toast.success("Foto de perfil atualizada com sucesso!");
     } catch (error) {
       console.error("Erro ao salvar avatar:", error);
+      // Error toast handled by parent or hook
     } finally {
       setIsLoading(false);
     }
@@ -457,50 +123,72 @@ export const AvatarEditor: React.FC<AvatarEditorProps> = ({
 
   return (
     <>
-      <AvatarContainer onClick={handleOpenModal}>
-        <AvatarImage src={currentAvatar || defaultAvatar} alt={`Foto de ${userName}`} />
-        <AvatarOverlay>
-          <EditIconWrapper>
+      <div
+        className="relative w-[110px] h-[110px] mb-4 cursor-pointer group mx-auto"
+        onClick={handleOpenModal}
+      >
+        <img
+          src={currentAvatar || defaultAvatar}
+          alt={`Foto de ${userName}`}
+          className="w-full h-full rounded-full object-cover border-4 border-white dark:border-zinc-800 shadow-lg transition-all duration-300 ring-2 ring-primary/20"
+        />
+        <div className="absolute inset-0 rounded-full bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 backdrop-blur-[1px] text-white">
+          <div className="flex flex-col items-center gap-1.5 text-xs font-bold uppercase tracking-wide">
             <Camera size={24} />
             <span>Editar</span>
-          </EditIconWrapper>
-        </AvatarOverlay>
-        <LevelBadge>Nv. {userLevel}</LevelBadge>
-      </AvatarContainer>
+          </div>
+        </div>
+        <div className="absolute bottom-0.5 -right-2 bg-gradient-to-br from-primary to-blue-600 text-white text-[0.7rem] font-bold px-2.5 py-1 rounded-full border-[3px] border-white dark:border-zinc-800 shadow-sm z-10 animate-pulse">
+          Nv. {userLevel}
+        </div>
+      </div>
 
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title="Alterar Foto de Perfil"
       >
-        <ModalContent>
+        <div className="flex flex-col gap-6 p-2">
           {/* Preview Section */}
-          <PreviewSection>
-            <PreviewAvatarWrapper
+          <div className="flex flex-col items-center gap-4 p-6 bg-gradient-to-br from-primary/5 to-cyan-500/5 rounded-2xl relative overflow-hidden border border-primary/10">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-green-500 to-orange-500" />
+
+            <motion.div
               key={displayAvatar}
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ type: "spring", stiffness: 300, damping: 20 }}
+              className="relative"
             >
-              <PreviewAvatar src={displayAvatar} alt="Preview" />
+              <img
+                src={displayAvatar}
+                alt="Preview"
+                className="w-[140px] h-[140px] rounded-full object-cover border-4 border-white dark:border-zinc-800 shadow-xl"
+              />
               {hasChanges && (
-                <PreviewBadge>
+                <div className="absolute bottom-1 right-1 w-9 h-9 rounded-full bg-green-500 flex items-center justify-center text-white border-[3px] border-white dark:border-zinc-800 shadow-lg">
                   <Check size={18} />
-                </PreviewBadge>
+                </div>
               )}
-            </PreviewAvatarWrapper>
-            <PreviewLabel>
+            </motion.div>
+
+            <div className="flex items-center gap-2 text-sm text-zinc-500 font-medium">
+              <span className="w-5 h-[1px] bg-zinc-300 dark:bg-zinc-700" />
               {hasChanges ? "Nova foto selecionada" : "Foto atual"}
-            </PreviewLabel>
-          </PreviewSection>
+              <span className="w-5 h-[1px] bg-zinc-300 dark:bg-zinc-700" />
+            </div>
+          </div>
 
           {/* Upload Area */}
-          <OptionsSection>
-            <SectionTitle>Enviar Foto</SectionTitle>
-            
-            <UploadArea
-              $isDragOver={isDragOver}
-              $hasFile={selectedOption === 'upload'}
+          <div className="flex flex-col gap-3">
+            <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-widest pl-1">Enviar Foto</h4>
+
+            <motion.div
+              className={cn(
+                "border-2 border-dashed rounded-2xl p-6 text-center transition-all duration-300 cursor-pointer relative overflow-hidden group",
+                isDragOver ? "border-primary bg-primary/5" : "border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900/50",
+                selectedOption === 'upload' && "border-green-500 bg-green-500/5"
+              )}
               onClick={handleUploadClick}
               onDrop={handleDrop}
               onDragOver={handleDragOver}
@@ -508,84 +196,105 @@ export const AvatarEditor: React.FC<AvatarEditorProps> = ({
               whileHover={{ scale: 1.01 }}
               whileTap={{ scale: 0.99 }}
             >
-              <UploadIcon
-                $hasFile={selectedOption === 'upload'}
+              <motion.div
+                className={cn(
+                  "w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3 text-white shadow-lg",
+                  selectedOption === 'upload'
+                    ? "bg-gradient-to-br from-green-500 to-green-600 shadow-green-500/30"
+                    : "bg-gradient-to-br from-primary to-blue-500 shadow-primary/30"
+                )}
                 animate={selectedOption === 'upload' ? { scale: [1, 1.1, 1] } : {}}
                 transition={{ duration: 0.3 }}
               >
                 {selectedOption === 'upload' ? <Check size={28} /> : <Upload size={28} />}
-              </UploadIcon>
-              <UploadTitle>
+              </motion.div>
+
+              <h5 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 mb-1">
                 {selectedOption === 'upload' ? "Foto selecionada!" : "Clique ou arraste"}
-              </UploadTitle>
-              <UploadHint>
-                {selectedOption === 'upload' 
-                  ? selectedFile?.name 
+              </h5>
+              <p className="text-sm text-zinc-500">
+                {selectedOption === 'upload'
+                  ? selectedFile?.name
                   : "PNG, JPG ou GIF (máx. 5MB)"}
-              </UploadHint>
-              <FileInput
+              </p>
+
+              <input
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
                 onChange={handleFileInputChange}
+                className="hidden"
               />
-            </UploadArea>
-          </OptionsSection>
+            </motion.div>
+          </div>
 
           {/* Quick Options */}
-          <OptionsSection>
-            <SectionTitle>Opções Rápidas</SectionTitle>
-            
-            <OptionsGrid>
-              <OptionButton
-                $isActive={selectedOption === 'initials'}
+          <div className="flex flex-col gap-3">
+            <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-widest pl-1">Opções Rápidas</h4>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <motion.button
+                className={cn(
+                  "flex flex-col items-center gap-2 p-4 border-2 rounded-2xl transition-all duration-300 font-sans",
+                  selectedOption === 'initials'
+                    ? "border-primary bg-primary/5"
+                    : "border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:border-primary hover:bg-primary/5"
+                )}
                 onClick={handleUseInitials}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
-                <OptionIconWrapper $gradient="linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white shadow-md">
                   <User size={24} />
-                </OptionIconWrapper>
-                <OptionLabel>Usar Iniciais</OptionLabel>
-                <OptionHint>Avatar com suas iniciais</OptionHint>
-              </OptionButton>
+                </div>
+                <div className="text-center">
+                  <span className="block text-sm font-semibold text-zinc-900 dark:text-zinc-100">Usar Iniciais</span>
+                  <span className="block text-xs text-zinc-500">Gerar com seu nome</span>
+                </div>
+              </motion.button>
 
-              <OptionButton
-                $isActive={selectedOption === 'random'}
+              <motion.button
+                className={cn(
+                  "flex flex-col items-center gap-2 p-4 border-2 rounded-2xl transition-all duration-300 font-sans",
+                  selectedOption === 'random'
+                    ? "border-orange-500 bg-orange-500/5"
+                    : "border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:border-orange-500 hover:bg-orange-500/5"
+                )}
                 onClick={handleUseRandomAvatar}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
-                <OptionIconWrapper $gradient="linear-gradient(135deg, #F59E0B 0%, #F97316 100%)">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white shadow-md">
                   <Shuffle size={24} />
-                </OptionIconWrapper>
-                <OptionLabel>Avatar Aleatório</OptionLabel>
-                <OptionHint>Gerar novo avatar</OptionHint>
-              </OptionButton>
-            </OptionsGrid>
-          </OptionsSection>
+                </div>
+                <div className="text-center">
+                  <span className="block text-sm font-semibold text-zinc-900 dark:text-zinc-100">Aleatório</span>
+                  <span className="block text-xs text-zinc-500">Gerar novo avatar</span>
+                </div>
+              </motion.button>
+            </div>
+          </div>
 
           {/* Footer Buttons */}
-          <FooterSection>
-            <StyledButton
+          <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+            <Button
               variant="outline"
               onClick={() => setIsModalOpen(false)}
               disabled={isLoading}
+              className="flex-1 h-12 rounded-xl font-semibold border-2 hover:bg-zinc-100 dark:hover:bg-zinc-800"
             >
               Cancelar
-            </StyledButton>
-            <StyledButton
-              variant="primary"
+            </Button>
+            <Button
               onClick={handleSave}
               disabled={isLoading || !hasChanges}
+              className="flex-1 h-12 rounded-xl font-semibold bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20"
             >
               {isLoading ? "Salvando..." : "Salvar Alterações"}
-            </StyledButton>
-          </FooterSection>
-        </ModalContent>
+            </Button>
+          </div>
+        </div>
       </Modal>
     </>
   );
 };
-
-export default AvatarEditor;

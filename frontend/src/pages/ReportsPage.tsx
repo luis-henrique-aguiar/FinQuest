@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useTheme } from 'styled-components';
+import React, { useState, useMemo } from 'react';
 import {
   PieChart,
   Pie,
@@ -16,7 +15,6 @@ import {
   Area,
 } from 'recharts';
 import {
-  BarChart3,
   TrendingUp,
   TrendingDown,
   DollarSign,
@@ -26,638 +24,498 @@ import {
   AlertCircle,
   Lightbulb,
 } from 'lucide-react';
-import { useToast } from '../hooks/useToast';
 import {
-  type YearlyReportDTO,
-  type ExpensesReportDTO,
-  type DailyExpensesReportDTO,
-  getYearlyReport,
-  getExpensesByCategory,
-  getDailyExpenses,
-  getSumByType,
   formatCurrency,
-  getMonthRange,
   MONTH_NAMES,
   CHART_COLORS,
-} from '../services/reportsService';
-import * as S from './ReportsPage.styles ';
+} from '@/features/finance/services/reports-api';
+import {
+  useMonthlyReportData,
+  useYearlyReport,
+} from '@/features/finance/hooks/useReports';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
+import { motion } from 'framer-motion';
 
 type PeriodType = 'month' | 'year';
 
-interface ChartData {
-  yearlyData: YearlyReportDTO | null;
-  categoryData: ExpensesReportDTO | null;
-  dailyData: DailyExpensesReportDTO | null;
-  totalIncome: number;
-  totalExpense: number;
-  previousIncome: number;
-  previousExpense: number;
-}
-
-interface CustomTooltipProps {
-  active?: boolean;
-  payload?: Array<{ value: number; name: string; color: string }>;
-  label?: string;
-}
-
-const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label }) => {
-  const theme = useTheme();
-
-  if (!active || !payload) return null;
-
-  return (
-    <div
-      style={{
-        background: theme.colors.white,
-        border: `1px solid ${theme.colors.border}`,
-        borderRadius: theme.borderRadius.medium,
-        padding: theme.spacing.md,
-        boxShadow: theme.shadows.medium,
-      }}
-    >
-      <p style={{ margin: 0, fontWeight: 600, marginBottom: 8 }}>{label}</p>
-      {payload.map((entry, index) => (
-        <p key={index} style={{ margin: 0, color: entry.color }}>
-          {entry.name}: {formatCurrency(entry.value)}
-        </p>
-      ))}
-    </div>
-  );
+// Chart theme colors matching Tailwind variables
+const CHART_THEME = {
+  primary: '#3b82f6', // blue-500
+  success: '#22c55e', // green-500
+  error: '#ef4444',   // red-500
+  warning: '#f59e0b', // amber-500
+  background: '#ffffff',
+  text: '#374151',
 };
 
-export const ReportsPage: React.FC = () => {
-  const theme = useTheme();
-  const { addToast } = useToast();
-
-  // State
+const ReportsPage: React.FC = () => {
+  const [currentDate, setCurrentDate] = useState(new Date());
   const [periodType, setPeriodType] = useState<PeriodType>('month');
-  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
-  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
-  const [isLoading, setIsLoading] = useState(true);
-  const [chartData, setChartData] = useState<ChartData>({
-    yearlyData: null,
-    categoryData: null,
-    dailyData: null,
-    totalIncome: 0,
-    totalExpense: 0,
-    previousIncome: 0,
-    previousExpense: 0,
-  });
 
-  const fetchData = useCallback(async () => {
-    setIsLoading(true);
+  const currentYear = currentDate.getFullYear();
+  const currentMonth = currentDate.getMonth();
 
-    try {
-      // Busca dados anuais
-      const yearlyData = await getYearlyReport(currentYear);
+  // TanStack Query Hooks
+  const {
+    categoryData,
+    dailyData,
+    totalIncome,
+    totalExpense,
+    previousIncome,
+    previousExpense,
+    isLoading: isLoadingMonthly,
+    error: monthlyError,
+  } = useMonthlyReportData(currentYear, currentMonth);
 
-      // Range do mês atual
-      const { startDate, endDate } = getMonthRange(currentYear, currentMonth);
+  const {
+    data: yearlyData,
+    isLoading: isLoadingYearly,
+    error: yearlyError,
+  } = useYearlyReport(currentYear);
 
-      // Range do mês anterior
-      const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
-      const prevYear = currentMonth === 0 ? currentYear - 1 : currentYear;
-      const { startDate: prevStartDate, endDate: prevEndDate } = getMonthRange(prevYear, prevMonth);
+  const isLoading = isLoadingMonthly || (periodType === 'year' && isLoadingYearly);
+  const error = monthlyError || (periodType === 'year' ? yearlyError : null);
 
-      const [categoryData, dailyData, incomeSum, expenseSum, prevIncomeSum, prevExpenseSum] =
-        await Promise.all([
-          getExpensesByCategory(startDate, endDate),
-          getDailyExpenses(startDate, endDate),
-          getSumByType('INCOME', startDate, endDate),
-          getSumByType('EXPENSE', startDate, endDate),
-          getSumByType('INCOME', prevStartDate, prevEndDate),
-          getSumByType('EXPENSE', prevStartDate, prevEndDate),
-        ]);
+  // Derived Data & Calculations
+  const balance = totalIncome - totalExpense;
+  const savingsRate = totalIncome > 0 ? ((totalIncome - totalExpense) / totalIncome) * 100 : 0;
 
-      setChartData({
-        yearlyData,
-        categoryData,
-        dailyData,
-        totalIncome: incomeSum.total,
-        totalExpense: expenseSum.total,
-        previousIncome: prevIncomeSum.total,
-        previousExpense: prevExpenseSum.total,
-      });
-    } catch (error) {
-      console.error('Erro ao carregar dados:', error);
-      addToast('Erro ao carregar relatórios', 'error');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [currentMonth, currentYear, addToast]);
+  const previousBalance = previousIncome - previousExpense;
+  const balanceChange = previousBalance !== 0 ? ((balance - previousBalance) / Math.abs(previousBalance)) * 100 : 0;
+  const incomeChange = previousIncome !== 0 ? ((totalIncome - previousIncome) / previousIncome) * 100 : 0;
+  const expenseChange = previousExpense !== 0 ? ((totalExpense - previousExpense) / previousExpense) * 100 : 0;
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  const navigateMonth = (direction: 'prev' | 'next') => {
-    if (direction === 'prev') {
-      if (currentMonth === 0) {
-        setCurrentMonth(11);
-        setCurrentYear((prev) => prev - 1);
-      } else {
-        setCurrentMonth((prev) => prev - 1);
-      }
-    } else {
-      if (currentMonth === 11) {
-        setCurrentMonth(0);
-        setCurrentYear((prev) => prev + 1);
-      } else {
-        setCurrentMonth((prev) => prev + 1);
-      }
-    }
-  };
-
-  const navigateYear = (direction: 'prev' | 'next') => {
-    setCurrentYear((prev) => (direction === 'prev' ? prev - 1 : prev + 1));
-  };
-
-  const periodLabel = useMemo(() => {
-    if (periodType === 'year') {
-      return `Ano ${currentYear}`;
-    }
-    return `${MONTH_NAMES[currentMonth]} ${currentYear}`;
-  }, [periodType, currentMonth, currentYear]);
-
-  const saldo = chartData.totalIncome - chartData.totalExpense;
-  const savingsRate =
-    chartData.totalIncome > 0
-      ? ((saldo / chartData.totalIncome) * 100).toFixed(1)
-      : '0.0';
-
-  const incomeChange =
-    chartData.previousIncome > 0
-      ? ((chartData.totalIncome - chartData.previousIncome) / chartData.previousIncome) * 100
-      : 0;
-
-  const expenseChange =
-    chartData.previousExpense > 0
-      ? ((chartData.totalExpense - chartData.previousExpense) / chartData.previousExpense) * 100
-      : 0;
-
-  // Dados formatados para os gráficos
-  const yearlyChartData = useMemo(() => {
-    if (!chartData.yearlyData) return [];
-    return chartData.yearlyData.reports.map((report) => ({
-      month: report.month,
-      receitas: report.receitas,
-      despesas: report.despesas,
-      saldo: report.saldo,
-    }));
-  }, [chartData.yearlyData]);
-
+  // Chart Data Preparation
   const categoryChartData = useMemo(() => {
-    if (!chartData.categoryData) return [];
-    return chartData.categoryData.expenses.map((expense) => ({
-      name: expense.category,
-      value: expense.amount,
-      percentage: expense.percentage,
-      count: expense.count,
+    if (!categoryData) return [];
+    return categoryData.expenses.map((item) => ({
+      name: item.category,
+      value: item.total,
+      percentage: item.percentage,
     }));
-  }, [chartData.categoryData]);
+  }, [categoryData]);
 
   const dailyChartData = useMemo(() => {
-    if (!chartData.dailyData) return [];
-    return chartData.dailyData.expenses.map((expense) => ({
-      day: expense.day,
-      value: expense.value,
-      count: expense.count,
+    if (!dailyData) return [];
+    return dailyData.dailyExpenses.map((item) => ({
+      day: parseInt(item.date.split('-')[2]),
+      amount: item.totalExpense,
     }));
-  }, [chartData.dailyData]);
+  }, [dailyData]);
 
+  const yearlyChartData = useMemo(() => {
+    if (!yearlyData) return [];
+    return yearlyData.months.map((m) => ({
+      name: MONTH_NAMES[m.month].substring(0, 3),
+      receitas: m.totalIncome,
+      despesas: m.totalExpense,
+      saldo: m.balance,
+    }));
+  }, [yearlyData]);
+
+  // Insights Generation
   const insights = useMemo(() => {
-    const items: Array<{
-      type: 'success' | 'warning' | 'info';
-      title: string;
-      text: string;
-    }> = [];
+    const list = [];
 
-    if (saldo > 0) {
-      items.push({
-        type: 'success',
-        title: 'Economia no Caminho Certo! 🎉',
-        text: `Você economizou ${formatCurrency(saldo)} este mês, representando ${savingsRate}% da sua renda. Continue assim!`,
+    if (savingsRate > 20) {
+      list.push({
+        type: 'success' as const,
+        title: 'Ótima Taxa de Poupança',
+        message: `Você poupou ${savingsRate.toFixed(0)}% da sua renda este mês. Continue assim!`,
       });
-    } else if (saldo < 0) {
-      items.push({
-        type: 'warning',
-        title: 'Atenção ao Saldo Negativo',
-        text: `Suas despesas superaram suas receitas em ${formatCurrency(Math.abs(saldo))}. Considere revisar seus gastos.`,
+    } else if (savingsRate < 0) {
+      list.push({
+        type: 'warning' as const,
+        title: 'Atenção aos Gastos',
+        message: 'Suas despesas superaram suas receitas. Revise seu orçamento.',
       });
     }
 
-    if (categoryChartData.length > 0) {
-      const topCategory = categoryChartData[0];
-      if (topCategory.percentage > 40) {
-        items.push({
-          type: 'warning',
-          title: `Gastos Concentrados em ${topCategory.name}`,
-          text: `Essa categoria representa ${topCategory.percentage.toFixed(1)}% das despesas. Considere diversificar ou reduzir.`,
-        });
+    if (totalExpense < previousExpense) {
+      list.push({
+        type: 'success' as const,
+        title: 'Redução de Despesas',
+        message: 'Você gastou menos que no mês passado. Parabéns pela economia!',
+      });
+    }
+
+    const highestCategory = categoryChartData.length > 0 ? categoryChartData[0] : null;
+    if (highestCategory) {
+      list.push({
+        type: 'info' as const,
+        title: 'Maior Gasto',
+        message: `Sua maior despesa foi com ${highestCategory.name} representa ${highestCategory.percentage.toFixed(0)}% do total.`,
+      });
+    }
+
+    return list;
+  }, [savingsRate, totalExpense, previousExpense, categoryChartData]);
+
+  const handleMonthChange = (direction: 'prev' | 'next') => {
+    setCurrentDate((prev) => {
+      const newDate = new Date(prev);
+      if (direction === 'prev') {
+        newDate.setMonth(prev.getMonth() - 1);
+      } else {
+        newDate.setMonth(prev.getMonth() + 1);
       }
-    }
+      return newDate;
+    });
+  };
 
-    if (expenseChange < -10) {
-      items.push({
-        type: 'success',
-        title: 'Redução nas Despesas',
-        text: `Suas despesas diminuíram ${Math.abs(expenseChange).toFixed(1)}% comparado ao mês anterior. Ótimo trabalho!`,
-      });
-    } else if (expenseChange > 20) {
-      items.push({
-        type: 'info',
-        title: 'Aumento nas Despesas',
-        text: `Suas despesas aumentaram ${expenseChange.toFixed(1)}% em relação ao mês anterior. Fique atento aos gastos.`,
-      });
-    }
+  const handleYearChange = (direction: 'prev' | 'next') => {
+    setCurrentDate((prev) => {
+      const newDate = new Date(prev);
+      if (direction === 'prev') {
+        newDate.setFullYear(prev.getFullYear() - 1);
+      } else {
+        newDate.setFullYear(prev.getFullYear() + 1);
+      }
+      return newDate;
+    });
+  };
 
-    return items;
-  }, [saldo, savingsRate, categoryChartData, expenseChange]);
+  if (isLoading) {
+    return (
+      <div className="max-w-[1400px] mx-auto p-4 flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+        <p className="text-zinc-500">Carregando relatórios...</p>
+      </div>
+    );
+  }
 
-  const hasData =
-    chartData.yearlyData &&
-    chartData.yearlyData.reports.some((r) => r.transactionCount > 0);
+  if (error) {
+    return (
+      <div className="max-w-[1400px] mx-auto p-4">
+        <div className="flex flex-col items-center justify-center p-12 text-center bg-white dark:bg-zinc-900 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-800 gap-4">
+          <AlertCircle size={48} className="text-red-500 opacity-60" />
+          <h3 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Erro ao carregar dados</h3>
+          <p className="text-zinc-500 max-w-sm">Não foi possível gerar o relatório. Tente novamente mais tarde.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <S.PageContainer>
+    <div className="max-w-[1400px] mx-auto p-4 md:p-8 flex flex-col gap-6 md:gap-8">
       {/* Hero Section */}
-      <S.HeroSection>
-        <S.HeroHeader>
-          <S.HeroContent>
-            <S.Title>
-              <BarChart3 size={32} />
-              Relatórios Financeiros
-            </S.Title>
-            <S.Subtitle>
-              Análise detalhada dos seus hábitos financeiros e insights
-              personalizados.
-            </S.Subtitle>
-          </S.HeroContent>
-
-          <S.ControlsContainer>
-            <S.MonthSelector>
-              <S.MonthButton
-                onClick={() =>
-                  periodType === 'year' ? navigateYear('prev') : navigateMonth('prev')
-                }
-              >
-                <ChevronLeft size={20} />
-              </S.MonthButton>
-              <S.MonthDisplay>{periodLabel}</S.MonthDisplay>
-              <S.MonthButton
-                onClick={() =>
-                  periodType === 'year' ? navigateYear('next') : navigateMonth('next')
-                }
-              >
-                <ChevronRight size={20} />
-              </S.MonthButton>
-            </S.MonthSelector>
-
-            <S.FilterTabs>
-              <S.FilterTab
-                $active={periodType === 'month'}
-                onClick={() => setPeriodType('month')}
-              >
-                Mensal
-              </S.FilterTab>
-              <S.FilterTab
-                $active={periodType === 'year'}
-                onClick={() => setPeriodType('year')}
-              >
-                Anual
-              </S.FilterTab>
-            </S.FilterTabs>
-          </S.ControlsContainer>
-        </S.HeroHeader>
-
-        {/* Stats Grid */}
-        {!isLoading && (
-          <S.StatsGrid>
-            <S.StatCard
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-            >
-              <S.StatIcon $color="#28A745">
-                <TrendingUp />
-              </S.StatIcon>
-              <S.StatContent>
-                <S.StatValue $color="#28A745">
-                  {formatCurrency(chartData.totalIncome)}
-                </S.StatValue>
-                <S.StatLabel>Receitas</S.StatLabel>
-                {incomeChange !== 0 && (
-                  <S.StatChange $positive={incomeChange >= 0}>
-                    {incomeChange >= 0 ? <TrendingUp /> : <TrendingDown />}
-                    {Math.abs(incomeChange).toFixed(1)}% vs mês anterior
-                  </S.StatChange>
-                )}
-              </S.StatContent>
-            </S.StatCard>
-
-            <S.StatCard
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-            >
-              <S.StatIcon $color="#DC3545">
-                <TrendingDown />
-              </S.StatIcon>
-              <S.StatContent>
-                <S.StatValue $color="#DC3545">
-                  {formatCurrency(chartData.totalExpense)}
-                </S.StatValue>
-                <S.StatLabel>Despesas</S.StatLabel>
-                {expenseChange !== 0 && (
-                  <S.StatChange $positive={expenseChange <= 0}>
-                    {expenseChange <= 0 ? <TrendingDown /> : <TrendingUp />}
-                    {Math.abs(expenseChange).toFixed(1)}% vs mês anterior
-                  </S.StatChange>
-                )}
-              </S.StatContent>
-            </S.StatCard>
-
-            <S.StatCard
-              $highlight={saldo > 0}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-            >
-              <S.StatIcon $color={saldo >= 0 ? '#28A745' : '#DC3545'}>
-                <DollarSign />
-              </S.StatIcon>
-              <S.StatContent>
-                <S.StatValue $color={saldo >= 0 ? '#28A745' : '#DC3545'}>
-                  {formatCurrency(saldo)}
-                </S.StatValue>
-                <S.StatLabel>Saldo do Período</S.StatLabel>
-              </S.StatContent>
-            </S.StatCard>
-
-            <S.StatCard
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-            >
-              <S.StatIcon $color="#007ACC">
-                <Percent />
-              </S.StatIcon>
-              <S.StatContent>
-                <S.StatValue>{savingsRate}%</S.StatValue>
-                <S.StatLabel>Taxa de Economia</S.StatLabel>
-              </S.StatContent>
-            </S.StatCard>
-          </S.StatsGrid>
-        )}
-      </S.HeroSection>
-
-      {/* Loading State */}
-      {isLoading ? (
-        <S.LoadingContainer>
-          <div className="spinner" />
-          <p>Carregando relatórios...</p>
-        </S.LoadingContainer>
-      ) : !hasData ? (
-        <S.EmptyState>
-          <div className="icon">📊</div>
-          <h3>Nenhum dado disponível</h3>
-          <p>
-            Registre suas transações para visualizar relatórios e insights
-            personalizados sobre suas finanças.
+      <div className="bg-gradient-to-br from-primary/10 to-green-500/10 p-6 md:p-8 rounded-3xl border border-primary/20 flex flex-col md:flex-row justify-between items-start gap-6">
+        <div className="flex-1">
+          <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3 mb-2 text-zinc-900 dark:text-zinc-50">
+            <TrendingUp className="text-primary w-8 h-8" />
+            Relatórios Financeiros
+          </h1>
+          <p className="text-zinc-600 dark:text-zinc-400 text-lg">
+            Acompanhe sua evolução e analise seus hábitos financeiros
           </p>
-        </S.EmptyState>
-      ) : (
-        <>
-          {/* Charts */}
-          <S.ChartsGrid>
-            {/* Evolução Anual */}
-            <S.ChartCard
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-4 w-full md:w-auto">
+          <div className="flex p-1 bg-white dark:bg-zinc-900 rounded-full border border-zinc-200 dark:border-zinc-700 shadow-sm">
+            <button
+              onClick={() => setPeriodType('month')}
+              className={cn(
+                "px-4 py-2 rounded-full text-sm font-medium transition-all",
+                periodType === 'month'
+                  ? "bg-primary text-white shadow-sm"
+                  : "text-zinc-500 hover:text-primary hover:bg-primary/5"
+              )}
             >
-              <S.ChartHeader>
-                <div>
-                  <S.ChartTitle>Evolução ao Longo do Ano</S.ChartTitle>
-                  <S.ChartSubtitle>
-                    Comparação entre receitas e despesas mensais
-                  </S.ChartSubtitle>
+              Mensal
+            </button>
+            <button
+              onClick={() => setPeriodType('year')}
+              className={cn(
+                "px-4 py-2 rounded-full text-sm font-medium transition-all",
+                periodType === 'year'
+                  ? "bg-primary text-white shadow-sm"
+                  : "text-zinc-500 hover:text-primary hover:bg-primary/5"
+              )}
+            >
+              Anual
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-zinc-900 rounded-full border border-zinc-200 dark:border-zinc-700 shadow-sm">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 rounded-full hover:bg-primary/10 hover:text-primary"
+              onClick={() =>
+                periodType === 'month'
+                  ? handleMonthChange('prev')
+                  : handleYearChange('prev')
+              }
+            >
+              <ChevronLeft size={18} />
+            </Button>
+            <span className="min-w-[140px] text-center font-semibold text-zinc-900 dark:text-zinc-100 capitalize">
+              {periodType === 'month'
+                ? `${MONTH_NAMES[currentMonth]} ${currentYear}`
+                : currentYear}
+            </span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 rounded-full hover:bg-primary/10 hover:text-primary"
+              onClick={() =>
+                periodType === 'month'
+                  ? handleMonthChange('next')
+                  : handleYearChange('next')
+              }
+            >
+              <ChevronRight size={18} />
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <Card className="hover:-translate-y-1 transition-transform cursor-default">
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className="w-14 h-14 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 dark:text-green-400">
+                <DollarSign size={28} />
+              </div>
+              <div>
+                <p className="text-sm text-zinc-500 font-medium">Receitas</p>
+                <h3 className="text-2xl font-bold text-green-600 dark:text-green-400">{formatCurrency(totalIncome)}</h3>
+                <div className={cn("flex items-center gap-1 text-xs mt-1", incomeChange >= 0 ? "text-green-600" : "text-red-500")}>
+                  {incomeChange >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                  <span>{Math.abs(incomeChange).toFixed(1)}% vs anterior</span>
                 </div>
-              </S.ChartHeader>
-              <ResponsiveContainer width="100%" height={300}>
-                <AreaChart data={yearlyChartData}>
-                  <defs>
-                    <linearGradient id="colorReceitas" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#28A745" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#28A745" stopOpacity={0} />
-                    </linearGradient>
-                    <linearGradient id="colorDespesas" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#DC3545" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#DC3545" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke={theme.colors.textMedium + '33'}
-                    vertical={false}
-                  />
-                  <XAxis
-                    dataKey="month"
-                    stroke={theme.colors.textMedium}
-                    tick={{ fontSize: 12 }}
-                    tickLine={false}
-                  />
-                  <YAxis
-                    stroke={theme.colors.textMedium}
-                    tickFormatter={(value) => `R$ ${(value / 1000).toFixed(0)}k`}
-                    tick={{ fontSize: 11 }}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Legend />
-                  <Area
-                    type="monotone"
-                    dataKey="receitas"
-                    stroke="#28A745"
-                    strokeWidth={2}
-                    fill="url(#colorReceitas)"
-                    name="Receitas"
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="despesas"
-                    stroke="#DC3545"
-                    strokeWidth={2}
-                    fill="url(#colorDespesas)"
-                    name="Despesas"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </S.ChartCard>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
 
-            {/* Row com 2 gráficos */}
-            <S.ChartRow>
-              {/* Gastos por Categoria */}
-              <S.ChartCard
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-              >
-                <S.ChartHeader>
-                  <div>
-                    <S.ChartTitle>Gastos por Categoria</S.ChartTitle>
-                    <S.ChartSubtitle>Distribuição percentual</S.ChartSubtitle>
-                  </div>
-                </S.ChartHeader>
-                {categoryChartData.length > 0 ? (
-                  <>
-                    <ResponsiveContainer width="100%" height={250}>
-                      <PieChart>
-                        <Pie
-                          data={categoryChartData}
-                          dataKey="value"
-                          nameKey="name"
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={60}
-                          outerRadius={90}
-                          paddingAngle={3}
-                        >
-                          {categoryChartData.map((_, index) => (
-                            <Cell
-                              key={`cell-${index}`}
-                              fill={CHART_COLORS[index % CHART_COLORS.length]}
-                            />
-                          ))}
-                        </Pie>
-                        <Tooltip
-                          formatter={(value: number) => formatCurrency(value)}
-                        />
-                      </PieChart>
-                    </ResponsiveContainer>
-                    <S.CategoryList>
-                      {categoryChartData.map((category, index) => (
-                        <S.CategoryItem key={category.name}>
-                          <S.CategoryInfo>
-                            <S.CategoryDot
-                              $color={CHART_COLORS[index % CHART_COLORS.length]}
-                            />
-                            <S.CategoryName>{category.name}</S.CategoryName>
-                          </S.CategoryInfo>
-                          <div>
-                            <S.CategoryValue>
-                              {formatCurrency(category.value)}
-                            </S.CategoryValue>
-                            <S.CategoryPercentage>
-                              ({category.percentage.toFixed(1)}%)
-                            </S.CategoryPercentage>
-                          </div>
-                        </S.CategoryItem>
-                      ))}
-                    </S.CategoryList>
-                  </>
-                ) : (
-                  <S.EmptyState>
-                    <div className="icon">🗂️</div>
-                    <p>Sem despesas neste período</p>
-                  </S.EmptyState>
-                )}
-              </S.ChartCard>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
+        >
+          <Card className="hover:-translate-y-1 transition-transform cursor-default">
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className="w-14 h-14 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400">
+                <TrendingDown size={28} />
+              </div>
+              <div>
+                <p className="text-sm text-zinc-500 font-medium">Despesas</p>
+                <h3 className="text-2xl font-bold text-red-600 dark:text-red-400">{formatCurrency(totalExpense)}</h3>
+                <div className={cn("flex items-center gap-1 text-xs mt-1", expenseChange <= 0 ? "text-green-600" : "text-red-500")}>
+                  {expenseChange <= 0 ? <TrendingDown size={12} /> : <TrendingUp size={12} />}
+                  <span>{Math.abs(expenseChange).toFixed(1)}% vs anterior</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
 
-              {/* Despesas Diárias */}
-              <S.ChartCard
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-              >
-                <S.ChartHeader>
-                  <div>
-                    <S.ChartTitle>Despesas Diárias</S.ChartTitle>
-                    <S.ChartSubtitle>
-                      Padrão de gastos ao longo do mês
-                    </S.ChartSubtitle>
-                  </div>
-                </S.ChartHeader>
-                {dailyChartData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={350}>
-                    <BarChart data={dailyChartData}>
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        stroke={theme.colors.textMedium + '33'}
-                        vertical={false}
-                      />
-                      <XAxis
-                        dataKey="day"
-                        stroke={theme.colors.textMedium}
-                        tick={{ fontSize: 11 }}
-                        tickLine={false}
-                      />
-                      <YAxis
-                        stroke={theme.colors.textMedium}
-                        tickFormatter={(value) => `R$ ${value}`}
-                        tick={{ fontSize: 11 }}
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                      <Tooltip content={<CustomTooltip />} />
-                      <Bar
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.2 }}
+        >
+          <Card className="hover:-translate-y-1 transition-transform cursor-default border-primary/50 bg-primary/5">
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className="w-14 h-14 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-primary">
+                <DollarSign size={28} />
+              </div>
+              <div>
+                <p className="text-sm text-zinc-500 font-medium">Saldo</p>
+                <h3 className="text-2xl font-bold text-primary">{formatCurrency(balance)}</h3>
+                <div className={cn("flex items-center gap-1 text-xs mt-1", balanceChange >= 0 ? "text-green-600" : "text-red-500")}>
+                  {balanceChange >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                  <span>{Math.abs(balanceChange).toFixed(1)}% vs anterior</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.3 }}
+        >
+          <Card className="hover:-translate-y-1 transition-transform cursor-default">
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className="w-14 h-14 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600 dark:text-amber-400">
+                <Percent size={28} />
+              </div>
+              <div>
+                <p className="text-sm text-zinc-500 font-medium">Taxa de Poupança</p>
+                <h3 className="text-2xl font-bold text-amber-600 dark:text-amber-400">{savingsRate.toFixed(1)}%</h3>
+                <p className="text-xs text-zinc-400 mt-1">da renda mensal</p>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+
+      {/* Charts Section */}
+      <div className="flex flex-col gap-8">
+        {periodType === 'year' && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Visão Anual</CardTitle>
+              <CardDescription>Evolução mensal de receitas e despesas</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={yearlyChartData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
+                    <XAxis dataKey="name" tickLine={false} axisLine={false} tick={{ fill: '#6b7280', fontSize: 12 }} dy={10} />
+                    <YAxis tickLine={false} axisLine={false} tick={{ fill: '#6b7280', fontSize: 12 }} tickFormatter={(val) => `R$${val / 1000}k`} />
+                    <Tooltip
+                      formatter={(value: number) => formatCurrency(value)}
+                      contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                    />
+                    <Legend iconType="circle" />
+                    <Bar dataKey="receitas" fill={CHART_THEME.success} name="Receitas" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="despesas" fill={CHART_THEME.error} name="Despesas" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {periodType === 'month' && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Pie Chart */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Despesas por Categoria</CardTitle>
+                <CardDescription>Distribuição dos gastos do período</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col md:flex-row items-center h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%" className="!w-full md:!w-1/2">
+                    <PieChart>
+                      <Pie
+                        data={categoryChartData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={80}
+                        paddingAngle={5}
                         dataKey="value"
-                        fill={theme.colors.primary}
-                        radius={[4, 4, 0, 0]}
-                        name="Despesas"
+                      >
+                        {categoryChartData.map((_, index) => (
+                          <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} strokeWidth={0} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(value: number) => formatCurrency(value)}
+                        contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                       />
-                    </BarChart>
+                    </PieChart>
                   </ResponsiveContainer>
-                ) : (
-                  <S.EmptyState>
-                    <div className="icon">📅</div>
-                    <p>Sem despesas neste período</p>
-                  </S.EmptyState>
-                )}
-              </S.ChartCard>
-            </S.ChartRow>
-          </S.ChartsGrid>
 
-          {/* Insights */}
-          {insights.length > 0 && (
-            <S.SectionContainer>
-              <S.SectionTitle>
-                <Lightbulb size={24} />
-                Insights Personalizados
-              </S.SectionTitle>
-              <S.InsightsSection>
-                {insights.map((insight, index) => (
-                  <S.InsightCard
-                    key={index}
-                    $type={insight.type}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.1 * index }}
-                  >
-                    <S.InsightIcon>
-                      {insight.type === 'success' && (
-                        <TrendingUp size={32} color={theme.colors.success} />
-                      )}
-                      {insight.type === 'warning' && (
-                        <AlertCircle size={32} color={theme.colors.warning} />
-                      )}
-                      {insight.type === 'info' && (
-                        <TrendingDown size={32} color={theme.colors.primary} />
-                      )}
-                    </S.InsightIcon>
-                    <S.InsightContent>
-                      <S.InsightTitle>{insight.title}</S.InsightTitle>
-                      <S.InsightText>{insight.text}</S.InsightText>
-                    </S.InsightContent>
-                  </S.InsightCard>
-                ))}
-              </S.InsightsSection>
-            </S.SectionContainer>
-          )}
-        </>
-      )}
-    </S.PageContainer>
+                  <div className="w-full md:w-1/2 flex flex-col gap-2 overflow-y-auto max-h-[280px] pr-2">
+                    {categoryChartData.slice(0, 5).map((entry, index) => (
+                      <div key={index} className="flex justify-between items-center p-2 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-3 h-3 rounded-full"
+                            style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
+                          />
+                          <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{entry.name}</span>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{formatCurrency(entry.value)}</div>
+                          <div className="text-xs text-zinc-500">{entry.percentage.toFixed(1)}%</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Area Chart */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Despesas Diárias</CardTitle>
+                <CardDescription>Fluxo de gastos ao longo do mês</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[300px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={dailyChartData}>
+                      <defs>
+                        <linearGradient id="colorAmount" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor={CHART_THEME.error} stopOpacity={0.1} />
+                          <stop offset="95%" stopColor={CHART_THEME.error} stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
+                      <XAxis dataKey="day" tickLine={false} axisLine={false} tick={{ fill: '#6b7280', fontSize: 12 }} dy={10} />
+                      <YAxis tickLine={false} axisLine={false} tick={{ fill: '#6b7280', fontSize: 12 }} />
+                      <Tooltip
+                        formatter={(value: number) => formatCurrency(value)}
+                        contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="amount"
+                        stroke={CHART_THEME.error}
+                        fillOpacity={1}
+                        fill="url(#colorAmount)"
+                        name="Gasto"
+                        strokeWidth={2}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Insights Section */}
+        {insights.length > 0 && (
+          <div className="flex flex-col gap-4">
+            <h2 className="text-xl font-bold flex items-center gap-2 text-zinc-900 dark:text-zinc-100">
+              <Lightbulb className="text-amber-500" />
+              Insights Financeiros
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {insights.map((insight, index) => (
+                <div
+                  key={index}
+                  className={cn(
+                    "p-6 rounded-2xl border-l-4 shadow-sm flex items-start gap-4",
+                    insight.type === 'success' ? "bg-green-50 dark:bg-green-900/10 border-l-green-500" :
+                      insight.type === 'warning' ? "bg-amber-50 dark:bg-amber-900/10 border-l-amber-500" :
+                        "bg-blue-50 dark:bg-blue-900/10 border-l-blue-500"
+                  )}
+                >
+                  <div className="shrink-0">
+                    {insight.type === 'success' && <TrendingUp size={24} className="text-green-600" />}
+                    {insight.type === 'warning' && <AlertCircle size={24} className="text-amber-600" />}
+                    {insight.type === 'info' && <Lightbulb size={24} className="text-blue-600" />}
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-zinc-900 dark:text-zinc-100 mb-1">{insight.title}</h4>
+                    <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">{insight.message}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 };
 

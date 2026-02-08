@@ -1,6 +1,6 @@
 import React from "react";
-import styled from "styled-components";
 import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
 
 interface ProgressBarProps {
   progress: number;
@@ -9,65 +9,6 @@ interface ProgressBarProps {
   tooltipText?: string;
   className?: string;
 }
-
-const Tooltip = styled.div`
-  visibility: hidden;
-  width: max-content;
-  background-color: #555;
-  color: #fff;
-  text-align: center;
-  border-radius: 6px;
-  padding: 5px 10px;
-  position: absolute;
-  z-index: 1;
-  bottom: 125%;
-  left: 50%;
-  transform: translateX(-50%);
-  opacity: 0;
-  transition: opacity 0.3s;
-
-  &::after {
-    content: "";
-    position: absolute;
-    top: 100%;
-    left: 50%;
-    margin-left: -5px;
-    border-width: 5px;
-    border-style: solid;
-    border-color: #555 transparent transparent transparent;
-  }
-`;
-
-const ProgressBarContainer = styled.div<{ height: number }>`
-  position: relative;
-  width: 100%;
-  height: ${({ height }) => height}px;
-  background-color: ${({ theme }) => theme.colors.background};
-  border-radius: ${({ theme }) => theme.borderRadius.pill};
-
-  &:hover ${Tooltip} {
-    visibility: visible;
-    opacity: 1;
-  }
-`;
-
-const ProgressFill = styled(motion.div)<{
-  variant: "default" | "streak" | "xp";
-}>`
-  height: 100%;
-  border-radius: ${({ theme }) => theme.borderRadius.pill};
-
-  ${({ variant, theme }) => {
-    switch (variant) {
-      case "streak":
-        return `background: linear-gradient(90deg, ${theme.colors.accent}, ${theme.colors.warning});`;
-      case "xp":
-        return `background: linear-gradient(90deg, ${theme.colors.secondary}, ${theme.colors.primary});`;
-      default:
-        return `background-color: ${theme.colors.secondary};`;
-    }
-  }}
-`;
 
 export const ProgressBar: React.FC<ProgressBarProps> = ({
   progress,
@@ -78,17 +19,42 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
 }) => {
   const clampedProgress = Math.min(Math.max(progress, 0), 100);
 
+  const getVariantClasses = () => {
+    switch (variant) {
+      case "streak":
+        return "bg-gradient-to-r from-orange-500 to-amber-500";
+      case "xp":
+        return "bg-gradient-to-r from-blue-500 to-indigo-600";
+      default:
+        return "bg-primary";
+    }
+  };
+
   return (
-    <ProgressBarContainer height={height} className={className}>
-      <ProgressFill
-        variant={variant}
+    <div
+      className={cn(
+        "relative w-full bg-zinc-100 dark:bg-zinc-800 rounded-full group",
+        className
+      )}
+      style={{ height }}
+    >
+      <motion.div
+        className={cn(
+          "h-full rounded-full",
+          getVariantClasses()
+        )}
         initial={{ width: 0 }}
         animate={{ width: `${clampedProgress}%` }}
         transition={{ duration: 0.8, ease: "easeOut" }}
       />
-      {/* Renderiza o tooltip apenas se o texto for fornecido */}
-      {tooltipText && <Tooltip>{tooltipText}</Tooltip>}
-    </ProgressBarContainer>
+
+      {tooltipText && (
+        <div className="absolute bottom-[150%] left-1/2 -translate-x-1/2 px-2 py-1 bg-zinc-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+          {tooltipText}
+          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-zinc-800" />
+        </div>
+      )}
+    </div>
   );
 };
 

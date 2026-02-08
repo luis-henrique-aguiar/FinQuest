@@ -1,8 +1,9 @@
 import React from "react";
-import styled from "styled-components";
 import { Edit, Trash2, Plus } from "lucide-react";
 import { motion } from "framer-motion";
 import ProgressBar from "./ProgressBar";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 const STATUS_LABELS: Record<'COMPLETED' | 'IN_PROGRESS', string> = {
   COMPLETED: 'Concluída',
@@ -19,218 +20,6 @@ interface GoalCardProps {
   onEdit: () => void;
   onDelete: () => void;
 }
-
-const CardContainer = styled(motion.div)<{ $isComplete: boolean }>`
-  background: ${({ theme }) => theme.colors.white};
-  border-radius: ${({ theme }) => theme.borderRadius.large};
-  padding: ${({ theme }) => theme.spacing.lg};
-  box-shadow: ${({ theme }) => theme.shadows.medium};
-  border: 2px solid ${({ $isComplete, theme }) => 
-    $isComplete ? theme.colors.success : theme.colors.border};
-  transition: all ${({ theme }) => theme.animations.fast} ease;
-  position: relative;
-  overflow: hidden;
-
-  ${({ $isComplete, theme }) =>
-    $isComplete &&
-    `
-    background: linear-gradient(135deg, ${theme.colors.success}05 0%, ${theme.colors.success}08 100%);
-  `}
-
-  &:hover {
-    transform: translateY(-4px);
-    box-shadow: ${({ theme }) => theme.shadows.large};
-    border-color: ${({ $isComplete, theme }) =>
-      $isComplete ? theme.colors.success : theme.colors.primary};
-  }
-`;
-
-const CardHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: ${({ theme }) => theme.spacing.md};
-  gap: ${({ theme }) => theme.spacing.md};
-`;
-
-const TitleSection = styled.div`
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.xs};
-`;
-
-const GoalTitle = styled.h3`
-  margin: 0;
-  font-size: 1.25rem;
-  font-family: ${({ theme }) => theme.typography.fontFamily.heading};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semiBold};
-  color: ${({ theme }) => theme.colors.textDark};
-  line-height: 1.3;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-`;
-
-const StatusBadge = styled.span<{ $isComplete: boolean }>`
-  display: inline-flex;
-  align-items: center;
-  gap: ${({ theme }) => theme.spacing.xs};
-  padding: ${({ theme }) => theme.spacing.xs} ${({ theme }) => theme.spacing.sm};
-  border-radius: ${({ theme }) => theme.borderRadius.pill};
-  font-size: ${({ theme }) => theme.typography.fontSize.caption};
-  font-family: ${({ theme }) => theme.typography.fontFamily.body};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semiBold};
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  background: ${({ $isComplete, theme }) =>
-    $isComplete ? `${theme.colors.success}22` : `${theme.colors.primary}22`};
-  color: ${({ $isComplete, theme }) =>
-    $isComplete ? theme.colors.success : theme.colors.primary};
-  width: fit-content;
-`;
-
-const ActionButtons = styled.div`
-  display: flex;
-  gap: ${({ theme }) => theme.spacing.xs};
-  flex-shrink: 0;
-`;
-
-const ActionButton = styled.button`
-  background: ${({ theme }) => theme.colors.white};
-  border: 2px solid ${({ theme }) => theme.colors.border};
-  padding: ${({ theme }) => theme.spacing.xs};
-  cursor: pointer;
-  color: ${({ theme }) => theme.colors.textMedium};
-  border-radius: ${({ theme }) => theme.borderRadius.medium};
-  transition: all ${({ theme }) => theme.animations.fast} ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-
-  svg {
-    width: 16px;
-    height: 16px;
-  }
-
-  &:hover {
-    background: ${({ theme }) => theme.colors.primary}11;
-    border-color: ${({ theme }) => theme.colors.primary};
-    color: ${({ theme }) => theme.colors.primary};
-    transform: translateY(-2px);
-  }
-
-  &:active {
-    transform: translateY(0);
-  }
-`;
-
-const DeleteButton = styled(ActionButton)`
-  &:hover {
-    background: ${({ theme }) => theme.colors.error}11;
-    border-color: ${({ theme }) => theme.colors.error};
-    color: ${({ theme }) => theme.colors.error};
-  }
-`;
-
-const ProgressSection = styled.div`
-  margin: ${({ theme }) => theme.spacing.lg} 0;
-`;
-
-const AmountDisplay = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  margin-bottom: ${({ theme }) => theme.spacing.md};
-  gap: ${({ theme }) => theme.spacing.md};
-`;
-
-const AmountGroup = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.xs};
-`;
-
-const AmountLabel = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.caption};
-  font-family: ${({ theme }) => theme.typography.fontFamily.body};
-  color: ${({ theme }) => theme.colors.textMedium};
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-`;
-
-const AmountValue = styled.div<{ $variant: 'saved' | 'target' }>`
-  font-size: ${({ $variant }) => $variant === 'saved' ? '2rem' : '1.25rem'};
-  font-family: ${({ theme }) => theme.typography.fontFamily.heading};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
-  color: ${({ $variant, theme }) => 
-    $variant === 'saved' ? theme.colors.primary : theme.colors.textDark};
-  line-height: 1;
-`;
-
-const ProgressInfo = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: ${({ theme }) => theme.spacing.sm};
-`;
-
-const ProgressLabel = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.body};
-  font-family: ${({ theme }) => theme.typography.fontFamily.body};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
-  color: ${({ theme }) => theme.colors.textDark};
-`;
-
-const RemainingLabel = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.caption};
-  font-family: ${({ theme }) => theme.typography.fontFamily.body};
-  color: ${({ theme }) => theme.colors.textMedium};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-`;
-
-const AddFundsButton = styled.button`
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: ${({ theme }) => theme.spacing.sm};
-  padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
-  background: ${({ theme }) => theme.colors.white};
-  border: 2px solid ${({ theme }) => theme.colors.primary};
-  color: ${({ theme }) => theme.colors.primary};
-  border-radius: ${({ theme }) => theme.borderRadius.medium};
-  font-family: ${({ theme }) => theme.typography.fontFamily.body};
-  font-size: ${({ theme }) => theme.typography.fontSize.body};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semiBold};
-  cursor: pointer;
-  transition: all ${({ theme }) => theme.animations.fast} ease;
-  margin-top: ${({ theme }) => theme.spacing.lg};
-
-  svg {
-    width: 18px;
-    height: 18px;
-  }
-
-  &:hover {
-    background: ${({ theme }) => theme.colors.primary};
-    color: ${({ theme }) => theme.colors.white};
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px ${({ theme }) => theme.colors.primary}44;
-  }
-
-  &:active {
-    transform: translateY(0);
-  }
-`;
-
-
 
 export const GoalCard: React.FC<GoalCardProps> = ({
   name,
@@ -273,61 +62,93 @@ export const GoalCard: React.FC<GoalCardProps> = ({
   };
 
   return (
-    <CardContainer
-      $isComplete={isComplete}
+    <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
+      className={cn(
+        "bg-white dark:bg-zinc-900 rounded-xl p-6 shadow-sm border-2 transition-all duration-200 relative overflow-hidden flex flex-col gap-4",
+        isComplete
+          ? "border-green-500 bg-gradient-to-br from-white to-green-50/50 dark:from-zinc-900 dark:to-green-900/10"
+          : "border-zinc-200 dark:border-zinc-800 hover:border-primary/50 hover:shadow-md hover:-translate-y-1"
+      )}
     >
-      <CardHeader>
-        <TitleSection>
-          <GoalTitle>{name}</GoalTitle>
-          <StatusBadge $isComplete={isComplete}>
+      {/* Header */}
+      <div className="flex justify-between items-start gap-4">
+        <div className="flex-1 min-w-0 flex flex-col gap-2">
+          <h3 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100 line-clamp-2 leading-tight">
+            {name}
+          </h3>
+          <span className={cn(
+            "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium uppercase tracking-wide w-fit",
+            isComplete
+              ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+              : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+          )}>
             {statusDisplayLabel}
-          </StatusBadge>
-        </TitleSection>
-        <ActionButtons>
-          <ActionButton onClick={onEdit} aria-label="Editar meta" title="Editar">
-            <Edit />
-          </ActionButton>
-          <DeleteButton onClick={onDelete} aria-label="Excluir meta" title="Excluir">
-            <Trash2 />
-          </DeleteButton>
-        </ActionButtons>
-      </CardHeader>
+          </span>
+        </div>
 
-      <ProgressSection>
-        <AmountDisplay>
-          <AmountGroup>
-            <AmountLabel>Economizado</AmountLabel>
-            <AmountValue $variant="saved">{formatCurrencyCompact(saved)}</AmountValue>
-          </AmountGroup>
-          <AmountGroup style={{ alignItems: 'flex-end' }}>
-            <AmountLabel>Meta</AmountLabel>
-            <AmountValue $variant="target">{formatCurrencyCompact(target)}</AmountValue>
-          </AmountGroup>
-        </AmountDisplay>
+        <div className="flex gap-1 shrink-0">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onEdit}
+            title="Editar meta"
+            className="h-9 w-9 text-zinc-500 hover:text-primary hover:bg-primary/10"
+          >
+            <Edit size={16} />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onDelete}
+            title="Excluir meta"
+            className="h-9 w-9 text-zinc-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+          >
+            <Trash2 size={16} />
+          </Button>
+        </div>
+      </div>
 
-        <ProgressInfo>
-          <ProgressLabel>{progress.toFixed(0)}%</ProgressLabel>
+      {/* Progress Section */}
+      <div className="my-2">
+        <div className="flex justify-between items-end mb-3">
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Economizado</span>
+            <span className="text-2xl font-bold text-primary">{formatCurrencyCompact(saved)}</span>
+          </div>
+          <div className="flex flex-col gap-1 items-end text-right">
+            <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Meta</span>
+            <span className="text-lg font-bold text-zinc-700 dark:text-zinc-300">{formatCurrencyCompact(target)}</span>
+          </div>
+        </div>
+
+        <div className="flex justify-between items-center mb-2">
+          <span className="text-base font-bold text-zinc-900 dark:text-zinc-100">{progress.toFixed(0)}%</span>
           {!isComplete && remaining > 0 && (
-            <RemainingLabel>Faltam {formatCurrency(remaining)}</RemainingLabel>
+            <span className="text-xs font-medium text-zinc-500">Faltam {formatCurrency(remaining)}</span>
           )}
-        </ProgressInfo>
+        </div>
 
         <ProgressBar
           progress={progress}
           variant={isComplete ? "streak" : "xp"}
           height={10}
         />
-      </ProgressSection>
+      </div>
 
+      {/* Action Button */}
       {!isComplete && (
-        <AddFundsButton onClick={onAddFunds}>
-          <Plus />
-          <span>Adicionar Dinheiro</span>
-        </AddFundsButton>
+        <Button
+          variant="outline"
+          className="w-full mt-auto border-primary text-primary hover:bg-primary hover:text-white transition-all shadow-sm"
+          onClick={onAddFunds}
+        >
+          <Plus size={18} className="mr-2" />
+          Adicionar Dinheiro
+        </Button>
       )}
-    </CardContainer>
+    </motion.div>
   );
 };

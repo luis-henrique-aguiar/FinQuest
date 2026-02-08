@@ -1,10 +1,10 @@
 import React, { useState } from "react";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import Button from "../components/common/Button";
+import { Button } from "@/components/ui/button";
 import Animation from "../components/common/Animation";
-import * as S from "./OnboardingPage.style";
 import { presentationSteps } from "../data/onboarding-steps-data";
+import { cn } from "@/lib/utils";
 
 const variants = {
   enter: (direction: number) => ({
@@ -46,10 +46,10 @@ export const OnboardingPage: React.FC<{ onComplete: () => void }> = ({
   const isLastStep = step === presentationSteps.length - 1;
 
   return (
-    <S.OnboardingContainer>
-      <S.SlidesWrapper>
+    <div className="flex flex-col h-screen w-full overflow-hidden bg-white dark:bg-zinc-950">
+      <div className="flex-grow relative flex overflow-hidden">
         <AnimatePresence initial={false} custom={direction}>
-          <S.Slide
+          <motion.div
             key={step}
             custom={direction}
             variants={variants}
@@ -60,32 +60,48 @@ export const OnboardingPage: React.FC<{ onComplete: () => void }> = ({
               x: { type: "spring", stiffness: 300, damping: 30 },
               opacity: { duration: 0.2 },
             }}
+            className="absolute w-full h-full flex flex-col items-center justify-center p-8 text-center"
           >
-            <S.AnimationContainer>
-              <Animation animationData={currentStepData.animation} size={250} />{" "}
-            </S.AnimationContainer>
-            <S.Title>{currentStepData.title}</S.Title>
-            <S.Text>{currentStepData.description}</S.Text>
-            <Button size="large" onClick={handleNext} data-testid="button-onboarding">
+            <div className="w-[250px] h-[250px] mb-8">
+              <Animation animationData={currentStepData.animation} size={250} />
+            </div>
+
+            <h1 className="text-3xl md:text-4xl font-bold mb-4 text-zinc-900 dark:text-zinc-50 mt-4">
+              {currentStepData.title}
+            </h1>
+
+            <p className="text-lg text-zinc-600 dark:text-zinc-400 leading-relaxed mb-12 max-w-[500px]">
+              {currentStepData.description}
+            </p>
+
+            <Button
+              size="lg"
+              onClick={handleNext}
+              data-testid="button-onboarding"
+              className="text-lg px-8 py-6 rounded-xl bg-gradient-to-r from-[#007ACC] to-[#28A745] hover:opacity-90 transition-all shadow-lg hover:shadow-xl hover:-translate-y-1"
+            >
               {isLastStep ? "Começar Agora" : "Próximo"}
             </Button>
-          </S.Slide>
+          </motion.div>
         </AnimatePresence>
-      </S.SlidesWrapper>
+      </div>
 
-      <S.Navigation>
-        <S.DotsContainer>
+      <div className="flex flex-col items-center p-8 w-full">
+        <div className="flex gap-3">
           {presentationSteps.map((_, i) => (
-            <S.Dot
+            <button
               key={i}
-              $active={i === step}
               onClick={() => goToStep(i)}
               aria-label={`Ir para o passo ${i + 1}`}
+              className={cn(
+                "w-3 h-3 rounded-full transition-all duration-300 border-none cursor-pointer p-0",
+                i === step ? "bg-[#28A745] w-8" : "bg-zinc-300 dark:bg-zinc-700 hover:bg-zinc-400 dark:hover:bg-zinc-600"
+              )}
             />
           ))}
-        </S.DotsContainer>
-      </S.Navigation>
-    </S.OnboardingContainer>
+        </div>
+      </div>
+    </div>
   );
 };
 

@@ -1,161 +1,153 @@
-import React, { useState, useEffect } from "react";
-import { BookOpen, Award, TrendingUp, Filter } from "react-feather";
-import { CourseCard } from "../components/gamification/CourseCard";
-import {
-  getCoursesForUser,
-  type CourseProgressDTO,
-} from "../services/courseService";
-import { useToast } from "../hooks/useToast";
-import * as S from "./LearnHubPage.styles";
+import React, { useState, useMemo } from 'react';
+import { BookOpen, Award, TrendingUp, Filter } from 'lucide-react';
+import { toast } from 'sonner';
+import { CourseCard } from '@/components/gamification/CourseCard';
+import { useCourses } from '@/features/course/hooks/useCourse';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
-type FilterType = "all" | "in-progress" | "completed" | "not-started";
+type FilterType = 'all' | 'in-progress' | 'completed' | 'not-started';
 
 export const LearnHubPage: React.FC = () => {
-  const [courses, setCourses] = useState<CourseProgressDTO[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [activeFilter, setActiveFilter] = useState<FilterType>("all");
-  const { addToast } = useToast();
+  const [activeFilter, setActiveFilter] = useState<FilterType>('all');
 
-  useEffect(() => {
-    const fetchCourses = async () => {
-      try {
-        setIsLoading(true);
-        const data = await getCoursesForUser();
-        setCourses(data);
-      } catch (error) {
-        console.error("Falha ao carregar cursos", error);
-        addToast(
-          "Não foi possível carregar os cursos. Tente novamente.",
-          "error"
-        );
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  // TanStack Query hook
+  const { data: courses = [], isLoading, error } = useCourses();
 
-    fetchCourses();
-  }, [addToast]);
-
-  const filteredCourses = courses.filter((course) => {
-    const progress = course.progress ?? 0;
-
-    switch (activeFilter) {
-      case "in-progress":
-        return progress > 0 && progress < 100;
-      case "completed":
-        return progress === 100;
-      case "not-started":
-        return progress === 0;
-      default:
-        return true;
+  // Show error toast
+  React.useEffect(() => {
+    if (error) {
+      toast.error('Não foi possível carregar os cursos. Tente novamente.');
     }
-  });
+  }, [error]);
 
-  const stats = {
-    total: courses.length,
-    inProgress: courses.filter((c) => {
-      const p = c.progress ?? 0;
-      return p > 0 && p < 100;
-    }).length,
-    completed: courses.filter((c) => c.progress === 100).length,
-  };
+  // Filter courses
+  const filteredCourses = useMemo(() => {
+    return courses.filter((course) => {
+      const progress = course.progress ?? 0;
 
+      switch (activeFilter) {
+        case 'in-progress':
+          return progress > 0 && progress < 100;
+        case 'completed':
+          return progress === 100;
+        case 'not-started':
+          return progress === 0;
+        default:
+          return true;
+      }
+    });
+  }, [courses, activeFilter]);
+
+  // Statistics
+  const stats = useMemo(() => {
+    return {
+      total: courses.length,
+      inProgress: courses.filter((c) => {
+        const p = c.progress ?? 0;
+        return p > 0 && p < 100;
+      }).length,
+      completed: courses.filter((c) => c.progress === 100).length,
+      notStarted: courses.filter((c) => (c.progress ?? 0) === 0).length,
+    };
+  }, [courses]);
+
+  // Loading state
   if (isLoading) {
     return (
-      <S.PageContainer>
-        <S.LoadingContainer>
-          <div className="spinner" />
-          <p>Carregando seus cursos...</p>
-        </S.LoadingContainer>
-      </S.PageContainer>
+      <div className="max-w-7xl mx-auto p-8 flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+        <p className="text-zinc-500">Carregando seus cursos...</p>
+      </div>
     );
   }
 
   return (
-    <S.PageContainer>
-      <S.Header>
-        <S.HeaderContent>
-          <S.Title>
-            <BookOpen size={32} />
-            Trilhas de Conhecimento
-          </S.Title>
-          <S.Subtitle>
-            Escolha um curso para começar sua jornada e desbloquear novas
-            conquistas!
-          </S.Subtitle>
-        </S.HeaderContent>
-      </S.Header>
+    <div className="max-w-7xl mx-auto p-4 md:p-8 flex flex-col gap-8">
+      {/* HEADER */}
+      <div className="flex flex-col gap-2">
+        <h1 className="text-3xl font-bold flex items-center gap-3 text-zinc-900 dark:text-zinc-50">
+          <BookOpen className="text-primary w-8 h-8" />
+          Trilhas de Conhecimento
+        </h1>
+        <p className="text-zinc-600 dark:text-zinc-400 text-lg">
+          Escolha um curso para começar sua jornada e desbloquear novas conquistas!
+        </p>
+      </div>
 
-      <S.StatsGrid>
-        <S.StatCard>
-          <S.StatIcon color="#007ACC">
-            <BookOpen size={24} />
-          </S.StatIcon>
-          <S.StatContent>
-            <S.StatValue>{stats.total}</S.StatValue>
-            <S.StatLabel>Cursos Disponíveis</S.StatLabel>
-          </S.StatContent>
-        </S.StatCard>
+      {/* STATS CARDS */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <Card className="hover:-translate-y-1 transition-transform border-l-4 border-l-blue-500">
+          <CardContent className="p-6 flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
+              <BookOpen size={24} />
+            </div>
+            <div>
+              <h3 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">{stats.total}</h3>
+              <p className="text-sm font-medium text-zinc-500">Cursos Disponíveis</p>
+            </div>
+          </CardContent>
+        </Card>
 
-        <S.StatCard>
-          <S.StatIcon color="#FFA500">
-            <TrendingUp size={24} />
-          </S.StatIcon>
-          <S.StatContent>
-            <S.StatValue>{stats.inProgress}</S.StatValue>
-            <S.StatLabel>Em Progresso</S.StatLabel>
-          </S.StatContent>
-        </S.StatCard>
+        <Card className="hover:-translate-y-1 transition-transform border-l-4 border-l-amber-500">
+          <CardContent className="p-6 flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600 dark:text-amber-400">
+              <TrendingUp size={24} />
+            </div>
+            <div>
+              <h3 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">{stats.inProgress}</h3>
+              <p className="text-sm font-medium text-zinc-500">Em Progresso</p>
+            </div>
+          </CardContent>
+        </Card>
 
-        <S.StatCard>
-          <S.StatIcon color="#28A745">
-            <Award size={24} />
-          </S.StatIcon>
-          <S.StatContent>
-            <S.StatValue>{stats.completed}</S.StatValue>
-            <S.StatLabel>Concluídos</S.StatLabel>
-          </S.StatContent>
-        </S.StatCard>
-      </S.StatsGrid>
+        <Card className="hover:-translate-y-1 transition-transform border-l-4 border-l-green-500">
+          <CardContent className="p-6 flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 dark:text-green-400">
+              <Award size={24} />
+            </div>
+            <div>
+              <h3 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">{stats.completed}</h3>
+              <p className="text-sm font-medium text-zinc-500">Concluídos</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
-      <S.FilterSection>
-        <S.FilterHeader>
-          <S.FilterTitle>
-            <Filter size={20} />
-            Filtrar Cursos
-          </S.FilterTitle>
-        </S.FilterHeader>
-        <S.FilterTabs>
-          <S.FilterTab
-            $active={activeFilter === "all"}
-            onClick={() => setActiveFilter("all")}
-          >
-            Todos ({courses.length})
-          </S.FilterTab>
-          <S.FilterTab
-            $active={activeFilter === "in-progress"}
-            onClick={() => setActiveFilter("in-progress")}
-          >
-            Em Progresso ({stats.inProgress})
-          </S.FilterTab>
-          <S.FilterTab
-            $active={activeFilter === "completed"}
-            onClick={() => setActiveFilter("completed")}
-          >
-            Concluídos ({stats.completed})
-          </S.FilterTab>
-          <S.FilterTab
-            $active={activeFilter === "not-started"}
-            onClick={() => setActiveFilter("not-started")}
-          >
-            Não Iniciados (
-            {courses.filter((c) => (c.progress ?? 0) === 0).length})
-          </S.FilterTab>
-        </S.FilterTabs>
-      </S.FilterSection>
+      {/* FILTER SECTION */}
+      <div className="bg-white dark:bg-zinc-900 rounded-xl p-6 shadow-sm border border-zinc-200 dark:border-zinc-800 flex flex-col gap-4">
+        <div className="flex items-center gap-2 pb-2 border-b border-zinc-100 dark:border-zinc-800">
+          <Filter className="text-primary w-5 h-5" />
+          <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">Filtrar Cursos</h3>
+        </div>
 
+        <div className="flex flex-wrap gap-2">
+          {[
+            { id: 'all', label: `Todos (${stats.total})` },
+            { id: 'in-progress', label: `Em Progresso (${stats.inProgress})` },
+            { id: 'completed', label: `Concluídos (${stats.completed})` },
+            { id: 'not-started', label: `Não Iniciados (${stats.notStarted})` },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveFilter(tab.id as FilterType)}
+              className={cn(
+                "px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 border-2",
+                activeFilter === tab.id
+                  ? "bg-primary text-white border-primary shadow-sm scale-105"
+                  : "bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800 hover:border-primary/50 hover:text-primary"
+              )}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* COURSES GRID */}
       {filteredCourses.length > 0 ? (
-        <S.CoursesGrid>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredCourses.map((course) => (
             <CourseCard
               key={course.id}
@@ -166,30 +158,31 @@ export const LearnHubPage: React.FC = () => {
               progress={course.progress}
             />
           ))}
-        </S.CoursesGrid>
+        </div>
       ) : (
-        <S.EmptyState>
-          <BookOpen size={64} />
-          <h3>Nenhum curso encontrado</h3>
-          <p>
-            {activeFilter === "all"
-              ? "Não há cursos disponíveis no momento."
-              : `Você não tem cursos ${
-                  activeFilter === "in-progress"
-                    ? "em progresso"
-                    : activeFilter === "completed"
-                    ? "concluídos"
-                    : "não iniciados"
-                }.`}
+        <div className="flex flex-col items-center justify-center py-20 bg-white dark:bg-zinc-900 rounded-xl border-2 border-dashed border-zinc-200 dark:border-zinc-800 text-center gap-4">
+          <div className="w-20 h-20 bg-zinc-100 dark:bg-zinc-800 rounded-full flex items-center justify-center text-zinc-400">
+            <BookOpen size={40} />
+          </div>
+          <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Nenhum curso encontrado</h3>
+          <p className="text-zinc-500 max-w-sm">
+            {activeFilter === 'all'
+              ? 'Não há cursos disponíveis no momento.'
+              : `Você não tem cursos ${activeFilter === 'in-progress'
+                ? 'em progresso'
+                : activeFilter === 'completed'
+                  ? 'concluídos'
+                  : 'não iniciados'
+              }.`}
           </p>
-          {activeFilter !== "all" && (
-            <S.ResetFilterButton onClick={() => setActiveFilter("all")}>
+          {activeFilter !== 'all' && (
+            <Button variant="outline" onClick={() => setActiveFilter('all')}>
               Ver Todos os Cursos
-            </S.ResetFilterButton>
+            </Button>
           )}
-        </S.EmptyState>
+        </div>
       )}
-    </S.PageContainer>
+    </div>
   );
 };
 

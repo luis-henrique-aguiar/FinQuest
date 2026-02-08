@@ -1,94 +1,75 @@
-import React, { useEffect, useState, useMemo } from "react";
-import Button from "../components/common/Button";
-import { Modal } from "../components/common/Modal";
-import { useToast } from "../hooks/useToast";
-import { GoalCard } from "../components/gamification/GoalCard";
-import * as S from "./GoalsPage.styles";
-import api from "../services/api";
+import React, { useState, useMemo } from 'react';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Modal } from '@/components/common/Modal'; // Using the refactored Modal wrapper
+import { GoalCard } from '@/components/gamification/GoalCard';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 import {
-  getAllGoals,
-  type GoalCompletionDTO,
-  type GoalDTO,
-  type GoalUpdateResponseDTO,
-} from "../services/goalService";
-import { useAuth } from "../hooks/useAuth";
-import { useGamification } from "../context/GamificationContext";
-import { Award, Target, TrendingUp, CheckCircle } from "react-feather";
-import type { Achievement, User } from "../context/AuthContext";
+  useGoals,
+  useCreateGoal,
+  useUpdateGoal,
+  useDeleteGoal,
+} from '@/features/finance/hooks/useGoals';
+import { Award, Target, TrendingUp, CheckCircle, Plus } from 'lucide-react';
+import type { GoalDTO } from '@/features/finance/services/goals-api';
 
-type FilterType = "all" | "IN_PROGRESS" | "COMPLETED";
+
+type FilterType = 'all' | 'IN_PROGRESS' | 'COMPLETED';
 
 export const GoalsPage: React.FC = () => {
-  const [goals, setGoals] = useState<GoalDTO[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [activeFilter, setActiveFilter] = useState<FilterType>("all");
-  const { addToast } = useToast();
-  const { updateUserContext } = useAuth();
-  const { showLevelUp, showBadgeUnlocked } = useGamification();
+  const [activeFilter, setActiveFilter] = useState<FilterType>('all');
 
-  // Estados dos modais
+  // TanStack Query hooks
+  const { data: goals = [], isLoading } = useGoals();
+  const createGoal = useCreateGoal();
+  const updateGoal = useUpdateGoal();
+  const deleteGoal = useDeleteGoal();
+
+  // Modal states
   const [isAddGoalModalOpen, setAddGoalModalOpen] = useState(false);
   const [isAddFundsModalOpen, setAddFundsModalOpen] = useState(false);
   const [isCelebrationModalOpen, setCelebrationModalOpen] = useState(false);
-  const [isLevelUpModalOpen, setLevelUpModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isConfirmDeleteModalOpen, setConfirmDeleteModalOpen] = useState(false);
 
-  // Estados para gerenciar a meta selecionada
+  // Selected goal
   const [selectedGoal, setSelectedGoal] = useState<GoalDTO | null>(null);
-  const [levelUpInfo] = useState<GoalCompletionDTO | null>(null);
 
-  // Estados para os formulários
-  const [goalName, setGoalName] = useState("");
-  const [goalTarget, setGoalTarget] = useState("");
-  const [fundsToAdd, setFundsToAdd] = useState("");
-  const [currentAmountEdit, setCurrentAmountEdit] = useState("");
+  // Form states
+  const [goalName, setGoalName] = useState('');
+  const [goalTarget, setGoalTarget] = useState('');
+  const [fundsToAdd, setFundsToAdd] = useState('');
+  const [currentAmountEdit, setCurrentAmountEdit] = useState('');
 
-  // Carregar metas ao montar o componente
-  useEffect(() => {
-    loadGoals();
-  }, []);
-
-  const loadGoals = async () => {
-    try {
-      setIsLoading(true);
-      const goals = await getAllGoals();
-      setGoals(goals);
-    } catch (error) {
-      console.error("Erro ao carregar metas:", error);
-      addToast("Erro ao carregar suas metas", "error");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+  // Determine goal status
   const getNormalizedStatus = (goal: GoalDTO) => {
     if (goal.currentAmount >= goal.targetAmount) {
-      return "COMPLETED";
+      return 'COMPLETED';
     }
     return goal.statusLabel;
   };
 
+  // Filtered goals
   const filteredGoals = useMemo(() => {
     switch (activeFilter) {
-      case "IN_PROGRESS":
-        return goals.filter((goal) => getNormalizedStatus(goal) !== "COMPLETED");
-
-      case "COMPLETED":
-        return goals.filter((goal) => getNormalizedStatus(goal) === "COMPLETED");
-
+      case 'IN_PROGRESS':
+        return goals.filter((goal) => getNormalizedStatus(goal) !== 'COMPLETED');
+      case 'COMPLETED':
+        return goals.filter((goal) => getNormalizedStatus(goal) === 'COMPLETED');
       default:
         return goals;
     }
   }, [goals, activeFilter]);
 
-  // Estatísticas calculadas
+  // Statistics
   const stats = useMemo(() => {
     const activeGoals = goals.filter(
-      (goal) => getNormalizedStatus(goal) !== "COMPLETED"
+      (goal) => getNormalizedStatus(goal) !== 'COMPLETED'
     );
     const completedGoals = goals.filter(
-      (goal) => getNormalizedStatus(goal) === "COMPLETED"
+      (goal) => getNormalizedStatus(goal) === 'COMPLETED'
     );
     const totalSaved = activeGoals.reduce(
       (sum, goal) => sum + goal.currentAmount,
@@ -110,8 +91,17 @@ export const GoalsPage: React.FC = () => {
     };
   }, [goals]);
 
-  // Efeito para preencher o formulário de edição quando selectedGoal muda
-  useEffect(() => {
+  // Reset form
+  const resetForm = () => {
+    setGoalName('');
+    setGoalTarget('');
+    setFundsToAdd('');
+    setCurrentAmountEdit('');
+    setSelectedGoal(null);
+  };
+
+  // Populate edit form
+  React.useEffect(() => {
     if (selectedGoal) {
       setGoalName(selectedGoal.name);
       setGoalTarget(selectedGoal.targetAmount.toString());
@@ -119,39 +109,27 @@ export const GoalsPage: React.FC = () => {
     }
   }, [selectedGoal]);
 
-  const resetForm = () => {
-    setGoalName("");
-    setGoalTarget("");
-    setFundsToAdd("");
-    setSelectedGoal(null);
-  };
-
+  // Handlers
   const handleCreateGoal = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!goalName.trim() || !goalTarget || parseFloat(goalTarget) <= 0) {
-      addToast("Por favor, preencha todos os campos corretamente", "error");
+      toast.error('Por favor, preencha todos os campos corretamente');
       return;
     }
 
-    try {
-      const response = await api.post("/goals", {
+    createGoal.mutate(
+      {
         name: goalName.trim(),
         targetAmount: parseFloat(goalTarget),
-      });
-
-      setGoals((prev) => [...prev, response.data]);
-      setAddGoalModalOpen(false);
-      resetForm();
-      addToast("Nova meta criada com sucesso!", "success");
-    } catch (error: any) {
-      if (error?.response?.data?.details) {
-        addToast(`${error.response.data.details[0]}`, "error");
-      } else {
-        console.error("Erro ao criar meta:", error);
-        addToast("Erro ao criar meta. Tente novamente.", "error");
+      },
+      {
+        onSuccess: () => {
+          setAddGoalModalOpen(false);
+          resetForm();
+        },
       }
-    }
+    );
   };
 
   const handleUpdateGoal = async (e: React.FormEvent) => {
@@ -164,161 +142,86 @@ export const GoalsPage: React.FC = () => {
       parseFloat(goalTarget) <= 0 ||
       parseFloat(currentAmountEdit) < 0
     ) {
-      addToast("Por favor, preencha todos os campos corretamente", "error");
+      toast.error('Por favor, preencha todos os campos corretamente');
       return;
     }
 
-    try {
-      const previousStatus = selectedGoal.statusLabel;
+    const previousStatus = selectedGoal.statusLabel;
 
-      const response = await api.put(`/goals/${selectedGoal.id}`, {
-        name: goalName.trim(),
-        targetAmount: parseFloat(goalTarget),
-        currentAmount: parseFloat(currentAmountEdit),
-      });
+    updateGoal.mutate(
+      {
+        goalId: selectedGoal.id,
+        updates: {
+          name: goalName.trim(),
+          targetAmount: parseFloat(goalTarget),
+          currentAmount: parseFloat(currentAmountEdit),
+        },
+      },
+      {
+        onSuccess: (data) => {
+          setIsEditModalOpen(false);
+          resetForm();
 
-      const { updatedGoal, missionCompletion } = response.data;
-      setGoals((prev) =>
-        prev.map((g) => (g.id === selectedGoal.id ? { ...g, ...updatedGoal } : g))
-      );
+          const justCompleted =
+            previousStatus !== 'COMPLETED' &&
+            data.updatedGoal.statusLabel === 'COMPLETED';
 
-      setIsEditModalOpen(false);
-      resetForm();
-
-      const justCompleted =
-        previousStatus !== "COMPLETED" &&
-        updatedGoal.statusLabel === "COMPLETED";
-
-      if (justCompleted) {
-        setCelebrationModalOpen(true);
-      } else {
-        addToast("Meta atualizada com sucesso!", "success");
+          if (justCompleted) {
+            setCelebrationModalOpen(true);
+          }
+        },
       }
-
-      if (missionCompletion) {
-        const updateData: Partial<User> & { unlockedBadge?: Achievement } = {
-          totalFinPoints: missionCompletion.totalFinPoints,
-          level: missionCompletion.level,
-        };
-
-        if (missionCompletion.unlockedBadge) {
-          updateData.unlockedBadge = {
-            achievementId: Number(missionCompletion.unlockedBadge.id),
-            title: missionCompletion.unlockedBadge.title,
-            icon: missionCompletion.unlockedBadge.icon,
-            unlockedDate: new Date().toISOString(),
-          };
-        }
-
-        updateUserContext(updateData);
-
-        if (missionCompletion.didLevelUp && missionCompletion.unlockedBadge) {
-          showBadgeUnlocked(
-            missionCompletion.unlockedBadge,
-            missionCompletion.level,
-            missionCompletion.totalFinPoints
-          );
-        } else if (missionCompletion.didLevelUp) {
-          showLevelUp(missionCompletion.level);
-        }
-      }
-    } catch (error: any) {
-      if (error?.response?.data?.details) {
-        addToast(`${error.response.data.details[0]}`, "error");
-      } else {
-        console.error("Erro ao atualizar meta:", error);
-        addToast("Erro ao atualizar meta. Tente novamente.", "error");
-      }
-    }
+    );
   };
 
   const handleDeleteGoal = async () => {
     if (!selectedGoal) return;
 
-    try {
-      await api.delete(`/goals/${selectedGoal.id}`);
-
-      setGoals((prev) => prev.filter((g) => g.id !== selectedGoal.id));
-      setConfirmDeleteModalOpen(false);
-      resetForm();
-      addToast("Meta excluída com sucesso", "success");
-    } catch (error) {
-      console.error("Erro ao excluir meta:", error);
-      addToast("Erro ao excluir meta. Tente novamente.", "error");
-    }
+    deleteGoal.mutate(selectedGoal.id, {
+      onSuccess: () => {
+        setConfirmDeleteModalOpen(false);
+        resetForm();
+      },
+    });
   };
 
   const handleAddFunds = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!selectedGoal || !fundsToAdd || parseFloat(fundsToAdd) <= 0) {
-      addToast("Por favor, insira um valor válido", "error");
+      toast.error('Por favor, insira um valor válido');
       return;
     }
 
-    try {
-      const amountToAdd = parseFloat(fundsToAdd);
-      const response = await api.put<GoalUpdateResponseDTO>(
-        `/goals/${selectedGoal.id}/deposit`,
-        { amount: amountToAdd }
-      );
+    const amountToAdd = parseFloat(fundsToAdd);
+    const newAmount = selectedGoal.currentAmount + amountToAdd;
+    const previousStatus = selectedGoal.statusLabel;
 
-      const { updatedGoal, missionCompletion } = response.data;
+    updateGoal.mutate(
+      {
+        goalId: selectedGoal.id,
+        updates: {
+          currentAmount: newAmount,
+        },
+      },
+      {
+        onSuccess: (data) => {
+          setAddFundsModalOpen(false);
+          resetForm();
 
-      setGoals((prev) =>
-        prev.map((goal) => (goal.id === selectedGoal.id ? updatedGoal : goal))
-      );
+          const justCompleted =
+            previousStatus !== 'COMPLETED' &&
+            data.updatedGoal.statusLabel === 'COMPLETED';
 
-      setAddFundsModalOpen(false);
-      resetForm();
-
-      const previousStatus = selectedGoal.statusLabel;
-      const justCompleted =
-        previousStatus !== "COMPLETED" &&
-        updatedGoal.statusLabel === "COMPLETED";
-
-      if (justCompleted) {
-        setCelebrationModalOpen(true);
-      } else {
-        addToast("Valor adicionado com sucesso!", "success");
+          if (justCompleted) {
+            setCelebrationModalOpen(true);
+          }
+        },
       }
-
-      if (missionCompletion) {
-        const updateData: Partial<User> & { unlockedBadge?: Achievement } = {
-          totalFinPoints: missionCompletion.totalFinPoints,
-          level: missionCompletion.level,
-        };
-
-        if (missionCompletion.unlockedBadge) {
-          updateData.unlockedBadge = {
-            achievementId: Number(missionCompletion.unlockedBadge.id),
-            title: missionCompletion.unlockedBadge.title,
-            icon: missionCompletion.unlockedBadge.icon,
-            unlockedDate: new Date().toISOString(),
-          };
-        }
-
-        updateUserContext(updateData);
-
-        if (missionCompletion.didLevelUp && missionCompletion.unlockedBadge) {
-          showBadgeUnlocked(
-            missionCompletion.unlockedBadge,
-            missionCompletion.level,
-            missionCompletion.totalFinPoints
-          );
-        } else if (missionCompletion.didLevelUp) {
-          showLevelUp(missionCompletion.level);
-        }
-      }
-    } catch (error: any) {
-      if (error?.response?.data?.details) {
-        addToast(`${error.response.data.details[0]}`, "error");
-      } else {
-        addToast("Erro ao adicionar fundos. Tente novamente.", "error");
-      }
-    }
+    );
   };
 
+  // Openers
   const openAddFundsModal = (goal: GoalDTO) => {
     setSelectedGoal(goal);
     setAddFundsModalOpen(true);
@@ -341,386 +244,111 @@ export const GoalsPage: React.FC = () => {
 
   const getFilterLabel = (filter: FilterType) => {
     switch (filter) {
-      case "all":
+      case 'all':
         return `Todas (${goals.length})`;
-      case "IN_PROGRESS":
+      case 'IN_PROGRESS':
         return `Em Andamento (${stats.activeGoals})`;
-      case "COMPLETED":
+      case 'COMPLETED':
         return `Concluídas (${stats.completedGoals})`;
       default:
-        return "Todas";
+        return 'Todas';
     }
   };
 
-  const getEmptyStateMessage = (filter: FilterType) => {
-    switch (filter) {
-      case "IN_PROGRESS":
-        return {
-          title: "Nenhuma meta em andamento",
-          description:
-            "Que tal criar uma nova meta financeira para começar a economizar?",
-        };
-      case "COMPLETED":
-        return {
-          title: "Nenhuma meta concluída ainda",
-          description:
-            "Continue trabalhando em suas metas ativas para vê-las aqui!",
-        };
-      default:
-        return {
-          title: "Nenhuma meta criada ainda",
-          description:
-            "Que tal definir sua primeira meta financeira? Comece pequeno e vá conquistando seus objetivos!",
-        };
-    }
+  const emptyState = {
+    title: 'Nenhuma meta encontrada',
+    description: 'Crie uma nova meta para começar a acompanhar seu progresso.'
   };
 
-  const emptyState = getEmptyStateMessage(activeFilter);
-
-  // Loading state
   if (isLoading) {
     return (
-      <S.PageContainer>
-        <S.LoadingContainer>
-          <div className="spinner" />
-          <p>Carregando suas metas...</p>
-        </S.LoadingContainer>
-      </S.PageContainer>
+      <div className="max-w-7xl mx-auto p-8 flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+        <p className="text-zinc-500">Carregando suas metas...</p>
+      </div>
     );
   }
 
   return (
-    <S.PageContainer>
-      {/* Modais... */}
-      <Modal
-        isOpen={isAddGoalModalOpen}
-        onClose={() => setAddGoalModalOpen(false)}
-        title="Criar Nova Meta"
-      >
-        <S.ModalContent>
-          <S.ModalDescription>
-            Defina uma meta financeira e comece a economizar para alcançá-la!
-          </S.ModalDescription>
-
-          <S.FormContainer onSubmit={handleCreateGoal}>
-            <S.InputGroup>
-              <S.Label htmlFor="goalName">Nome da Meta</S.Label>
-              <S.Input
-                id="goalName"
-                type="text"
-                placeholder="Ex: Viagem, Carro novo, Fundo de emergência..."
-                value={goalName}
-                onChange={(e) => setGoalName(e.target.value)}
-                required
-              />
-            </S.InputGroup>
-
-            <S.InputGroup>
-              <S.Label htmlFor="goalTarget">Valor Alvo (R$)</S.Label>
-              <S.Input
-                id="goalTarget"
-                type="number"
-                placeholder="Ex: 5000.00"
-                value={goalTarget}
-                onChange={(e) => setGoalTarget(e.target.value)}
-                min="0"
-                step="0.01"
-                required
-              />
-            </S.InputGroup>
-
-            <S.ModalButtonContainer>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setAddGoalModalOpen(false)}
-              >
-                Cancelar
-              </Button>
-              <Button type="submit" variant="primary">
-                Criar Meta
-              </Button>
-            </S.ModalButtonContainer>
-          </S.FormContainer>
-        </S.ModalContent>
-      </Modal>
-
-      {/* Modal de Editar Meta */}
-      <Modal
-        isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
-        title="Editar Meta"
-      >
-        <S.ModalContent>
-          <S.ModalDescription>
-            Edite as informações da sua meta financeira.
-          </S.ModalDescription>
-
-          <S.FormContainer onSubmit={handleUpdateGoal}>
-            <S.InputGroup>
-              <S.Label htmlFor="editGoalName">Nome da Meta</S.Label>
-              <S.Input
-                id="editGoalName"
-                type="text"
-                placeholder="Nome da Meta"
-                value={goalName}
-                onChange={(e) => setGoalName(e.target.value)}
-                required
-              />
-            </S.InputGroup>
-
-            <S.InputGroup>
-              <S.Label htmlFor="editGoalTarget">Valor Alvo (R$)</S.Label>
-              <S.Input
-                id="editGoalTarget"
-                type="number"
-                placeholder="Valor Alvo"
-                value={goalTarget}
-                onChange={(e) => setGoalTarget(e.target.value)}
-                min="0"
-                step="0.01"
-                required
-              />
-            </S.InputGroup>
-
-            <S.InputGroup>
-              <S.Label htmlFor="editCurrentAmount">Valor Atual (R$)</S.Label>
-              <S.Input
-                id="editCurrentAmount"
-                type="number"
-                placeholder="Valor Atual"
-                value={currentAmountEdit}
-                onChange={(e) => setCurrentAmountEdit(e.target.value)}
-                min="0"
-                step="0.01"
-                required
-              />
-            </S.InputGroup>
-
-            <S.ModalButtonContainer>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsEditModalOpen(false)}
-              >
-                Cancelar
-              </Button>
-              <Button type="submit" variant="primary">
-                Salvar Alterações
-              </Button>
-            </S.ModalButtonContainer>
-          </S.FormContainer>
-        </S.ModalContent>
-      </Modal>
-
-      {/* Modal de Confirmação de Exclusão */}
-      <Modal
-        isOpen={isConfirmDeleteModalOpen}
-        onClose={() => setConfirmDeleteModalOpen(false)}
-        title="Confirmar Exclusão"
-      >
-        <S.ModalContent>
-          <p>
-            Você tem certeza que deseja excluir a meta &quot;
-            <strong>{selectedGoal?.name}</strong>&quot;?
-          </p>
-          <S.ModalDescription>
-            Esta ação não pode ser desfeita e todo o progresso será perdido.
-          </S.ModalDescription>
-
-          <S.ModalButtonContainer>
-            <Button
-              variant="outline"
-              onClick={() => setConfirmDeleteModalOpen(false)}
-            >
-              Cancelar
-            </Button>
-            <Button
-              variant="primary"
-              style={{ backgroundColor: "#DC3545" }}
-              onClick={handleDeleteGoal}
-            >
-              Sim, Excluir
-            </Button>
-          </S.ModalButtonContainer>
-        </S.ModalContent>
-      </Modal>
-
-      {/* Modal de Adicionar Fundos */}
-      <Modal
-        isOpen={isAddFundsModalOpen}
-        onClose={() => setAddFundsModalOpen(false)}
-        title="Adicionar Dinheiro"
-      >
-        <S.ModalContent>
-          <S.ModalDescription>
-            Adicione dinheiro à meta &quot;<strong>{selectedGoal?.name}</strong>
-            &quot;.
-          </S.ModalDescription>
-
-          <S.FormContainer onSubmit={handleAddFunds}>
-            <S.InputGroup>
-              <S.Label htmlFor="fundsAmount">Valor a Adicionar (R$)</S.Label>
-              <S.Input
-                id="fundsAmount"
-                type="number"
-                placeholder="Ex: 100.00"
-                value={fundsToAdd}
-                onChange={(e) => setFundsToAdd(e.target.value)}
-                min="0"
-                step="0.01"
-                required
-              />
-            </S.InputGroup>
-
-            <S.ModalButtonContainer>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setAddFundsModalOpen(false)}
-              >
-                Cancelar
-              </Button>
-              <Button type="submit" variant="primary">
-                Adicionar
-              </Button>
-            </S.ModalButtonContainer>
-          </S.FormContainer>
-        </S.ModalContent>
-      </Modal>
-
-      {/* Modal de Celebração */}
-      <Modal
-        isOpen={isCelebrationModalOpen}
-        onClose={() => setCelebrationModalOpen(false)}
-        title=""
-      >
-        <S.CelebrationContainer>
-          <S.LottieContainer>🏆</S.LottieContainer>
-          <h2>Parabéns!</h2>
-          <p>
-            Você alcançou sua meta financeira! Continue assim e conquiste ainda
-            mais objetivos!
-          </p>
-          <Button onClick={() => setCelebrationModalOpen(false)}>
-            Continuar
-          </Button>
-        </S.CelebrationContainer>
-      </Modal>
-
-      {/* Modal de Level Up */}
-      <Modal
-        isOpen={isLevelUpModalOpen}
-        onClose={() => setLevelUpModalOpen(false)}
-        title=""
-      >
-        <S.CelebrationContainer>
-          <S.LottieContainer>🎊</S.LottieContainer>
-          <h2>SUBIU DE NÍVEL!</h2>
-          <p>
-            Você chegou ao <strong>Nível {levelUpInfo?.level}</strong>!
-          </p>
-          <p>
-            Total de FinPoints: <strong>{levelUpInfo?.totalFinPoints}</strong>
-          </p>
-
-          {levelUpInfo?.unlockedBadge && (
-            <div
-              style={{
-                marginTop: "20px",
-                padding: "15px",
-                background: "#f8f9fa",
-                borderRadius: "8px",
-              }}
-            >
-              <div style={{ fontSize: "48px", marginBottom: "10px" }}>
-                {levelUpInfo.unlockedBadge.icon}
-              </div>
-              <h3>Badge Desbloqueado!</h3>
-              <p>
-                <strong>{levelUpInfo.unlockedBadge.title}</strong>
-              </p>
-              <p style={{ fontSize: "14px", color: "#666" }}>
-                {levelUpInfo.unlockedBadge.description}
-              </p>
-            </div>
-          )}
-
-          <Button
-            onClick={() => setLevelUpModalOpen(false)}
-            style={{ marginTop: "20px" }}
-          >
-            Continuar
-          </Button>
-        </S.CelebrationContainer>
-      </Modal>
-
-      <S.Header>
-        <S.Title>
-          <Award size={32} />
+    <div className="max-w-7xl mx-auto p-4 md:p-8 flex flex-col gap-8">
+      {/* PAGE HEADER */}
+      <div className="flex flex-col gap-2">
+        <h1 className="text-3xl font-bold flex items-center gap-3 text-zinc-900 dark:text-zinc-50">
+          <Award className="text-primary w-8 h-8" />
           Minhas Metas Financeiras
-        </S.Title>
-        <S.Subtitle>
+        </h1>
+        <p className="text-zinc-600 dark:text-zinc-400 text-lg">
           Defina objetivos, economize e conquiste suas metas financeiras!
-        </S.Subtitle>
-      </S.Header>
+        </p>
+      </div>
 
       {/* STATS CARDS */}
-      <S.StatsGrid>
-        <S.StatCard>
-          <S.StatIcon color="#007ACC">
-            <Target size={24} />
-          </S.StatIcon>
-          <S.StatContent>
-            <S.StatValue>{goals.length || 0}</S.StatValue>
-            <S.StatLabel>Total de Metas</S.StatLabel>
-          </S.StatContent>
-        </S.StatCard>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <Card className="hover:-translate-y-1 transition-transform border-l-4 border-l-primary/50">
+          <CardContent className="p-6 flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
+              <Target size={24} />
+            </div>
+            <div>
+              <h3 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">{goals.length || 0}</h3>
+              <p className="text-sm font-medium text-zinc-500">Total de Metas</p>
+            </div>
+          </CardContent>
+        </Card>
 
-        <S.StatCard>
-          <S.StatIcon color="#FFA500">
-            <TrendingUp size={24} />
-          </S.StatIcon>
-          <S.StatContent>
-            <S.StatValue>{stats.activeGoals || 0}</S.StatValue>
-            <S.StatLabel>Em Andamento</S.StatLabel>
-          </S.StatContent>
-        </S.StatCard>
+        <Card className="hover:-translate-y-1 transition-transform border-l-4 border-l-amber-500/50">
+          <CardContent className="p-6 flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600 dark:text-amber-400">
+              <TrendingUp size={24} />
+            </div>
+            <div>
+              <h3 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">{stats.activeGoals || 0}</h3>
+              <p className="text-sm font-medium text-zinc-500">Em Andamento</p>
+            </div>
+          </CardContent>
+        </Card>
 
-        <S.StatCard>
-          <S.StatIcon color="#28A745">
-            <CheckCircle size={24} />
-          </S.StatIcon>
-          <S.StatContent>
-            <S.StatValue>{stats.completedGoals || 0}</S.StatValue>
-            <S.StatLabel>Concluídas</S.StatLabel>
-          </S.StatContent>
-        </S.StatCard>
-      </S.StatsGrid>
+        <Card className="hover:-translate-y-1 transition-transform border-l-4 border-l-green-500/50">
+          <CardContent className="p-6 flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 dark:text-green-400">
+              <CheckCircle size={24} />
+            </div>
+            <div>
+              <h3 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">{stats.completedGoals || 0}</h3>
+              <p className="text-sm font-medium text-zinc-500">Concluídas</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
-      <S.ControlsContainer>
-        <S.FilterTabs>
-          {(["all", "IN_PROGRESS", "COMPLETED"] as FilterType[]).map(
-            (filter) => (
-              <S.FilterTab
-                key={filter}
-                $active={activeFilter === filter}
-                onClick={() => setActiveFilter(filter)}
-              >
-                {getFilterLabel(filter)}
-              </S.FilterTab>
-            )
-          )}
-        </S.FilterTabs>
+      {/* CONTROLS */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="flex p-1 bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-x-auto w-full md:w-auto">
+          {(['all', 'IN_PROGRESS', 'COMPLETED'] as FilterType[]).map((filter) => (
+            <button
+              key={filter}
+              onClick={() => setActiveFilter(filter)}
+              className={cn(
+                "px-4 py-2 rounded-md text-sm font-medium transition-all whitespace-nowrap",
+                activeFilter === filter
+                  ? "bg-primary text-white shadow-sm"
+                  : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              )}
+            >
+              {getFilterLabel(filter)}
+            </button>
+          ))}
+        </div>
 
-        <Button variant="primary" onClick={openAddGoalModal}>
-          + Nova Meta
+        <Button onClick={openAddGoalModal} className="w-full md:w-auto shadow-md">
+          <Plus size={18} className="mr-2" />
+          Nova Meta
         </Button>
-      </S.ControlsContainer>
+      </div>
 
-      {/* GRID DE METAS */}
+      {/* GOALS GRID */}
       {filteredGoals.length > 0 ? (
-        <S.GoalsGrid>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredGoals.map((goal) => (
             <GoalCard
               key={goal.id}
@@ -734,15 +362,213 @@ export const GoalsPage: React.FC = () => {
               onDelete={() => openConfirmDeleteModal(goal)}
             />
           ))}
-        </S.GoalsGrid>
+        </div>
       ) : (
-        <S.EmptyState>
-          <Target size={64} />
-          <h3>{emptyState.title}</h3>
-          <p>{emptyState.description}</p>
-        </S.EmptyState>
+        <div className="flex flex-col items-center justify-center py-20 bg-white dark:bg-zinc-900 rounded-xl border-2 border-dashed border-zinc-200 dark:border-zinc-800 text-center gap-4">
+          <div className="w-20 h-20 bg-zinc-100 dark:bg-zinc-800 rounded-full flex items-center justify-center text-zinc-400">
+            <Target size={40} />
+          </div>
+          <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">{emptyState.title}</h3>
+          <p className="text-zinc-500 max-w-sm">{emptyState.description}</p>
+          <Button variant="outline" onClick={openAddGoalModal} className="mt-2">
+            Criar primeira meta
+          </Button>
+        </div>
       )}
-    </S.PageContainer>
+
+      {/* CREATE GOAL MODAL */}
+      <Modal
+        isOpen={isAddGoalModalOpen}
+        onClose={() => setAddGoalModalOpen(false)}
+        title="Criar Nova Meta"
+      >
+        <div className="flex flex-col gap-6 p-1">
+          <p className="text-zinc-500">
+            Defina uma meta financeira e comece a economizar para alcançá-la!
+          </p>
+
+          <form onSubmit={handleCreateGoal} className="flex flex-col gap-4">
+            <div className="space-y-2">
+              <label htmlFor="goalName" className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                Nome da Meta
+              </label>
+              <Input
+                id="goalName"
+                placeholder="Ex: Viagem, Carro novo..."
+                value={goalName}
+                onChange={(e) => setGoalName(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="goalTarget" className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                Valor Alvo (R$)
+              </label>
+              <Input
+                id="goalTarget"
+                type="number"
+                placeholder="Ex: 5000.00"
+                value={goalTarget}
+                onChange={(e) => setGoalTarget(e.target.value)}
+                min="0"
+                step="0.01"
+                required
+              />
+            </div>
+
+            <div className="flex justify-end gap-3 mt-4">
+              <Button type="button" variant="outline" onClick={() => setAddGoalModalOpen(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={createGoal.isPending}>
+                {createGoal.isPending ? 'Criando...' : 'Criar Meta'}
+              </Button>
+            </div>
+          </form>
+        </div>
+      </Modal>
+
+      {/* EDIT GOAL MODAL */}
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        title="Editar Meta"
+      >
+        <div className="flex flex-col gap-6 p-1">
+          <form onSubmit={handleUpdateGoal} className="flex flex-col gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Nome da Meta</label>
+              <Input
+                value={goalName}
+                onChange={(e) => setGoalName(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Valor Alvo (R$)</label>
+              <Input
+                type="number"
+                value={goalTarget}
+                onChange={(e) => setGoalTarget(e.target.value)}
+                min="0"
+                step="0.01"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Valor Atual (R$)</label>
+              <Input
+                type="number"
+                value={currentAmountEdit}
+                onChange={(e) => setCurrentAmountEdit(e.target.value)}
+                min="0"
+                step="0.01"
+                required
+              />
+            </div>
+
+            <div className="flex justify-end gap-3 mt-4">
+              <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={updateGoal.isPending}>
+                {updateGoal.isPending ? 'Salvando...' : 'Salvar'}
+              </Button>
+            </div>
+          </form>
+        </div>
+      </Modal>
+
+      {/* ADD FUNDS MODAL */}
+      <Modal
+        isOpen={isAddFundsModalOpen}
+        onClose={() => setAddFundsModalOpen(false)}
+        title="Adicionar Dinheiro"
+      >
+        <div className="flex flex-col gap-6 p-1">
+          <p className="text-zinc-500">
+            Adicione dinheiro à meta <strong className="text-zinc-900 dark:text-zinc-100">{selectedGoal?.name}</strong>.
+          </p>
+
+          <form onSubmit={handleAddFunds} className="flex flex-col gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Valor a Adicionar (R$)</label>
+              <Input
+                type="number"
+                placeholder="Ex: 100.00"
+                value={fundsToAdd}
+                onChange={(e) => setFundsToAdd(e.target.value)}
+                min="0"
+                step="0.01"
+                required
+                autoFocus
+              />
+            </div>
+
+            <div className="flex justify-end gap-3 mt-4">
+              <Button type="button" variant="outline" onClick={() => setAddFundsModalOpen(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={updateGoal.isPending}>
+                {updateGoal.isPending ? 'Adicionando...' : 'Adicionar'}
+              </Button>
+            </div>
+          </form>
+        </div>
+      </Modal>
+
+      {/* DELETE CONFIRMATION MODAL */}
+      <Modal
+        isOpen={isConfirmDeleteModalOpen}
+        onClose={() => setConfirmDeleteModalOpen(false)}
+        title="Confirmar Exclusão"
+      >
+        <div className="flex flex-col gap-6 p-1">
+          <p className="text-zinc-600 dark:text-zinc-400">
+            Você tem certeza que deseja excluir a meta <strong className="text-zinc-900 dark:text-zinc-100">{selectedGoal?.name}</strong>?
+            Esta ação não pode ser desfeita.
+          </p>
+
+          <div className="flex justify-end gap-3 mt-2">
+            <Button variant="outline" onClick={() => setConfirmDeleteModalOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteGoal}
+              disabled={deleteGoal.isPending}
+            >
+              {deleteGoal.isPending ? 'Excluindo...' : 'Sim, Excluir'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* CELEBRATION MODAL */}
+      <Modal
+        isOpen={isCelebrationModalOpen}
+        onClose={() => setCelebrationModalOpen(false)}
+        title=""
+      >
+        <div className="flex flex-col items-center text-center gap-6 p-6">
+          <div className="w-32 h-32 bg-yellow-100 rounded-full flex items-center justify-center text-6xl animate-bounce">
+            🏆
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold text-green-600">Parabéns!</h2>
+            <p className="text-zinc-600">
+              Você alcançou sua meta financeira! Continue assim e conquiste ainda mais objetivos!
+            </p>
+          </div>
+          <Button onClick={() => setCelebrationModalOpen(false)} size="lg" className="w-full">
+            Continuar
+          </Button>
+        </div>
+      </Modal>
+    </div>
   );
 };
 

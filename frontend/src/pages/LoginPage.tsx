@@ -1,75 +1,63 @@
-import React, { useState, type FormEvent } from "react";
-import {
-  Mail,
-  Lock,
-  ArrowRight,
-  EyeOff,
-  Eye,
-} from "react-feather";
-import { useNavigate } from "react-router-dom";
-import * as S from "./LoginPage.styles";
-import { InputGroup } from "../components/auth/InputGroup";
-import { useAuth } from "../hooks/useAuth";
-import { useToast } from "../hooks/useToast";
-import {} from "lucide-react";
-import mascotImage from "../assets/images/fox.png";
+import React, { useState } from 'react';
+import { Mail, Lock, ArrowRight, Eye, EyeOff, User } from 'react-feather';
+import { useNavigate } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { toast } from 'sonner';
+import { motion } from 'framer-motion';
+import { useAuthStore } from '@/stores/auth-store';
+import { loginSchema, type LoginSchema } from '@/features/auth/schemas/auth-schema';
+import mascotImage from '../assets/images/fox.png';
+import { Input } from '@/components/ui/input';
+
+import { Label } from '@/components/ui/label';
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
-  const { addToast } = useToast();
-
+  const login = useAuthStore((state) => state.login);
   const [showPassword, setShowPassword] = useState(false);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const handleLogin = async (e: FormEvent) => {
-    e.preventDefault();
-    setError(null);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginSchema>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: '',
+      password: '',
+    },
+  });
 
-    if (!email || !password) {
-      setError("Por favor, preencha o email e a senha.");
-      return;
-    }
-
+  const onSubmit = async (data: LoginSchema) => {
     setIsLoading(true);
-
     try {
-      await login(email, password);
-      addToast("Bem-vindo(a) de volta.", "success");
-      navigate("/home");
+      await login(data.email, data.password);
+      toast.success('Bem-vindo(a) de volta!');
+      navigate('/home');
     } catch (error: any) {
-      console.error("Erro no login:", error);
+      console.error('Erro no login:', error);
+      let msg = 'Ocorreu um erro inesperado. Tente novamente.';
 
-      let msg = "Ocorreu um erro inesperado. Tente novamente.";
-
-      if (error instanceof Error && !error.message.includes("Firebase:")) {
-        msg = error.message;
-      } else if (error.code) {
+      if (error?.code) {
         switch (error.code) {
-          case "auth/invalid-credential":
-          case "auth/user-not-found":
-          case "auth/wrong-password":
-            msg = "Email ou senha incorretos. Verifique suas credenciais.";
+          case 'auth/invalid-credential':
+          case 'auth/user-not-found':
+          case 'auth/wrong-password':
+            msg = 'Email ou senha incorretos.';
             break;
-          case "auth/invalid-email":
-            msg = "O formato do email é inválido.";
+          case 'auth/invalid-email':
+            msg = 'O formato do email é inválido.';
             break;
-          case "auth/too-many-requests":
-            msg = "Muitas tentativas falhas. Aguarde alguns instantes.";
-            break;
-          case "auth/network-request-failed":
-            msg = "Erro de conexão. Verifique sua internet.";
+          case 'auth/too-many-requests':
+            msg = 'Muitas tentativas. Aguarde alguns instantes.';
             break;
           default:
-            msg = "Erro ao autenticar. Tente novamente.";
+            msg = 'Erro ao autenticar. Tente novamente.';
         }
       }
-
-      setError(msg);
-      addToast(msg, "error");
+      toast.error(msg);
     } finally {
       setIsLoading(false);
     }
@@ -80,175 +68,193 @@ const LoginPage: React.FC = () => {
     transition: {
       duration: 4,
       repeat: Infinity,
-      ease: "easeInOut" as const,
-      repeatType: "loop" as const,
+      ease: 'easeInOut' as const,
+      repeatType: 'loop' as const,
     },
   };
 
   return (
-    <S.PageContainer>
-      <S.BackgroundShapes>
-        <S.FloatingShape
-          $color="#007ACC"
-          $size={400}
-          $top="20%"
-          $left="-10%"
+    <div className="min-h-screen flex flex-col lg:flex-row relative overflow-hidden bg-white dark:bg-zinc-950">
+      {/* Background Shapes */}
+      <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+        <motion.div
+          className="absolute w-[400px] h-[400px] bg-[#007ACC] rounded-full blur-[100px] opacity-20 top-[20%] -left-[10%]"
           animate={{
             y: floatingAnimation.y,
             transition: floatingAnimation.transition,
           }}
         />
-        <S.FloatingShape
-          $color="#28A745"
-          $size={350}
-          $top="60%"
-          $left="80%"
+        <motion.div
+          className="absolute w-[300px] h-[300px] bg-[#28A745] rounded-full blur-[100px] opacity-20 top-[60%] left-[80%]"
           animate={{
             y: floatingAnimation.y,
-            transition: { ...floatingAnimation.transition, delay: 1.5 },
+            transition: { ...floatingAnimation.transition, delay: 1 },
           }}
         />
-      </S.BackgroundShapes>
+      </div>
 
-      {/* --- Lado Esquerdo (Branding) --- */}
-      <S.BrandingSide>
-        <S.BrandingContent
-          initial={{ opacity: 0, x: -50 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.8 }}
+      {/* Left Side - Branding */}
+      <div className="flex-1 bg-gradient-to-br from-[#007acc] to-[#28a745] flex flex-col items-center justify-center p-8 lg:p-16 relative text-white text-center rounded-b-[30px] lg:rounded-r-[30px] lg:rounded-bl-none z-10 lg:min-h-screen">
+        <motion.div
+          animate={{
+            y: [0, -15, 0],
+            rotate: [0, 5, -5, 0],
+          }}
+          transition={{
+            duration: 6,
+            repeat: Infinity,
+            ease: 'easeInOut',
+          }}
+          className="w-[150px] h-[150px] lg:w-[200px] lg:h-[200px] bg-white/15 backdrop-blur-xl rounded-full flex items-center justify-center p-4 border-[3px] border-white/30 mb-8 shadow-[0_20px_60px_rgba(0,0,0,0.2)]"
         >
-          <S.MascotContainer
-            animate={{
-              y: [0, -15, 0],
-              rotate: [0, 5, -5, 0],
-            }}
-            transition={{
-              duration: 4,
-              repeat: Infinity,
-              ease: "easeInOut" as const,
-              repeatType: "loop" as const,
-            }}
-          >
-            <img
-              src={mascotImage}
-              alt="Mascote FinQuest Raposa Exploradora"
-              style={{ width: "80%", height: "auto", objectFit: "contain" }}
-            />
-          </S.MascotContainer>
-          <h1>Bem-vindo de volta!</h1>
-          <p>
-            Continue sua jornada de educação financeira e conquiste novos
-            objetivos hoje.
+          <img
+            src={mascotImage}
+            alt="FinQuest Mascote"
+            className="w-full h-full object-contain"
+          />
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="max-w-[500px] relative z-10"
+        >
+          <h1 className="text-4xl lg:text-5xl font-bold mb-4 text-white drop-shadow-md">FinQuest</h1>
+          <p className="text-lg lg:text-xl opacity-95 leading-relaxed mb-4">
+            Transforme sua vida financeira em uma jornada épica de conquistas e
+            aprendizado.
           </p>
 
-          <S.StatsRow>
-            <S.StatItem
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.4 }}
-            >
-              <h3>1.2k</h3>
-              <p>FinPoints</p>
-            </S.StatItem>
-            <S.StatItem
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.5 }}
-            >
-              <h3>12</h3>
-              <p>Conquistas</p>
-            </S.StatItem>
-          </S.StatsRow>
-        </S.BrandingContent>
-      </S.BrandingSide>
+          <div className="flex gap-8 lg:gap-12 mt-12 justify-center">
+            <div className="text-center">
+              <h3 className="text-3xl lg:text-4xl font-extrabold text-[#ffcc00] mb-1">+10k</h3>
+              <p className="text-sm lg:text-base opacity-90">Usuários</p>
+            </div>
+            <div className="text-center">
+              <h3 className="text-3xl lg:text-4xl font-extrabold text-[#ffcc00] mb-1">R$ 5M+</h3>
+              <p className="text-sm lg:text-base opacity-90">Economizados</p>
+            </div>
+          </div>
+        </motion.div>
+      </div>
 
-      {/* --- Lado Direito (Formulário) --- */}
-      <S.FormSide>
-        <S.FormContainer
-          initial={{ opacity: 0, x: 50 }}
+      {/* Right Side - Form */}
+      <div className="flex-1 flex items-center justify-center p-8 lg:p-16 bg-white dark:bg-zinc-950 relative z-10">
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.8 }}
+          transition={{ delay: 0.4 }}
+          className="w-full max-w-md"
         >
-          <S.FormHeader>
-            <h2>Entrar</h2>
-            <p>Acesse sua conta e continue aprendendo</p>
-          </S.FormHeader>
+          <div className="mb-12">
+            <h2 className="text-3xl lg:text-4xl font-bold mb-2 text-zinc-800 dark:text-zinc-100">Bem-vindo de volta!</h2>
+            <p className="text-zinc-500 dark:text-zinc-400 text-lg">Faça login para continuar sua jornada.</p>
+          </div>
 
-          <S.FormElement onSubmit={handleLogin} noValidate>
-            <InputGroup
-              id="email"
-              label="Email"
-              icon={<Mail size={20} />}
-              type="email"
-              placeholder="seu@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              aria-invalid={!!error}
-            />
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.8 }}
+            className="bg-gradient-to-br from-[#FFCC00]/10 to-[#FD7E14]/10 border-l-4 border-[#ffcc00] p-4 rounded-xl mb-8 flex gap-4 items-start"
+          >
+            <User size={20} className="text-[#333] shrink-0 mt-[2px]" />
+            <div>
+              <h4 className="text-[#333] text-sm font-semibold mb-1">Conta de Demonstração</h4>
+              <p className="text-sm text-zinc-500 m-0">Email: <strong className="text-[#333] font-mono bg-black/5 px-1.5 py-0.5 rounded text-xs">demo@finquest.com</strong></p>
+              <p className="text-sm text-zinc-500 m-0">Senha: <strong className="text-[#333] font-mono bg-black/5 px-1.5 py-0.5 rounded text-xs">demo123</strong></p>
+            </div>
+          </motion.div>
 
-            <S.InputGroupStyled>
-              <S.Label htmlFor="password">Senha</S.Label>
-              <S.InputWrapper>
-                <Lock size={20} />
-                <S.Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  aria-invalid={!!error}
-                  aria-describedby="login-error"
+          <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="email">Email</Label>
+              <div className="relative flex items-center">
+                <Mail size={20} className="absolute left-4 text-zinc-400 pointer-events-none z-10" />
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="seu@email.com"
+                  className="pl-12 py-6 rounded-xl border-2 border-zinc-200 dark:border-zinc-800 focus-visible:ring-0 focus-visible:border-[#007acc] transition-all bg-white dark:bg-zinc-900"
+                  {...register('email')}
                 />
+              </div>
+              {errors.email && (
+                <div className="text-red-500 text-sm font-medium mt-1 flex items-center gap-1">
+                  {errors.email.message}
+                </div>
+              )}
+            </div>
 
-                <S.PasswordToggleIcon
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="password">Senha</Label>
+              <div className="relative flex items-center">
+                <Lock size={20} className="absolute left-4 text-zinc-400 pointer-events-none z-10" />
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Sua senha secreta"
+                  className="pl-12 py-6 rounded-xl border-2 border-zinc-200 dark:border-zinc-800 focus-visible:ring-0 focus-visible:border-[#007acc] transition-all bg-white dark:bg-zinc-900"
+                  {...register('password')}
+                />
+                <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                  className="absolute right-4 text-zinc-400 hover:text-[#007acc] transition-colors bg-transparent border-none cursor-pointer flex items-center justify-center p-1 rounded-full focus:outline-none"
                 >
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                </S.PasswordToggleIcon>
-              </S.InputWrapper>
-              <S.ForgotPassword
-                type="button"
-                onClick={() => navigate("/forgot-password")}
-              >
-                Esqueceu sua senha?
-              </S.ForgotPassword>
-            </S.InputGroupStyled>
+                </button>
+              </div>
+              {errors.password && (
+                <div className="text-red-500 text-sm font-medium mt-1 flex items-center gap-1">
+                  {errors.password.message}
+                </div>
+              )}
+            </div>
 
-            <S.SubmitButtonStyled
+            <div className="flex justify-end">
+              <button type="button" className="text-[#007acc] text-sm font-semibold bg-transparent border-none p-0 cursor-pointer hover:underline hover:opacity-80 transition-all">
+                Esqueceu a senha?
+              </button>
+            </div>
+
+            <motion.button
               type="submit"
-              whileHover={!isLoading ? { scale: 1.02 } : undefined}
-              whileTap={!isLoading ? { scale: 0.98 } : undefined}
-              disabled={isLoading || !email || !password}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              disabled={isLoading}
+              className="w-full py-4 text-lg font-bold font-['Poppins'] bg-gradient-to-br from-[#007acc] to-[#28a745] text-white border-none rounded-xl cursor-pointer flex items-center justify-center gap-2 shadow-[0_10px_30px_rgba(0,122,204,0.3)] hover:shadow-[0_15px_40px_rgba(0,122,204,0.4)] hover:-translate-y-0.5 active:translate-y-0 transition-all disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none"
             >
               {isLoading ? (
                 <>
-                  <S.Spinner />
-                  <span>Entrando...</span>
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Entrando...
                 </>
               ) : (
                 <>
-                  <span>Entrar na minha conta</span>
-                  <ArrowRight size={20} />
+                  Entrar <ArrowRight size={20} />
                 </>
               )}
-            </S.SubmitButtonStyled>
-          </S.FormElement>
+            </motion.button>
+          </form>
 
-          <S.Divider>ou</S.Divider>
+          <div className="flex items-center gap-4 my-8 text-zinc-500 text-sm before:flex-1 before:h-px before:bg-zinc-200 dark:before:bg-zinc-800 after:flex-1 after:h-px after:bg-zinc-200 dark:after:bg-zinc-800">
+            ou
+          </div>
 
-          <S.SignUpPrompt>
-            Ainda não tem uma conta?{" "}
-            <button type="button" onClick={() => navigate("/register")}>
-              Cadastre-se gratuitamente
+          <div className="text-center text-zinc-500 text-base">
+            Não tem uma conta?{' '}
+            <button
+              type="button"
+              onClick={() => navigate('/register')}
+              className="text-[#007acc] font-semibold bg-transparent border-none p-0 cursor-pointer hover:underline hover:opacity-80 transition-all"
+            >
+              Crie agora gratuitamente
             </button>
-          </S.SignUpPrompt>
-        </S.FormContainer>
-      </S.FormSide>
-    </S.PageContainer>
+          </div>
+        </motion.div>
+      </div>
+    </div>
   );
 };
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from 'react';
 import {
   Edit2,
   PlusCircle,
@@ -13,31 +13,49 @@ import {
   ArrowUpCircle,
   ArrowDownCircle,
   RefreshCw,
-} from "lucide-react";
-import Button from "../components/common/Button";
-import { Modal } from "../components/common/Modal";
-import { useToast } from "../hooks/useToast";
+} from 'lucide-react';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 import {
   type Transaction,
   type TransactionType,
   type CreateTransactionDTO,
   type UpdateTransactionDTO,
-  type FinancialOverview,
-  createTransaction,
-  updateTransaction,
-  deleteTransaction,
-  getAllTransactions,
-  getFinancialOverview,
   formatCurrency,
   formatMonthYear,
   getCurrentMonthKey,
-  monthKeyToRange,
   EXPENSE_CATEGORIES,
   INCOME_CATEGORIES,
-} from "../services/transactionService";
-import * as S from "./FinancePlanningPage.styles";
-import { useGamification } from "../context/GamificationContext";
-import { useAuth } from "../hooks/useAuth";
+} from '@/features/finance/services/transaction-api';
+import {
+  useTransactions,
+  useFinancialOverview,
+  useCreateTransaction,
+  useUpdateTransaction,
+  useDeleteTransaction,
+} from '@/features/finance/hooks/useTransactions';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface TransactionModalProps {
   isOpen: boolean;
@@ -58,18 +76,18 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
 }) => {
   const [formData, setFormData] = useState<{
     type: TransactionType;
-    amount: number;
+    amount: string;
     description: string;
     category: string;
     date: string;
     notes: string;
   }>({
-    type: "EXPENSE",
-    amount: 0,
-    description: "",
-    category: "",
-    date: new Date().toISOString().split("T")[0],
-    notes: "",
+    type: 'EXPENSE',
+    amount: '',
+    description: '',
+    category: '',
+    date: new Date().toISOString().split('T')[0],
+    notes: '',
   });
 
   useEffect(() => {
@@ -77,20 +95,20 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
       if (initialData) {
         setFormData({
           type: initialData.type,
-          amount: initialData.amount,
+          amount: String(initialData.amount),
           description: initialData.description,
           category: initialData.category,
           date: initialData.date,
-          notes: initialData.notes || "",
+          notes: initialData.notes || '',
         });
       } else {
         setFormData({
-          type: "EXPENSE",
-          amount: 0,
-          description: "",
-          category: "",
-          date: new Date().toISOString().split("T")[0],
-          notes: "",
+          type: 'EXPENSE',
+          amount: '',
+          description: '',
+          category: '',
+          date: new Date().toISOString().split('T')[0],
+          notes: '',
         });
       }
     }
@@ -101,7 +119,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
 
     const data: CreateTransactionDTO | UpdateTransactionDTO = {
       type: formData.type,
-      amount: formData.amount,
+      amount: Number(formData.amount),
       description: formData.description,
       category: formData.category,
       date: formData.date,
@@ -111,58 +129,56 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
     await onSubmit(data);
   };
 
-  const handleTypeChange = (newType: TransactionType) => {
+  const handleTypeChange = (newType: string) => {
     setFormData({
       ...formData,
-      type: newType,
-      category: "",
+      type: newType as TransactionType,
+      category: '',
     });
   };
 
   const availableCategories =
-    formData.type === "INCOME" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
-
-  if (!isOpen) return null;
+    formData.type === 'INCOME' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={initialData ? "Editar Transação" : "Nova Transação"}
-    >
-      <S.ModalContent>
-        <S.ModalDescription>
-          {initialData
-            ? "Edite as informações da transação abaixo."
-            : "Preencha os dados para registrar uma nova transação."}
-        </S.ModalDescription>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle>{initialData ? 'Editar Transação' : 'Nova Transação'}</DialogTitle>
+          <DialogDescription>
+            {initialData
+              ? 'Edite as informações da transação abaixo.'
+              : 'Preencha os dados para registrar uma nova transação.'}
+          </DialogDescription>
+        </DialogHeader>
 
-        <S.FormContainer onSubmit={handleSubmit}>
-          <S.FormRow>
-            <S.InputGroup>
-              <S.Label htmlFor="type">Tipo</S.Label>
-              <S.Select
-                id="type"
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4 py-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="type">Tipo</Label>
+              <Select
                 value={formData.type}
-                onChange={(e) =>
-                  handleTypeChange(e.target.value as TransactionType)
-                }
-                required
+                onValueChange={handleTypeChange}
                 disabled={isLoading}
               >
-                <option value="EXPENSE">💸 Despesa</option>
-                <option value="INCOME">💰 Receita</option>
-              </S.Select>
-            </S.InputGroup>
+                <SelectTrigger id="type">
+                  <SelectValue placeholder="Selecione o tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="EXPENSE">💸 Despesa</SelectItem>
+                  <SelectItem value="INCOME">💰 Receita</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-            <S.InputGroup>
-              <S.Label htmlFor="amount">Valor (R$)</S.Label>
-              <S.Input
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="amount">Valor (R$)</Label>
+              <Input
                 id="amount"
                 type="number"
-                value={formData.amount || ""}
+                value={formData.amount}
                 onChange={(e) =>
-                  setFormData({ ...formData, amount: Number(e.target.value) })
+                  setFormData({ ...formData, amount: e.target.value })
                 }
                 placeholder="0,00"
                 min="0"
@@ -170,12 +186,12 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                 required
                 disabled={isLoading}
               />
-            </S.InputGroup>
-          </S.FormRow>
+            </div>
+          </div>
 
-          <S.InputGroup>
-            <S.Label htmlFor="description">Descrição</S.Label>
-            <S.Input
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="description">Descrição</Label>
+            <Input
               id="description"
               type="text"
               value={formData.description}
@@ -186,32 +202,33 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
               required
               disabled={isLoading}
             />
-          </S.InputGroup>
+          </div>
 
-          <S.FormRow>
-            <S.InputGroup>
-              <S.Label htmlFor="category">Categoria</S.Label>
-              <S.Select
-                id="category"
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="category">Categoria</Label>
+              <Select
                 value={formData.category}
-                onChange={(e) =>
-                  setFormData({ ...formData, category: e.target.value })
-                }
-                required
+                onValueChange={(value) => setFormData({ ...formData, category: value })}
                 disabled={isLoading}
+                required
               >
-                <option value="">Selecione...</option>
-                {availableCategories.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
-                  </option>
-                ))}
-              </S.Select>
-            </S.InputGroup>
+                <SelectTrigger id="category">
+                  <SelectValue placeholder="Selecione..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableCategories.map((category) => (
+                    <SelectItem key={category} value={category}>
+                      {category}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-            <S.InputGroup>
-              <S.Label htmlFor="date">Data</S.Label>
-              <S.Input
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="date">Data</Label>
+              <Input
                 id="date"
                 type="date"
                 value={formData.date}
@@ -221,12 +238,12 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                 required
                 disabled={isLoading}
               />
-            </S.InputGroup>
-          </S.FormRow>
+            </div>
+          </div>
 
-          <S.InputGroup>
-            <S.Label htmlFor="notes">Observações (opcional)</S.Label>
-            <S.TextArea
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="notes">Observações (opcional)</Label>
+            <Textarea
               id="notes"
               value={formData.notes}
               onChange={(e) =>
@@ -235,9 +252,9 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
               placeholder="Alguma observação adicional..."
               disabled={isLoading}
             />
-          </S.InputGroup>
+          </div>
 
-          <S.ModalButtonContainer>
+          <DialogFooter>
             <Button
               variant="outline"
               onClick={onClose}
@@ -246,170 +263,95 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
             >
               Cancelar
             </Button>
-            <Button variant="primary" type="submit" disabled={isLoading}>
+            <Button type="submit" disabled={isLoading}>
               {isLoading
-                ? "Salvando..."
+                ? 'Salvando...'
                 : initialData
-                ? "Salvar Alterações"
-                : "Adicionar"}
+                  ? 'Salvar Alterações'
+                  : 'Adicionar'}
             </Button>
-          </S.ModalButtonContainer>
-        </S.FormContainer>
-      </S.ModalContent>
-    </Modal>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 };
 
 export const FinancePlanningPage: React.FC = () => {
-  // State
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonthKey());
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [overview, setOverview] = useState<FinancialOverview | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Modal states
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<"add" | "edit">("add");
+  const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
   const [editingTransaction, setEditingTransaction] =
     useState<Transaction | null>(null);
   const [transactionToDelete, setTransactionToDelete] =
     useState<Transaction | null>(null);
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
 
-  const { addToast } = useToast();
-  const { updateUserContext } = useAuth();
-  const { showLevelUp, showBadgeUnlocked } = useGamification();
+  const { data: transactions = [], isLoading: isLoadingTransactions, refetch: refetchTransactions } = useTransactions(selectedMonth);
+  const { data: overview, isLoading: isLoadingOverview } = useFinancialOverview(selectedMonth);
 
-  const fetchData = useCallback(async () => {
-    setIsLoading(true);
+  const createMutation = useCreateTransaction(selectedMonth);
+  const updateMutation = useUpdateTransaction(selectedMonth);
+  const deleteMutation = useDeleteTransaction(selectedMonth);
 
-    try {
-      const { startDate, endDate } = monthKeyToRange(selectedMonth);
-
-      const [transactionsData, overviewData] = await Promise.all([
-        getAllTransactions(startDate, endDate),
-        getFinancialOverview(startDate, endDate),
-      ]);
-
-      setTransactions(transactionsData);
-      setOverview(overviewData);
-    } catch (error) {
-      console.error("Erro ao carregar dados:", error);
-      addToast("Erro ao carregar dados financeiros", "error");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [selectedMonth, addToast]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  const isLoading = isLoadingTransactions || isLoadingOverview;
+  const isSubmitting = createMutation.isPending || updateMutation.isPending || deleteMutation.isPending;
 
   const handleAddTransaction = async (data: CreateTransactionDTO) => {
-    setIsSubmitting(true);
-
     try {
-      const response = await createTransaction(data);
-      
-      const { missionCompletion } = response;
-
-      if (missionCompletion) {
-        updateUserContext({
-          totalFinPoints: missionCompletion.totalFinPoints,
-          level: missionCompletion.level,
-        });
-
-        if (missionCompletion.didLevelUp && missionCompletion.unlockedBadge) {
-          showBadgeUnlocked(
-            missionCompletion.unlockedBadge,
-            missionCompletion.level,
-            missionCompletion.totalFinPoints
-          );
-        } else if (missionCompletion.didLevelUp) {
-          showLevelUp(missionCompletion.level);
-        }
-      }
-
-      await fetchData();
+      await createMutation.mutateAsync(data);
+      toast.success('Transação adicionada com sucesso!');
       setIsTransactionModalOpen(false);
-
-      const message =
-        data.type === "INCOME"
-          ? "Receita adicionada com sucesso!"
-          : "Despesa adicionada com sucesso!";
-      addToast(message, "success");
     } catch (error) {
-      console.error("Erro ao criar transação:", error);
-      addToast("Erro ao criar transação. Tente novamente.", "error");
-    } finally {
-      setIsSubmitting(false);
+      toast.error('Erro ao adicionar transação.');
     }
   };
 
   const handleUpdateTransaction = async (data: UpdateTransactionDTO) => {
     if (!editingTransaction) return;
 
-    setIsSubmitting(true);
-
     try {
-      await updateTransaction(editingTransaction.id, data);
-      await fetchData();
+      await updateMutation.mutateAsync({ id: editingTransaction.id, data });
+      toast.success('Transação atualizada com sucesso!');
       setIsTransactionModalOpen(false);
       setEditingTransaction(null);
-      addToast("Transação atualizada com sucesso!", "success");
-    } catch (error: any) {
-      if (error?.response?.data?.details) {
-        addToast(`${error.response.data.details[0]}`, "error");
-      } else {
-        addToast(
-          `Erro ao atualizar transação. Por favor, tente novamente.`,
-          "error"
-        );
-      }
-    } finally {
-      setIsSubmitting(false);
+    } catch (error) {
+      toast.error('Erro ao atualizar transação.');
     }
   };
 
   const handleDeleteTransaction = async () => {
     if (!transactionToDelete) return;
 
-    setIsSubmitting(true);
-
     try {
-      await deleteTransaction(transactionToDelete.id);
-      await fetchData();
+      await deleteMutation.mutateAsync(transactionToDelete.id);
+      toast.success('Transação excluída com sucesso!');
       setIsConfirmDeleteOpen(false);
       setTransactionToDelete(null);
-      addToast("Transação excluída com sucesso!", "success");
     } catch (error) {
-      console.error("Erro ao excluir transação:", error);
-      addToast("Erro ao excluir transação. Tente novamente.", "error");
-    } finally {
-      setIsSubmitting(false);
+      toast.error('Erro ao excluir transação.');
     }
   };
 
   const handleSubmitTransaction = async (
     data: CreateTransactionDTO | UpdateTransactionDTO
   ) => {
-    if (modalMode === "add") {
+    if (modalMode === 'add') {
       await handleAddTransaction(data as CreateTransactionDTO);
     } else {
       await handleUpdateTransaction(data as UpdateTransactionDTO);
     }
   };
 
-  // Modal openers
   const openAddModal = () => {
-    setModalMode("add");
+    setModalMode('add');
     setEditingTransaction(null);
     setIsTransactionModalOpen(true);
   };
 
   const openEditModal = (transaction: Transaction) => {
-    setModalMode("edit");
+    setModalMode('edit');
     setEditingTransaction(transaction);
     setIsTransactionModalOpen(true);
   };
@@ -419,12 +361,11 @@ export const FinancePlanningPage: React.FC = () => {
     setIsConfirmDeleteOpen(true);
   };
 
-  // Navigation
-  const navigateMonth = (direction: "prev" | "next") => {
-    const [year, month] = selectedMonth.split("-").map(Number);
+  const navigateMonth = (direction: 'prev' | 'next') => {
+    const [year, month] = selectedMonth.split('-').map(Number);
     const date = new Date(year, month - 1);
 
-    if (direction === "prev") {
+    if (direction === 'prev') {
       date.setMonth(date.getMonth() - 1);
     } else {
       date.setMonth(date.getMonth() + 1);
@@ -432,14 +373,14 @@ export const FinancePlanningPage: React.FC = () => {
 
     const newMonth = `${date.getFullYear()}-${String(
       date.getMonth() + 1
-    ).padStart(2, "0")}`;
+    ).padStart(2, '0')}`;
     setSelectedMonth(newMonth);
   };
 
   const isCurrentMonth = selectedMonth === getCurrentMonthKey();
 
   return (
-    <S.PageContainer>
+    <div className="max-w-7xl mx-auto p-4 md:p-8 flex flex-col gap-8 pb-20">
       {/* Transaction Modal */}
       <TransactionModal
         isOpen={isTransactionModalOpen}
@@ -453,20 +394,16 @@ export const FinancePlanningPage: React.FC = () => {
       />
 
       {/* Delete Confirmation Modal */}
-      <Modal
-        isOpen={isConfirmDeleteOpen}
-        onClose={() => setIsConfirmDeleteOpen(false)}
-        title="Confirmar Exclusão"
-      >
-        <S.ModalContent>
-          <p>
-            Tem certeza que deseja excluir a transação "
-            <strong>{transactionToDelete?.description}</strong>"?
-          </p>
-          <S.ModalDescription>
-            Esta ação não pode ser desfeita.
-          </S.ModalDescription>
-          <S.ModalButtonContainer>
+      <Dialog open={isConfirmDeleteOpen} onOpenChange={setIsConfirmDeleteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar Exclusão</DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja excluir a transação "<strong>{transactionToDelete?.description}</strong>"?
+              Esta ação não pode ser desfeita.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
             <Button
               variant="outline"
               onClick={() => setIsConfirmDeleteOpen(false)}
@@ -475,225 +412,261 @@ export const FinancePlanningPage: React.FC = () => {
               Cancelar
             </Button>
             <Button
-              variant="primary"
-              style={{ backgroundColor: "#DC3545" }}
+              variant="destructive"
               onClick={handleDeleteTransaction}
               disabled={isSubmitting}
             >
-              {isSubmitting ? "Excluindo..." : "Excluir"}
+              {isSubmitting ? 'Excluindo...' : 'Excluir'}
             </Button>
-          </S.ModalButtonContainer>
-        </S.ModalContent>
-      </Modal>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Hero Section */}
-      <S.HeroSection>
-        <S.HeroHeader>
-          <S.HeroContent>
-            <S.Title>
-              <Wallet size={32} />
+      <div className="bg-gradient-to-br from-primary/10 to-transparent border border-primary/20 rounded-3xl p-6 md:p-10 relative overflow-hidden">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8 relative z-10">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold text-zinc-900 dark:text-zinc-50 flex items-center gap-3 mb-2">
+              <div className="p-2 bg-primary/20 rounded-lg text-primary">
+                <Wallet size={24} />
+              </div>
               Planejamento Financeiro
-            </S.Title>
-            <S.Subtitle>
-              Acompanhe suas receitas e despesas para manter suas finanças
-              sempre em dia.
-            </S.Subtitle>
-          </S.HeroContent>
+            </h1>
+            <p className="text-zinc-600 dark:text-zinc-400 text-lg max-w-2xl">
+              Acompanhe suas receitas e despesas para manter suas finanças sempre em dia.
+            </p>
+          </div>
 
-          <S.MonthSelector>
-            <S.MonthButton onClick={() => navigateMonth("prev")}>
-              <ChevronLeft size={20} />
-            </S.MonthButton>
-            <S.MonthDisplay>
+          <div className="flex items-center gap-3 bg-white dark:bg-zinc-900 p-1.5 rounded-full border border-zinc-200 dark:border-zinc-800 shadow-sm shrink-0">
+            <Button variant="ghost" size="icon" onClick={() => navigateMonth('prev')} className="rounded-full w-8 h-8">
+              <ChevronLeft size={18} />
+            </Button>
+            <div className="flex items-center gap-2 px-2 font-medium min-w-[140px] justify-center text-zinc-900 dark:text-zinc-50">
               {formatMonthYear(selectedMonth)}
-              {isCurrentMonth && <S.CurrentBadge>Atual</S.CurrentBadge>}
-            </S.MonthDisplay>
-            <S.MonthButton onClick={() => navigateMonth("next")}>
-              <ChevronRight size={20} />
-            </S.MonthButton>
-          </S.MonthSelector>
-        </S.HeroHeader>
+              {isCurrentMonth && (
+                <Badge variant="secondary" className="bg-primary/20 text-primary text-[10px] px-1.5 py-0.5">ATUAL</Badge>
+              )}
+            </div>
+            <Button variant="ghost" size="icon" onClick={() => navigateMonth('next')} className="rounded-full w-8 h-8">
+              <ChevronRight size={18} />
+            </Button>
+          </div>
+        </div>
 
-        {/* Stats Grid dentro do Hero */}
         {!isLoading && overview && (
-          <S.StatsGrid>
-            <S.StatCard
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 relative z-10">
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
+              className="bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-sm border border-zinc-200 dark:border-zinc-800 flex items-center gap-4 hover:-translate-y-1 transition-transform duration-300"
             >
-              <S.StatIcon $color="#28A745">
-                <TrendingUp />
-              </S.StatIcon>
-              <S.StatContent>
-                <S.StatValue $color="#28A745">
+              <div className="w-12 h-12 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 dark:text-green-400 shrink-0">
+                <TrendingUp size={24} />
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-green-600 dark:text-green-400 leading-tight">
                   {formatCurrency(overview.totalIncome)}
-                </S.StatValue>
-                <S.StatLabel>Receitas</S.StatLabel>
-              </S.StatContent>
-            </S.StatCard>
+                </div>
+                <div className="text-sm text-zinc-500 font-medium">Receitas</div>
+              </div>
+            </motion.div>
 
-            <S.StatCard
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
+              className="bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-sm border border-zinc-200 dark:border-zinc-800 flex items-center gap-4 hover:-translate-y-1 transition-transform duration-300"
             >
-              <S.StatIcon $color="#DC3545">
-                <TrendingDown />
-              </S.StatIcon>
-              <S.StatContent>
-                <S.StatValue $color="#DC3545">
+              <div className="w-12 h-12 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400 shrink-0">
+                <TrendingDown size={24} />
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-red-600 dark:text-red-400 leading-tight">
                   {formatCurrency(overview.totalExpense)}
-                </S.StatValue>
-                <S.StatLabel>Despesas</S.StatLabel>
-              </S.StatContent>
-            </S.StatCard>
+                </div>
+                <div className="text-sm text-zinc-500 font-medium">Despesas</div>
+              </div>
+            </motion.div>
 
-            <S.StatCard
-              $highlight={overview.balance > 0}
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
+              className={cn(
+                "bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-sm border-2 flex items-center gap-4 hover:-translate-y-1 transition-transform duration-300",
+                overview.balance >= 0
+                  ? "border-green-100 dark:border-green-900/20"
+                  : "border-red-100 dark:border-red-900/20"
+              )}
             >
-              <S.StatIcon
-                $color={overview.balance >= 0 ? "#28A745" : "#DC3545"}
-              >
-                <DollarSign />
-              </S.StatIcon>
-              <S.StatContent>
-                <S.StatValue
-                  $color={overview.balance >= 0 ? "#28A745" : "#DC3545"}
-                >
+              <div className={cn(
+                "w-12 h-12 rounded-xl flex items-center justify-center shrink-0",
+                overview.balance >= 0
+                  ? "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
+                  : "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400"
+              )}>
+                <DollarSign size={24} />
+              </div>
+              <div>
+                <div className={cn(
+                  "text-2xl font-bold leading-tight",
+                  overview.balance >= 0
+                    ? "text-green-600 dark:text-green-400"
+                    : "text-red-600 dark:text-red-400"
+                )}>
                   {formatCurrency(overview.balance)}
-                </S.StatValue>
-                <S.StatLabel>Saldo</S.StatLabel>
-              </S.StatContent>
-            </S.StatCard>
+                </div>
+                <div className="text-sm text-zinc-500 font-medium">Saldo</div>
+              </div>
+            </motion.div>
 
-            <S.StatCard
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
+              className="bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-sm border border-zinc-200 dark:border-zinc-800 flex items-center gap-4 hover:-translate-y-1 transition-transform duration-300"
             >
-              <S.StatIcon $color="#007ACC">
-                <Percent />
-              </S.StatIcon>
-              <S.StatContent>
-                <S.StatValue>{overview.savingsRate.toFixed(1)}%</S.StatValue>
-                <S.StatLabel>Taxa de Economia</S.StatLabel>
-              </S.StatContent>
-            </S.StatCard>
-          </S.StatsGrid>
+              <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
+                <Percent size={24} />
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-50 leading-tight">
+                  {overview.savingsRate.toFixed(1)}%
+                </div>
+                <div className="text-sm text-zinc-500 font-medium">Taxa de Economia</div>
+              </div>
+            </motion.div>
+          </div>
         )}
-      </S.HeroSection>
+      </div>
 
-      {/* Loading State */}
       {isLoading ? (
-        <S.LoadingContainer>
-          <div className="spinner" />
-          <p>Carregando dados financeiros...</p>
-        </S.LoadingContainer>
+        <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+          <div className="w-12 h-12 border-4 border-zinc-200 border-t-primary rounded-full animate-spin" />
+          <p className="text-zinc-500">Carregando dados financeiros...</p>
+        </div>
       ) : (
-        /* Transactions Section */
-        <S.SectionContainer>
-          <S.SectionHeader>
-            <S.SectionTitle>Transações</S.SectionTitle>
-            <S.SectionActions>
+        <div className="flex flex-col gap-6">
+          <div className="flex justify-between items-center">
+            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">Transações</h2>
+            <div className="flex gap-2">
               <Button
                 variant="outline"
-                size="small"
-                onClick={fetchData}
-                icon={<RefreshCw size={16} />}
+                size="sm"
+                onClick={() => refetchTransactions()}
+                className="gap-2"
               >
-                Atualizar
+                <RefreshCw size={16} />
+                <span className="hidden sm:inline">Atualizar</span>
               </Button>
               <Button
-                variant="primary"
-                size="small"
+                size="sm"
                 onClick={openAddModal}
-                icon={<PlusCircle size={16} />}
+                className="gap-2"
               >
-                Nova Transação
+                <PlusCircle size={16} />
+                <span className="hidden sm:inline">Nova Transação</span>
               </Button>
-            </S.SectionActions>
-          </S.SectionHeader>
+            </div>
+          </div>
 
-          {transactions.length > 0 ? (
-            <S.TransactionsList>
-              {transactions.map((transaction, index) => (
-                <S.TransactionCard
-                  key={transaction.id}
-                  $type={transaction.type}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                >
-                  <S.TransactionIcon $type={transaction.type}>
-                    {transaction.type === "INCOME" ? (
-                      <ArrowUpCircle />
-                    ) : (
-                      <ArrowDownCircle />
-                    )}
-                  </S.TransactionIcon>
-
-                  <S.TransactionInfo>
-                    <S.TransactionTitle>
-                      {transaction.description}
-                    </S.TransactionTitle>
-                    <S.TransactionMeta>
-                      <S.CategoryBadge>{transaction.category}</S.CategoryBadge>
-                      <S.DateText>
-                        {new Date(transaction.date).toLocaleDateString("pt-BR")}
-                      </S.DateText>
-                    </S.TransactionMeta>
-                    {transaction.notes && (
-                      <S.NotesText>{transaction.notes}</S.NotesText>
-                    )}
-                  </S.TransactionInfo>
-
-                  <S.TransactionRight>
-                    <S.TransactionAmount $type={transaction.type}>
-                      {transaction.type === "INCOME" ? "+" : "-"}{" "}
-                      {formatCurrency(transaction.amount)}
-                    </S.TransactionAmount>
-                    <S.ActionButtons>
-                      <button
-                        onClick={() => openEditModal(transaction)}
-                        title="Editar transação"
-                      >
-                        <Edit2 size={18} />
-                      </button>
-                      <button
-                        onClick={() => openDeleteModal(transaction)}
-                        title="Excluir transação"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </S.ActionButtons>
-                  </S.TransactionRight>
-                </S.TransactionCard>
-              ))}
-            </S.TransactionsList>
-          ) : (
-            <S.EmptyState>
-              <div className="icon">💸</div>
-              <h3>Nenhuma transação registrada</h3>
-              <p>
-                Comece a registrar suas receitas e despesas para acompanhar sua
-                saúde financeira neste período.
+          {!transactions || transactions.length === 0 ? (
+            <Card className="flex flex-col items-center justify-center p-12 text-center bg-zinc-50/50 dark:bg-zinc-900/50 border-dashed">
+              <div className="text-6xl mb-4 opacity-50">💸</div>
+              <h3 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 mb-2">
+                Nenhuma transação registrada
+              </h3>
+              <p className="text-zinc-500 max-w-md mb-6">
+                Comece a registrar suas receitas e despesas para acompanhar sua saúde financeira neste período.
               </p>
-              <Button
-                variant="primary"
-                onClick={openAddModal}
-                icon={<PlusCircle size={18} />}
-              >
+              <Button onClick={openAddModal} className="gap-2">
+                <PlusCircle size={18} />
                 Adicionar Primeira Transação
               </Button>
-            </S.EmptyState>
+            </Card>
+          ) : (
+            <div className="grid gap-3">
+              <AnimatePresence mode="popLayout">
+                {transactions.map((transaction, index) => (
+                  <motion.div
+                    key={transaction.id}
+                    layout
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    transition={{ delay: index * 0.05 }}
+                    className={cn(
+                      "group bg-white dark:bg-zinc-900 rounded-xl p-4 shadow-sm border flex items-center gap-4 hover:shadow-md transition-all duration-200 border-l-4",
+                      transaction.type === 'INCOME'
+                        ? "border-l-green-500 border-y-zinc-200 border-r-zinc-200 dark:border-y-zinc-800 dark:border-r-zinc-800 hover:border-l-green-600"
+                        : "border-l-red-500 border-y-zinc-200 border-r-zinc-200 dark:border-y-zinc-800 dark:border-r-zinc-800 hover:border-l-red-600"
+                    )}
+                  >
+                    <div className={cn(
+                      "w-10 h-10 rounded-lg flex items-center justify-center shrink-0",
+                      transaction.type === 'INCOME'
+                        ? "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
+                        : "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400"
+                    )}>
+                      {transaction.type === 'INCOME' ? <ArrowUpCircle size={20} /> : <ArrowDownCircle size={20} />}
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-semibold text-zinc-900 dark:text-zinc-50 truncate">
+                          {transaction.description}
+                        </span>
+                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5">
+                          {transaction.category}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-zinc-500">
+                        <span>{new Date(transaction.date).toLocaleDateString('pt-BR')}</span>
+                        {transaction.notes && (
+                          <>
+                            <span>•</span>
+                            <span className="truncate max-w-[200px] italic">{transaction.notes}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                      <span className={cn(
+                        "font-bold text-lg whitespace-nowrap",
+                        transaction.type === 'INCOME' ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
+                      )}>
+                        {transaction.type === 'INCOME' ? '+' : '-'} {formatCurrency(transaction.amount)}
+                      </span>
+
+                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-zinc-500 hover:text-primary hover:bg-primary/10"
+                          onClick={() => openEditModal(transaction)}
+                        >
+                          <Edit2 size={16} />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-zinc-500 hover:text-red-600 hover:bg-red-500/10"
+                          onClick={() => openDeleteModal(transaction)}
+                        >
+                          <Trash2 size={16} />
+                        </Button>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
           )}
-        </S.SectionContainer>
+        </div>
       )}
-    </S.PageContainer>
+    </div>
   );
 };
 

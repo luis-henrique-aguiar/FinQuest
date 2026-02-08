@@ -12,18 +12,17 @@ import {
   BrowserRouter as Router,
   Routes,
 } from "react-router-dom";
-import { useState } from "react";
-import { ThemeProvider } from "./context/ThemeContext";
+import { useEffect, useState } from "react";
+import { Toaster } from "@/components/ui/toaster";
+import { useThemeStore } from "@/stores/theme-store";
 import OnboardingPage from "./pages/OnboardingPage";
 import { AuthLayout } from "./components/layout/AuthLayout";
 import LandingPage from "./pages/LandingPage";
 import LessonPage from "./pages/LessonPage";
 import RegisterPage from "./pages/RegisterPage";
-import { ToastProvider } from "./context/ToastContext";
-import { AuthProvider } from "./context/AuthContext";
 import LoginPage from "./pages/LoginPage";
 import { ProtectedRoute } from "./layout/ProtectedRoute";
-import { AdminRoute } from "./layout/AdminRoute"; 
+import { AdminRoute } from "./layout/AdminRoute";
 import HomePage from "./pages/HomePage";
 import { PublicOnlyRoute } from "./layout/PublicOnlyRoute";
 import AppLayout from "./components/layout/AppLayout";
@@ -100,19 +99,42 @@ const AppRoutes = () => {
   );
 };
 
+/**
+ * App Component
+ * 
+ * Main application component using Zustand for state management.
+ * 
+ * State Management:
+ * - Theme: useThemeStore (Zustand) - replaces ThemeContext
+ * - Toast: Sonner Toaster component - replaces ToastContext
+ * - Auth: useAuthStore (Zustand) - replaces AuthContext
+ * - Gamification: Still uses GamificationContext (TODO: migrate to Zustand)
+ */
 function App() {
+  const mode = useThemeStore((state) => state.mode);
+
+  // Apply dark mode class to HTML element
+  useEffect(() => {
+    const root = document.documentElement;
+    if (mode === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+  }, [mode]);
+
   return (
-    <ThemeProvider>
-      <ToastProvider>
-        <AuthProvider>
-          <GamificationProvider>
-            <Router>
-              <AppRoutes />
-            </Router>
-          </GamificationProvider>
-        </AuthProvider>
-      </ToastProvider>
-    </ThemeProvider>
+    <>
+      {/* Toast notifications */}
+      <Toaster />
+
+      {/* Keep GamificationProvider for now (will migrate later) */}
+      <GamificationProvider>
+        <Router>
+          <AppRoutes />
+        </Router>
+      </GamificationProvider>
+    </>
   );
 }
 
