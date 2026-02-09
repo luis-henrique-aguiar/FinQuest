@@ -1,116 +1,25 @@
-import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React from "react";
 import Lottie from "lottie-react";
 import { ArrowRight, Target, Book, TrendingUp } from "react-feather";
-import { useAuth } from "../hooks/useAuth";
-import { useToast } from "../hooks/useToast";
 import { Button } from "@/components/ui/button";
-import { MissionCard } from "../components/gamification/MissionCard";
-import { LessonCard } from "../components/gamification/LessonCard";
-import { getHomeData } from "../services/homeService";
-import {
-  MissionStatus,
-  type MissionProgressDTO,
-} from "../services/missionService";
-import {
-  type CourseProgressDTO,
-  enrollInCourse,
-} from "../services/courseService";
+import { MissionCard } from "@/features/gamification/components/MissionCard";
+import { LessonCard } from "@/features/gamification/components/LessonCard";
 import greetingAnimation from "../assets/animations/hi_girl.json";
 import { motion } from "framer-motion";
-
+import { useDashboard } from "@/features/gamification/hooks/useDashboard";
 
 export const HomePage: React.FC = () => {
-  const navigate = useNavigate();
-  const { user } = useAuth();
-  const { addToast } = useToast();
-
-  const [missions, setMissions] = useState<MissionProgressDTO[]>([]);
-  const [courses, setCourses] = useState<CourseProgressDTO[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  const [isEnrollingId, setIsEnrollingId] = useState<string | null>(null);
-
-  const userName = user?.name ? user.name.split(" ")[0] : "Viajante";
-  const isProfileIncomplete = !user?.avatarUrl || !user.name;
-
-  useEffect(() => {
-    loadHomeData();
-  }, []);
-
-  const loadHomeData = async () => {
-    try {
-      setIsLoading(true);
-      const data = await getHomeData();
-      setMissions(data.missions);
-      setCourses(data.courses);
-    } catch (error) {
-      console.error("Erro ao carregar dados da home:", error);
-      addToast("Erro ao carregar dados. Tente novamente.", "error");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleCourseClick = async (course: CourseProgressDTO) => {
-    if (isEnrollingId) return;
-
-    if (course.progress !== null && course.progress !== undefined) {
-      navigate(`/learn/${course.id}`);
-      return;
-    }
-
-    try {
-      setIsEnrollingId(course.id);
-      addToast(`Matriculando em ${course.title}...`, "info");
-
-      await enrollInCourse(course.id);
-
-      addToast(`Matrícula realizada com sucesso!`, "success");
-
-      setCourses((prev) =>
-        prev.map((c) => (c.id === course.id ? { ...c, progress: 0 } : c))
-      );
-
-      navigate(`/learn/${course.id}`);
-    } catch (error: any) {
-      if (error.response && error.response.status === 409) {
-        setCourses((prev) =>
-          prev.map((c) =>
-            c.id === course.id ? { ...c, progress: c.progress ?? 0 } : c
-          )
-        );
-
-        navigate(`/learn/${course.id}`);
-        return;
-      }
-
-      console.error("Erro ao matricular:", error);
-      addToast("Erro ao realizar matrícula. Tente novamente.", "error");
-    } finally {
-      setIsEnrollingId(null);
-    }
-  };
-
-  const recommendedMissions = missions
-    .filter(
-      (m) =>
-        m.status === MissionStatus.IN_PROGRESS ||
-        m.status === MissionStatus.NOT_STARTED
-    )
-    .slice(0, 3);
-
-  const activeCourses = courses
-    .filter((c) => c.progress === null || (c.progress > 0 && c.progress < 100))
-    .slice(0, 3);
-
-  const stats = {
-    totalMissions: missions.length,
-    completedMissions: missions.filter(
-      (m) => m.status === MissionStatus.COMPLETED
-    ).length,
-    activeCourses: activeCourses.length,
-  };
+  const {
+    isLoading,
+    user,
+    userName,
+    isProfileIncomplete,
+    stats,
+    activeCourses,
+    recommendedMissions,
+    handleCourseClick,
+    navigate,
+  } = useDashboard();
 
   if (isLoading) {
     return (

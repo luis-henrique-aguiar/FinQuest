@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   XAxis,
   YAxis,
@@ -16,32 +16,18 @@ import {
   BarChart3,
   Info,
 } from 'lucide-react';
-import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import {
-  calculateInvestment,
   formatRate,
   type InvestmentOption,
-} from '../services/investimentsService';
-import { useInvestmentRates } from '@/features/finance/hooks/useInvestments';
-import InvestmentSelect from '../components/gamification/InvestmentSelect';
+} from '@/features/finance/services/investment-api';
+import InvestmentSelect from '@/features/gamification/components/InvestmentSelect';
 import { motion } from 'framer-motion';
-
-interface SimulationResult {
-  totalInvested: number;
-  totalInterest: number;
-  finalAmount: number;
-  monthlyData: Array<{
-    month: number;
-    invested: number;
-    total: number;
-  }>;
-}
+import { useInvestmentSimulator } from '@/features/finance/hooks/useInvestmentSimulator';
 
 const CustomTooltip: React.FC<any> = ({ active, payload, label }) => {
   if (!active || !payload || payload.length === 0) return null;
@@ -74,86 +60,23 @@ const CustomTooltip: React.FC<any> = ({ active, payload, label }) => {
 };
 
 export const InvestmentSimulatorPage: React.FC = () => {
-  const [initialValue, setInitialValue] = useState('');
-  const [monthlyValue, setMonthlyValue] = useState('');
-  const [period, setPeriod] = useState('5');
-  const [type, setType] = useState('cdb_100');
-  const [result, setResult] = useState<SimulationResult | null>(null);
-
-  const { data: ratesData, isLoading, error } = useInvestmentRates();
-
-  useEffect(() => {
-    if (ratesData) {
-      if (ratesData.source === 'fallback') {
-        toast.info('Usando taxas padrão (API offline)');
-      } else {
-        toast.success('Taxas atualizadas com sucesso!');
-      }
-    }
-  }, [ratesData]);
-
-  useEffect(() => {
-    if (error) {
-      toast.error('Erro ao carregar taxas. Usando valores padrão.');
-    }
-  }, [error]);
-
-  const handleSimulate = () => {
-    const P = parseFloat(initialValue) || 0;
-    const PMT = parseFloat(monthlyValue) || 0;
-    const years = parseInt(period) || 1;
-
-    if (P === 0 && PMT === 0) {
-      toast.error('Informe um valor inicial ou aporte mensal');
-      return;
-    }
-
-    if (years < 1) {
-      toast.error('O período deve ser de pelo menos 1 ano');
-      return;
-    }
-
-    if (!ratesData) {
-      toast.error('Aguarde o carregamento das taxas');
-      return;
-    }
-
-    const selectedInvestment = ratesData.rates.find((opt) => opt.id === type);
-    if (!selectedInvestment) {
-      toast.error('Selecione um tipo de investimento');
-      return;
-    }
-
-    const calculatedResult = calculateInvestment(
-      P,
-      PMT,
-      years,
-      selectedInvestment.rate
-    );
-    setResult(calculatedResult);
-    toast.success('Simulação calculada!');
-  };
-
-  const formatCurrency = (value: number) =>
-    value.toLocaleString('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-
-  const formatLastUpdate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
-  const selectedInvestment = ratesData?.rates.find((opt) => opt.id === type);
+  const {
+    initialValue,
+    setInitialValue,
+    monthlyValue,
+    setMonthlyValue,
+    period,
+    setPeriod,
+    type,
+    setType,
+    result,
+    ratesData,
+    isLoading,
+    handleSimulate,
+    formatCurrency,
+    formatLastUpdate,
+    selectedInvestment,
+  } = useInvestmentSimulator();
 
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-8 flex flex-col gap-8 pb-20">
@@ -184,7 +107,7 @@ export const InvestmentSimulatorPage: React.FC = () => {
             {Object.entries(ratesData.rawData).map(([key, value]) => (
               <div key={key} className="bg-white dark:bg-zinc-900 rounded-xl p-4 text-center border border-zinc-200 dark:border-zinc-800 shadow-sm hover:-translate-y-1 transition-transform cursor-default">
                 <div className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-1">{key}</div>
-                <div className="text-xl md:text-2xl font-bold text-primary">{value.toFixed(2)}%</div>
+                <div className="text-xl md:text-2xl font-bold text-primary">{(value as number).toFixed(2)}%</div>
               </div>
             ))}
           </div>

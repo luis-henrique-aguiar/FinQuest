@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   Edit2,
   PlusCircle,
@@ -14,19 +14,8 @@ import {
   ArrowDownCircle,
   RefreshCw,
 } from 'lucide-react';
-import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import {
   Dialog,
   DialogContent,
@@ -38,346 +27,36 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import {
-  type Transaction,
-  type TransactionType,
-  type CreateTransactionDTO,
-  type UpdateTransactionDTO,
   formatCurrency,
   formatMonthYear,
-  getCurrentMonthKey,
-  EXPENSE_CATEGORIES,
-  INCOME_CATEGORIES,
 } from '@/features/finance/services/transaction-api';
-import {
-  useTransactions,
-  useFinancialOverview,
-  useCreateTransaction,
-  useUpdateTransaction,
-  useDeleteTransaction,
-} from '@/features/finance/hooks/useTransactions';
 import { motion, AnimatePresence } from 'framer-motion';
-
-interface TransactionModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSubmit: (
-    data: CreateTransactionDTO | UpdateTransactionDTO
-  ) => Promise<void>;
-  initialData?: Transaction | null;
-  isLoading?: boolean;
-}
-
-const TransactionModal: React.FC<TransactionModalProps> = ({
-  isOpen,
-  onClose,
-  onSubmit,
-  initialData,
-  isLoading = false,
-}) => {
-  const [formData, setFormData] = useState<{
-    type: TransactionType;
-    amount: string;
-    description: string;
-    category: string;
-    date: string;
-    notes: string;
-  }>({
-    type: 'EXPENSE',
-    amount: '',
-    description: '',
-    category: '',
-    date: new Date().toISOString().split('T')[0],
-    notes: '',
-  });
-
-  useEffect(() => {
-    if (isOpen) {
-      if (initialData) {
-        setFormData({
-          type: initialData.type,
-          amount: String(initialData.amount),
-          description: initialData.description,
-          category: initialData.category,
-          date: initialData.date,
-          notes: initialData.notes || '',
-        });
-      } else {
-        setFormData({
-          type: 'EXPENSE',
-          amount: '',
-          description: '',
-          category: '',
-          date: new Date().toISOString().split('T')[0],
-          notes: '',
-        });
-      }
-    }
-  }, [isOpen, initialData]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    const data: CreateTransactionDTO | UpdateTransactionDTO = {
-      type: formData.type,
-      amount: Number(formData.amount),
-      description: formData.description,
-      category: formData.category,
-      date: formData.date,
-      notes: formData.notes || undefined,
-    };
-
-    await onSubmit(data);
-  };
-
-  const handleTypeChange = (newType: string) => {
-    setFormData({
-      ...formData,
-      type: newType as TransactionType,
-      category: '',
-    });
-  };
-
-  const availableCategories =
-    formData.type === 'INCOME' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
-
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle>{initialData ? 'Editar Transação' : 'Nova Transação'}</DialogTitle>
-          <DialogDescription>
-            {initialData
-              ? 'Edite as informações da transação abaixo.'
-              : 'Preencha os dados para registrar uma nova transação.'}
-          </DialogDescription>
-        </DialogHeader>
-
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4 py-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="type">Tipo</Label>
-              <Select
-                value={formData.type}
-                onValueChange={handleTypeChange}
-                disabled={isLoading}
-              >
-                <SelectTrigger id="type">
-                  <SelectValue placeholder="Selecione o tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="EXPENSE">💸 Despesa</SelectItem>
-                  <SelectItem value="INCOME">💰 Receita</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="amount">Valor (R$)</Label>
-              <Input
-                id="amount"
-                type="number"
-                value={formData.amount}
-                onChange={(e) =>
-                  setFormData({ ...formData, amount: e.target.value })
-                }
-                placeholder="0,00"
-                min="0"
-                step="0.01"
-                required
-                disabled={isLoading}
-              />
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="description">Descrição</Label>
-            <Input
-              id="description"
-              type="text"
-              value={formData.description}
-              onChange={(e) =>
-                setFormData({ ...formData, description: e.target.value })
-              }
-              placeholder="Ex: Supermercado, Salário, Conta de luz..."
-              required
-              disabled={isLoading}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="category">Categoria</Label>
-              <Select
-                value={formData.category}
-                onValueChange={(value) => setFormData({ ...formData, category: value })}
-                disabled={isLoading}
-                required
-              >
-                <SelectTrigger id="category">
-                  <SelectValue placeholder="Selecione..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableCategories.map((category) => (
-                    <SelectItem key={category} value={category}>
-                      {category}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="date">Data</Label>
-              <Input
-                id="date"
-                type="date"
-                value={formData.date}
-                onChange={(e) =>
-                  setFormData({ ...formData, date: e.target.value })
-                }
-                required
-                disabled={isLoading}
-              />
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="notes">Observações (opcional)</Label>
-            <Textarea
-              id="notes"
-              value={formData.notes}
-              onChange={(e) =>
-                setFormData({ ...formData, notes: e.target.value })
-              }
-              placeholder="Alguma observação adicional..."
-              disabled={isLoading}
-            />
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={onClose}
-              type="button"
-              disabled={isLoading}
-            >
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading
-                ? 'Salvando...'
-                : initialData
-                  ? 'Salvar Alterações'
-                  : 'Adicionar'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-};
+import { useFinancePlanning } from '@/features/finance/hooks/useFinancePlanning';
+import { TransactionModal } from '@/features/finance/components/TransactionModal';
 
 export const FinancePlanningPage: React.FC = () => {
-  const [selectedMonth, setSelectedMonth] = useState(getCurrentMonthKey());
-
-  const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
-  const [editingTransaction, setEditingTransaction] =
-    useState<Transaction | null>(null);
-  const [transactionToDelete, setTransactionToDelete] =
-    useState<Transaction | null>(null);
-  const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
-
-  const { data: transactions = [], isLoading: isLoadingTransactions, refetch: refetchTransactions } = useTransactions(selectedMonth);
-  const { data: overview, isLoading: isLoadingOverview } = useFinancialOverview(selectedMonth);
-
-  const createMutation = useCreateTransaction(selectedMonth);
-  const updateMutation = useUpdateTransaction(selectedMonth);
-  const deleteMutation = useDeleteTransaction(selectedMonth);
-
-  const isLoading = isLoadingTransactions || isLoadingOverview;
-  const isSubmitting = createMutation.isPending || updateMutation.isPending || deleteMutation.isPending;
-
-  const handleAddTransaction = async (data: CreateTransactionDTO) => {
-    try {
-      await createMutation.mutateAsync(data);
-      toast.success('Transação adicionada com sucesso!');
-      setIsTransactionModalOpen(false);
-    } catch (error) {
-      toast.error('Erro ao adicionar transação.');
-    }
-  };
-
-  const handleUpdateTransaction = async (data: UpdateTransactionDTO) => {
-    if (!editingTransaction) return;
-
-    try {
-      await updateMutation.mutateAsync({ id: editingTransaction.id, data });
-      toast.success('Transação atualizada com sucesso!');
-      setIsTransactionModalOpen(false);
-      setEditingTransaction(null);
-    } catch (error) {
-      toast.error('Erro ao atualizar transação.');
-    }
-  };
-
-  const handleDeleteTransaction = async () => {
-    if (!transactionToDelete) return;
-
-    try {
-      await deleteMutation.mutateAsync(transactionToDelete.id);
-      toast.success('Transação excluída com sucesso!');
-      setIsConfirmDeleteOpen(false);
-      setTransactionToDelete(null);
-    } catch (error) {
-      toast.error('Erro ao excluir transação.');
-    }
-  };
-
-  const handleSubmitTransaction = async (
-    data: CreateTransactionDTO | UpdateTransactionDTO
-  ) => {
-    if (modalMode === 'add') {
-      await handleAddTransaction(data as CreateTransactionDTO);
-    } else {
-      await handleUpdateTransaction(data as UpdateTransactionDTO);
-    }
-  };
-
-  const openAddModal = () => {
-    setModalMode('add');
-    setEditingTransaction(null);
-    setIsTransactionModalOpen(true);
-  };
-
-  const openEditModal = (transaction: Transaction) => {
-    setModalMode('edit');
-    setEditingTransaction(transaction);
-    setIsTransactionModalOpen(true);
-  };
-
-  const openDeleteModal = (transaction: Transaction) => {
-    setTransactionToDelete(transaction);
-    setIsConfirmDeleteOpen(true);
-  };
-
-  const navigateMonth = (direction: 'prev' | 'next') => {
-    const [year, month] = selectedMonth.split('-').map(Number);
-    const date = new Date(year, month - 1);
-
-    if (direction === 'prev') {
-      date.setMonth(date.getMonth() - 1);
-    } else {
-      date.setMonth(date.getMonth() + 1);
-    }
-
-    const newMonth = `${date.getFullYear()}-${String(
-      date.getMonth() + 1
-    ).padStart(2, '0')}`;
-    setSelectedMonth(newMonth);
-  };
-
-  const isCurrentMonth = selectedMonth === getCurrentMonthKey();
+  const {
+    selectedMonth,
+    isTransactionModalOpen,
+    setIsTransactionModalOpen,
+    setEditingTransaction,
+    editingTransaction,
+    transactionToDelete,
+    isConfirmDeleteOpen,
+    setIsConfirmDeleteOpen,
+    transactions,
+    overview,
+    isLoading,
+    isSubmitting,
+    refetchTransactions,
+    handleSubmitTransaction,
+    handleDeleteTransaction,
+    openAddModal,
+    openEditModal,
+    openDeleteModal,
+    navigateMonth,
+    isCurrentMonth,
+  } = useFinancePlanning();
 
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-8 flex flex-col gap-8 pb-20">

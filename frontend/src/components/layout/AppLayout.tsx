@@ -1,53 +1,13 @@
 import React from "react";
-import styled from "styled-components";
-import { motion, type Transition } from "framer-motion";
+import { motion } from "framer-motion";
 import { Outlet } from "react-router-dom";
 import TopBar from "./TopBar";
 import Sidebar from "./Sidebar";
+import { cn } from "@/lib/utils";
 
 interface AppLayoutProps {
   children?: React.ReactNode;
 }
-
-const LayoutContainer = styled.div`
-  display: flex;
-  min-height: 100vh;
-  background-color: ${({ theme }) => theme.colors.background};
-`;
-
-const MainContentWrapper = styled.div`
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  transition: margin-left ${({ theme }) => theme.animations.medium} ease-in-out;
-
-  @media (min-width: 769px) {
-    margin-left: 280px; /* ✅ Atualizado para nova largura da sidebar */
-  }
-`;
-
-const ContentArea = styled.div`
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow-x: hidden;
-`;
-
-const MainContent = styled(motion.main)`
-  flex: 1;
-  padding: ${({ theme }) => theme.spacing.xl};
-  max-width: 1400px; /* ✅ Aumentado para aproveitar mais espaço */
-  margin: 0 auto;
-  width: 100%;
-
-  @media (max-width: 1024px) {
-    padding: ${({ theme }) => theme.spacing.lg};
-  }
-
-  @media (max-width: 768px) {
-    padding: ${({ theme }) => theme.spacing.md};
-  }
-`;
 
 const pageVariants = {
   initial: { opacity: 0, y: 20 },
@@ -55,31 +15,35 @@ const pageVariants = {
   out: { opacity: 0, y: -20 },
 };
 
-const pageTransition: Transition = {
+const pageTransition = {
   type: "tween",
   ease: "anticipate",
   duration: 0.4,
-};
+} as const;
 
 export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   return (
-    <LayoutContainer>
+    <div className="flex min-h-screen bg-[#F8F9FA] dark:bg-[#121212] transition-colors duration-200">
       <Sidebar />
-      <MainContentWrapper>
+      <div className="flex-1 flex flex-col transition-[margin] duration-300 ease-in-out md:ml-[280px]">
         <TopBar />
-        <ContentArea>
-          <MainContent
+        <div className="flex-1 flex flex-col overflow-x-hidden">
+          <motion.main
             initial="initial"
             animate="in"
             exit="out"
             variants={pageVariants}
             transition={pageTransition}
+            className={cn(
+              "flex-1 w-full max-w-[1400px] mx-auto",
+              "p-4 md:p-6 lg:p-8"
+            )}
           >
             {children || <Outlet />}
-          </MainContent>
-        </ContentArea>
-      </MainContentWrapper>
-    </LayoutContainer>
+          </motion.main>
+        </div>
+      </div>
+    </div>
   );
 };
 

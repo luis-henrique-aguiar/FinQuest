@@ -1,10 +1,9 @@
-import React, { useState } from "react";
+import React from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import Animation from "../components/common/Animation";
-import { presentationSteps } from "../data/onboarding-steps-data";
 import { cn } from "@/lib/utils";
+import { useOnboarding } from "@/features/onboarding/hooks/useOnboarding";
 
 const variants = {
   enter: (direction: number) => ({
@@ -26,24 +25,15 @@ const variants = {
 export const OnboardingPage: React.FC<{ onComplete: () => void }> = ({
   onComplete,
 }) => {
-  const [[step, direction], setStep] = useState([0, 0]);
-  const navigate = useNavigate();
-
-  const handleNext = () => {
-    if (step === presentationSteps.length - 1) {
-      onComplete();
-      navigate("/register");
-    } else {
-      setStep([step + 1, 1]);
-    }
-  };
-
-  const goToStep = (stepIndex: number) => {
-    setStep([stepIndex, stepIndex > step ? 1 : -1]);
-  };
-
-  const currentStepData = presentationSteps[step];
-  const isLastStep = step === presentationSteps.length - 1;
+  const {
+    step,
+    direction,
+    handleNext,
+    goToStep,
+    currentStepData,
+    isLastStep,
+    presentationSteps,
+  } = useOnboarding(onComplete);
 
   return (
     <div className="flex flex-col h-screen w-full overflow-hidden bg-white dark:bg-zinc-950">

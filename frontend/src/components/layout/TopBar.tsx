@@ -1,124 +1,8 @@
 import React from "react";
-import styled from "styled-components";
 import FoxLogo from "../../assets/images/fox.png";
 import { motion } from "framer-motion";
 import { useAuth } from "../../hooks/useAuth";
 
-const TopBarContainer = styled.header`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: ${({ theme }) => theme.spacing.md} ${({ theme }) => theme.spacing.xl};
-  background: ${({ theme }) => theme.colors.white};
-  border-bottom: 2px solid ${({ theme }) => theme.colors.border};
-  height: 72px;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  box-shadow: ${({ theme }) => theme.shadows.small};
-
-  @media (max-width: 768px) {
-    padding: ${({ theme }) => theme.spacing.md} ${({ theme }) => theme.spacing.lg};
-    padding-left: 70px;
-  }
-`;
-
-const LogoSection = styled.div`
-  display: flex;
-  align-items: center;
-  gap: ${({ theme }) => theme.spacing.md};
-`;
-
-const AnimatedFox = styled(motion.img)`
-  height: 40px;
-  width: auto;
-  filter: drop-shadow(0 2px 8px ${({ theme }) => theme.colors.primary}44);
-  transition: filter ${({ theme }) => theme.animations.fast} ease;
-
-  &:hover {
-    filter: drop-shadow(0 4px 12px ${({ theme }) => theme.colors.primary}66);
-  }
-`;
-
-const BrandText = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-
-  @media (max-width: 480px) {
-    display: none;
-  }
-`;
-
-const BrandName = styled.h1`
-  font-family: ${({ theme }) => theme.typography.fontFamily.heading};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
-  font-size: 1.5rem;
-  color: ${({ theme }) => theme.colors.textDark};
-  margin: 0;
-  line-height: 1;
-`;
-
-const BrandTagline = styled.span`
-  font-family: ${({ theme }) => theme.typography.fontFamily.body};
-  font-size: ${({ theme }) => theme.typography.fontSize.caption};
-  color: ${({ theme }) => theme.colors.textMedium};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-`;
-
-const StatsContainer = styled.div`
-  display: flex;
-  align-items: center;
-  gap: ${({ theme }) => theme.spacing.lg};
-
-  @media (max-width: 640px) {
-    gap: ${({ theme }) => theme.spacing.md};
-  }
-`;
-
-const StatBadge = styled(motion.div)`
-  display: flex;
-  align-items: center;
-  gap: ${({ theme }) => theme.spacing.sm};
-  padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
-  background: ${({ theme }) => theme.colors.white};
-  border: 2px solid ${({ theme }) => theme.colors.border};
-  border-radius: ${({ theme }) => theme.borderRadius.pill};
-  transition: all ${({ theme }) => theme.animations.fast} ease;
-  cursor: default;
-
-  &:hover {
-    border-color: ${({ theme }) => theme.colors.primary};
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px ${({ theme }) => theme.colors.primary}22;
-  }
-
-  @media (max-width: 640px) {
-    padding: ${({ theme }) => theme.spacing.xs} ${({ theme }) => theme.spacing.sm};
-  }
-`;
-
-const CoinIcon = styled.span`
-  font-size: 1.5rem;
-  line-height: 1;
-  filter: drop-shadow(0 2px 4px rgba(255, 165, 0, 0.3));
-
-  @media (max-width: 640px) {
-    font-size: 1.25rem;
-  }
-`;
-
-const StatValue = styled.span`
-  font-family: ${({ theme }) => theme.typography.fontFamily.heading};
-  font-size: 1.125rem;
-  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
-  color: ${({ theme }) => theme.colors.textDark};
-  line-height: 1;
-
-  @media (max-width: 640px) {
-    font-size: 1rem;
-  }
-`;
 
 export const TopBar: React.FC = () => {
   const { user } = useAuth();
@@ -138,12 +22,13 @@ export const TopBar: React.FC = () => {
   };
 
   return (
-    <TopBarContainer>
-      <LogoSection>
-        <AnimatedFox
+    <header className="sticky top-0 z-[100] h-[72px] flex items-center justify-between px-6 md:px-8 pl-[70px] md:pl-8 bg-white dark:bg-[#1E1E1E] border-b-2 border-zinc-200 dark:border-zinc-800 shadow-sm transition-colors duration-200">
+      <div className="flex items-center gap-4">
+        <motion.img
           src={FoxLogo}
           alt="FinQuest Fox Logo"
-          animate={{ 
+          className="h-10 w-auto drop-shadow-[0_2px_8px_rgba(0,122,204,0.25)] hover:drop-shadow-[0_4px_12px_rgba(0,122,204,0.4)] transition-[filter] duration-200"
+          animate={{
             rotate: [0, 10, -10, 0],
             scale: [1, 1.05, 1.05, 1]
           }}
@@ -154,23 +39,30 @@ export const TopBar: React.FC = () => {
             repeatDelay: 3,
           }}
         />
-        <BrandText>
-          <BrandName>FinQuest</BrandName>
-          <BrandTagline>Educação Financeira Gamificada</BrandTagline>
-        </BrandText>
-      </LogoSection>
+        <div className="hidden min-[480px]:flex flex-col gap-0.5">
+          <h1 className="font-heading font-bold text-2xl text-zinc-800 dark:text-[#EAECEF] leading-none m-0">
+            FinQuest
+          </h1>
+          <span className="font-body text-xs font-medium text-zinc-500 dark:text-[#AAB1B8]">
+            Educação Financeira Gamificada
+          </span>
+        </div>
+      </div>
 
-      <StatsContainer>
-        <StatBadge
+      <div className="flex items-center gap-4 md:gap-6">
+        <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.3, delay: 0.1 }}
+          className="flex items-center gap-2 px-3 py-2 md:px-4 md:py-2 bg-white dark:bg-[#1E1E1E] border-2 border-zinc-200 dark:border-zinc-700 rounded-full transition-all duration-200 cursor-default hover:border-[#007ACC] hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(0,122,204,0.15)]"
         >
-          <CoinIcon>💎</CoinIcon>
-          <StatValue>{formatNumber(user.totalFinPoints)}</StatValue>
-        </StatBadge>
-      </StatsContainer>
-    </TopBarContainer>
+          <span className="text-xl md:text-2xl leading-none drop-shadow-sm filter">💎</span>
+          <span className="font-heading font-bold text-base md:text-lg text-zinc-800 dark:text-[#EAECEF] leading-none">
+            {formatNumber(user.totalFinPoints)}
+          </span>
+        </motion.div>
+      </div>
+    </header>
   );
 };
 

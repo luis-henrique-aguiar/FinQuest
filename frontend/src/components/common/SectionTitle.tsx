@@ -1,28 +1,25 @@
 import { type ReactNode } from 'react';
-import styled from 'styled-components';
 import { motion } from 'framer-motion';
-
-const Title = styled(motion.h2)`
-  margin: 0;
-  font-size: ${({ theme }) => theme.typography.fontSize.h2};
-  color: ${({ theme }) => theme.colors.primary};
-  border-bottom: 2px solid ${({ theme }) => theme.colors.primary}33;
-  padding-bottom: ${({ theme }) => theme.spacing.sm};
-`;
+import { cn } from '@/lib/utils';
 
 interface SectionTitleProps {
   children: ReactNode;
+  className?: string;
 }
 
-export const SectionTitle = ({ children }: SectionTitleProps) => {
+export const SectionTitle = ({ children, className }: SectionTitleProps) => {
   return (
-    <Title
+    <motion.h2
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
+      className={cn(
+        "m-0 text-2xl font-bold text-[#007ACC] border-b-2 border-[#007ACC]/20 pb-2 mb-4 dark:text-[#007ACC]",
+        className
+      )}
     >
       {children}
-    </Title>
+    </motion.h2>
   );
 };
 

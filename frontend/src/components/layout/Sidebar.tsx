@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import styled from "styled-components";
 import { NavLink } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -17,298 +16,18 @@ import {
   Shield,
   Wallet,
 } from "lucide-react";
-import { useThemeToggle } from "../../context/ThemeContext";
-import ProgressBar from "../gamification/ProgressBar";
+import { useThemeStore } from "../../stores/theme-store";
+import { ProgressBar } from "@/features/gamification/components/ProgressBar";
 import { useAuth } from "../../hooks/useAuth";
 import {
   calculateLevelProgress,
   getFinPointsForLevel,
 } from "../../utils/levelingSystem";
-
-const SidebarContainer = styled(motion.div)<{ $isOpen: boolean }>`
-  display: flex;
-  flex-direction: column;
-  position: fixed;
-  top: 0;
-  left: 0;
-  height: 100%;
-  width: 280px;
-  background: ${({ theme }) => theme.colors.white};
-  border-right: 2px solid ${({ theme }) => theme.colors.border};
-  z-index: 1000;
-  transition: transform 0.3s ease-in-out;
-
-  @media (max-width: 768px) {
-    transform: translateX(${({ $isOpen }) => ($isOpen ? "0" : "-100%")});
-    box-shadow: ${({ theme }) => theme.shadows.large};
-  }
-`;
-
-const SidebarHeader = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: ${({ theme }) => theme.spacing.xl};
-  border-bottom: 2px solid ${({ theme }) => theme.colors.border};
-  gap: ${({ theme }) => theme.spacing.md};
-  background: linear-gradient(
-    135deg,
-    ${({ theme }) => theme.colors.primary}11 0%,
-    ${({ theme }) => theme.colors.accent}11 100%
-  );
-`;
-
-const AvatarContainer = styled.div`
-  position: relative;
-  width: 88px;
-  height: 88px;
-`;
-
-const Avatar = styled.img`
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 3px solid ${({ theme }) => theme.colors.primary};
-  box-shadow: 0 4px 12px ${({ theme }) => theme.colors.primary}44;
-  transition: all ${({ theme }) => theme.animations.fast} ease;
-
-  &:hover {
-    transform: scale(1.05);
-    box-shadow: 0 6px 16px ${({ theme }) => theme.colors.primary}66;
-  }
-`;
-
-const LevelChip = styled.div`
-  position: absolute;
-  bottom: -4px;
-  right: -8px;
-  background: linear-gradient(
-    135deg,
-    ${({ theme }) => theme.colors.primary} 0%,
-    ${({ theme }) => theme.colors.accent} 100%
-  );
-  color: ${({ theme }) => theme.colors.white};
-  font-size: ${({ theme }) => theme.typography.fontSize.caption};
-  font-family: ${({ theme }) => theme.typography.fontFamily.body};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
-  padding: ${({ theme }) => theme.spacing.xs} ${({ theme }) => theme.spacing.sm};
-  border-radius: ${({ theme }) => theme.borderRadius.pill};
-  border: 2px solid ${({ theme }) => theme.colors.white};
-  box-shadow: ${({ theme }) => theme.shadows.medium};
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-`;
-
-const UserName = styled.h3`
-  font-size: 1.125rem;
-  font-family: ${({ theme }) => theme.typography.fontFamily.heading};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semiBold};
-  color: ${({ theme }) => theme.colors.textDark};
-  margin: 0;
-  text-align: center;
-  max-width: 200px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-`;
-
-const ProgressWrapper = styled.div`
-  width: 85%;
-  display: flex;
-  flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.xs};
-`;
-
-const ProgressLabel = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: ${({ theme }) => theme.typography.fontSize.caption};
-  font-family: ${({ theme }) => theme.typography.fontFamily.body};
-  color: ${({ theme }) => theme.colors.textMedium};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-`;
-
-const Nav = styled.nav`
-  display: flex;
-  flex-direction: column;
-  padding: ${({ theme }) => theme.spacing.lg} ${({ theme }) => theme.spacing.md};
-  gap: ${({ theme }) => theme.spacing.xs};
-  flex: 1;
-  overflow-y: auto;
-
-  /* Scrollbar estilizada */
-  &::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: ${({ theme }) => theme.colors.border};
-    border-radius: ${({ theme }) => theme.borderRadius.pill};
-  }
-
-  &::-webkit-scrollbar-thumb:hover {
-    background: ${({ theme }) => theme.colors.primary};
-  }
-
-  scrollbar-width: thin;
-  scrollbar-color: ${({ theme }) => theme.colors.border} transparent;
-`;
-
-const NavItem = styled(NavLink)`
-  display: flex;
-  align-items: center;
-  gap: ${({ theme }) => theme.spacing.md};
-  padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
-  border-radius: ${({ theme }) => theme.borderRadius.medium};
-  text-decoration: none;
-  color: ${({ theme }) => theme.colors.textMedium};
-  font-family: ${({ theme }) => theme.typography.fontFamily.body};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  font-size: ${({ theme }) => theme.typography.fontSize.body};
-  transition: all ${({ theme }) => theme.animations.fast} ease;
-  position: relative;
-
-  svg {
-    width: 20px;
-    height: 20px;
-    flex-shrink: 0;
-  }
-
-  &:hover {
-    background: ${({ theme }) => theme.colors.primary}11;
-    color: ${({ theme }) => theme.colors.primary};
-    transform: translateX(4px);
-  }
-
-  &.active {
-    background: linear-gradient(
-      135deg,
-      ${({ theme }) => theme.colors.primary}22 0%,
-      ${({ theme }) => theme.colors.accent}22 100%
-    );
-    color: ${({ theme }) => theme.colors.primary};
-    font-weight: ${({ theme }) => theme.typography.fontWeight.semiBold};
-
-    &::before {
-      content: "";
-      position: absolute;
-      left: 0;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 4px;
-      height: 60%;
-      background: ${({ theme }) => theme.colors.primary};
-      border-radius: 0 ${({ theme }) => theme.borderRadius.small}
-        ${({ theme }) => theme.borderRadius.small} 0;
-    }
-  }
-`;
-
-const ThemeToggleContainer = styled.div`
-  padding: ${({ theme }) => theme.spacing.md};
-  border-top: 2px solid ${({ theme }) => theme.colors.border};
-  background: ${({ theme }) => theme.colors.background};
-`;
-
-const ThemeToggleButton = styled.button`
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: ${({ theme }) => theme.spacing.sm};
-  padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
-  border-radius: ${({ theme }) => theme.borderRadius.medium};
-  border: 2px solid ${({ theme }) => theme.colors.border};
-  background: ${({ theme }) => theme.colors.white};
-  color: ${({ theme }) => theme.colors.textMedium};
-  font-family: ${({ theme }) => theme.typography.fontFamily.body};
-  font-size: ${({ theme }) => theme.typography.fontSize.body};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  cursor: pointer;
-  transition: all ${({ theme }) => theme.animations.fast} ease;
-
-  svg {
-    width: 18px;
-    height: 18px;
-  }
-
-  &:hover {
-    background: ${({ theme }) => theme.colors.primary}11;
-    border-color: ${({ theme }) => theme.colors.primary};
-    color: ${({ theme }) => theme.colors.primary};
-    transform: translateY(-2px);
-  }
-
-  &:active {
-    transform: translateY(0);
-  }
-`;
-
-const MenuToggle = styled.button`
-  display: none;
-  position: fixed;
-  top: 16px;
-  left: 16px;
-  z-index: 1001;
-  background: ${({ theme }) => theme.colors.white};
-  border: 2px solid ${({ theme }) => theme.colors.border};
-  border-radius: 50%;
-  width: 48px;
-  height: 48px;
-  cursor: pointer;
-  align-items: center;
-  justify-content: center;
-  box-shadow: ${({ theme }) => theme.shadows.medium};
-  transition: all ${({ theme }) => theme.animations.fast} ease;
-
-  &:hover {
-    background: ${({ theme }) => theme.colors.primary};
-    border-color: ${({ theme }) => theme.colors.primary};
-    color: ${({ theme }) => theme.colors.white};
-    transform: scale(1.1);
-  }
-
-  svg {
-    width: 22px;
-    height: 22px;
-  }
-
-  @media (max-width: 768px) {
-    display: flex;
-  }
-`;
-
-const Overlay = styled(motion.div)`
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(2px);
-  z-index: 999;
-
-  @media (max-width: 768px) {
-    display: block;
-  }
-`;
-
-const Divider = styled.div`
-  height: 1px;
-  background: ${({ theme }) => theme.colors.border};
-  margin: ${({ theme }) => theme.spacing.sm} 0;
-`;
+import { cn } from "@/lib/utils";
 
 export const Sidebar: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const { theme, toggleTheme } = useThemeToggle();
+  const { mode, toggleTheme } = useThemeStore();
   const { user, isLoading } = useAuth();
 
   if (isLoading || !user) {
@@ -322,97 +41,167 @@ export const Sidebar: React.FC = () => {
     user.avatarUrl ||
     `https://api.dicebear.com/8.x/initials/svg?seed=${user.name}`;
 
+  const navItems = [
+    { to: "/home", icon: <Home size={20} />, label: "Home", end: true },
+    { to: "/missions", icon: <Target size={20} />, label: "Missões" },
+    { to: "/learn", icon: <BookOpen size={20} />, label: "Aprenda" },
+    { to: "/planning", icon: <Wallet size={20} />, label: "Planejamento" },
+    { to: "/goals", icon: <Award size={20} />, label: "Metas" },
+    { to: "/simulator", icon: <TrendingUp size={20} />, label: "Simulador" },
+    { to: "/reports", icon: <FileText size={20} />, label: "Relatórios" },
+  ];
+
   return (
     <>
-      <MenuToggle onClick={() => setIsOpen(!isOpen)}>
-        {isOpen ? <X /> : <Menu />}
-      </MenuToggle>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="md:hidden fixed top-4 left-4 z-[1001] bg-white dark:bg-zinc-800 border-2 border-zinc-200 dark:border-zinc-700 rounded-full w-12 h-12 flex items-center justify-center shadow-md hover:scale-105 transition-transform text-zinc-700 dark:text-zinc-200"
+      >
+        {isOpen ? <X size={24} /> : <Menu size={24} />}
+      </button>
 
       <AnimatePresence>
         {isOpen && (
-          <Overlay
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setIsOpen(false)}
+            className="md:hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-[999]"
           />
         )}
       </AnimatePresence>
 
-      <SidebarContainer $isOpen={isOpen}>
-        <SidebarHeader>
-          <AvatarContainer>
-            <Avatar src={avatarSrc} alt={`Foto de ${user.name}`} />
-            <LevelChip>Nv {user.level}</LevelChip>
-          </AvatarContainer>
-          <UserName>{user.name}</UserName>
+      <div
+        className={cn(
+          "fixed top-0 left-0 h-full w-[280px] bg-white dark:bg-zinc-900 border-r-2 border-zinc-200 dark:border-zinc-800 z-[1000] flex flex-col transition-transform duration-300 md:translate-x-0 shadow-xl md:shadow-none",
+          isOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
+        {/* Header */}
+        <div className="flex flex-col items-center p-6 border-b border-zinc-200 dark:border-zinc-800 gap-4 bg-gradient-to-br from-blue-500/10 to-green-500/10 dark:from-blue-900/10 dark:to-green-900/10">
+          <div className="relative w-[88px] h-[88px]">
+            <img
+              src={avatarSrc}
+              alt={`Foto de ${user.name}`}
+              className="w-full h-full rounded-full object-cover border-[3px] border-[#007ACC] shadow-lg shadow-blue-500/20 hover:scale-105 transition-transform duration-200"
+            />
+            <div className="absolute -bottom-1 -right-2 bg-gradient-to-br from-[#007ACC] to-[#28A745] text-white text-xs font-bold px-2 py-0.5 rounded-full border-2 border-white dark:border-zinc-900 shadow-sm uppercase tracking-wider">
+              Nv {user.level}
+            </div>
+          </div>
 
-          <ProgressWrapper>
-            <ProgressLabel>
+          <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 text-center max-w-[200px] truncate">
+            {user.name}
+          </h3>
+
+          <div className="w-[85%] flex flex-col gap-1.5">
+            <div className="flex justify-between items-center text-xs font-medium text-zinc-500 dark:text-zinc-400">
               <span>XP para próximo nível</span>
               <span>{progressPercent.toFixed(0)}%</span>
-            </ProgressLabel>
+            </div>
             <ProgressBar
               progress={progressPercent}
               variant="xp"
               height={8}
               tooltipText={`${user.totalFinPoints.toLocaleString()} / ${finPointsForNextLevel.toLocaleString()} FinPoints`}
             />
-          </ProgressWrapper>
-        </SidebarHeader>
+          </div>
+        </div>
 
-        <Nav>
-          <NavItem to="/home" end onClick={() => setIsOpen(false)}>
-            <Home />
-            <span>Home</span>
-          </NavItem>
-          <NavItem to="/missions" onClick={() => setIsOpen(false)}>
-            <Target />
-            <span>Missões</span>
-          </NavItem>
-          <NavItem to="/learn" onClick={() => setIsOpen(false)}>
-            <BookOpen />
-            <span>Aprenda</span>
-          </NavItem>
-          <NavItem to="/planning" onClick={() => setIsOpen(false)}>
-            <Wallet />
-            <span>Planejamento</span>
-          </NavItem>
-          <NavItem to="/goals" onClick={() => setIsOpen(false)}>
-            <Award />
-            <span>Metas</span>
-          </NavItem>
-          <NavItem to="/simulator" onClick={() => setIsOpen(false)}>
-            <TrendingUp />
-            <span>Simulador</span>
-          </NavItem>
-          <NavItem to="/reports" onClick={() => setIsOpen(false)}>
-            <FileText />
-            <span>Relatórios</span>
-          </NavItem>
+        {/* Navigation */}
+        <nav className="flex-1 flex flex-col p-4 gap-1 overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-200 dark:scrollbar-thumb-zinc-700">
+          {navItems.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.end}
+              onClick={() => setIsOpen(false)}
+              className={({ isActive }) =>
+                cn(
+                  "flex items-center gap-3 px-4 py-2.5 rounded-lg font-medium transition-all duration-200 relative group",
+                  isActive
+                    ? "bg-gradient-to-br from-blue-500/10 to-green-500/10 text-[#007ACC] font-semibold dark:from-blue-900/20 dark:to-green-900/20"
+                    : "text-zinc-500 dark:text-zinc-400 hover:bg-[#007ACC]/5 hover:text-[#007ACC] hover:translate-x-1"
+                )
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  {isActive && (
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-[60%] bg-[#007ACC] rounded-r-sm" />
+                  )}
+                  <span className={cn(isActive ? "text-[#007ACC]" : "text-current")}>
+                    {item.icon}
+                  </span>
+                  <span>{item.label}</span>
+                </>
+              )}
+            </NavLink>
+          ))}
 
-          <Divider />
+          <div className="h-px bg-zinc-200 dark:bg-zinc-800 my-2" />
 
-          <NavItem to="/profile" onClick={() => setIsOpen(false)}>
-            <User />
-            <span>Perfil</span>
-          </NavItem>
+          <NavLink
+            to="/profile"
+            onClick={() => setIsOpen(false)}
+            className={({ isActive }) =>
+              cn(
+                "flex items-center gap-3 px-4 py-2.5 rounded-lg font-medium transition-all duration-200 relative group",
+                isActive
+                  ? "bg-gradient-to-br from-blue-500/10 to-green-500/10 text-[#007ACC] font-semibold dark:from-blue-900/20 dark:to-green-900/20"
+                  : "text-zinc-500 dark:text-zinc-400 hover:bg-[#007ACC]/5 hover:text-[#007ACC] hover:translate-x-1"
+              )
+            }
+          >
+            {({ isActive }) => (
+              <>
+                {isActive && (
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-[60%] bg-[#007ACC] rounded-r-sm" />
+                )}
+                <User size={20} />
+                <span>Perfil</span>
+              </>
+            )}
+          </NavLink>
 
           {user?.role === "ADMIN" && (
-            <NavItem to="/admin" onClick={() => setIsOpen(false)}>
-              <Shield />
-              <span>Admin</span>
-            </NavItem>
+            <NavLink
+              to="/admin"
+              onClick={() => setIsOpen(false)}
+              className={({ isActive }) =>
+                cn(
+                  "flex items-center gap-3 px-4 py-2.5 rounded-lg font-medium transition-all duration-200 relative group",
+                  isActive
+                    ? "bg-gradient-to-br from-blue-500/10 to-green-500/10 text-[#007ACC] font-semibold dark:from-blue-900/20 dark:to-green-900/20"
+                    : "text-zinc-500 dark:text-zinc-400 hover:bg-[#007ACC]/5 hover:text-[#007ACC] hover:translate-x-1"
+                )
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  {isActive && (
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-[60%] bg-[#007ACC] rounded-r-sm" />
+                  )}
+                  <Shield size={20} />
+                  <span>Admin</span>
+                </>
+              )}
+            </NavLink>
           )}
-        </Nav>
+        </nav>
 
-        <ThemeToggleContainer>
-          <ThemeToggleButton onClick={toggleTheme}>
-            {theme === "light" ? <Sun /> : <Moon />}
-            <span>{theme === "light" ? "Modo Claro" : "Modo Escuro"}</span>
-          </ThemeToggleButton>
-        </ThemeToggleContainer>
-      </SidebarContainer>
+        {/* Footer / Theme Toggle */}
+        <div className="p-4 border-t-2 border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900">
+          <button
+            onClick={toggleTheme}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border-2 border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 font-medium hover:border-[#007ACC] hover:text-[#007ACC] hover:-translate-y-0.5 transition-all duration-200 shadow-sm"
+          >
+            {mode === "light" ? <Sun size={18} /> : <Moon size={18} />}
+            <span>{mode === "light" ? "Modo Claro" : "Modo Escuro"}</span>
+          </button>
+        </div>
+      </div>
     </>
   );
 };

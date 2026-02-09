@@ -1,6 +1,7 @@
-import React, { type ReactNode } from 'react'; // Importação do React é necessária para React.CSSProperties
-import styled, { css } from 'styled-components';
+import React, { type ReactNode } from 'react';
 import { motion, type HTMLMotionProps } from 'framer-motion';
+import { cn } from '@/lib/utils';
+
 
 type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'text';
 type ButtonSize = 'small' | 'medium' | 'large';
@@ -17,137 +18,10 @@ interface ButtonOwnProps extends BaseButtonProps {
   iconPosition?: 'left' | 'right';
   children?: ReactNode;
   'data-testid'?: string;
+  className?: string;
 }
 
 type ButtonProps = ButtonOwnProps;
-
-const ButtonContainer = styled(motion.button)<{
-  $variant: ButtonVariant;
-  $size: ButtonSize;
-  $fullWidth: boolean;
-  $hasIcon: boolean;
-  $iconPosition: 'left' | 'right';
-}>`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: ${({ theme }) => theme.spacing.sm};
-  border-radius: ${({ theme }) => theme.borderRadius.medium};
-  font-family: ${({ theme }) => theme.typography.fontFamily.heading};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  transition: all ${({ theme }) => theme.animations.fast} ease;
-  cursor: pointer;
-  width: ${({ $fullWidth }) => ($fullWidth ? '100%' : 'auto')};
-  
-  ${({ $iconPosition }) =>
-    $iconPosition === 'right' &&
-    css`
-      flex-direction: row-reverse;
-  `}
-  
-  /* Size variants */
-  ${({ $size, theme }) =>
-    $size === 'small' &&
-    css`
-      padding: ${theme.spacing.xs} ${theme.spacing.md};
-      font-size: 14px;
-  `}
-  
-  ${({ $size, theme }) =>
-    $size === 'medium' &&
-    css`
-      padding: ${theme.spacing.sm} ${theme.spacing.lg};
-      font-size: ${theme.typography.fontSize.button};
-  `}
-  
-  ${({ $size, theme }) =>
-    $size === 'large' &&
-    css`
-      padding: ${theme.spacing.md} ${theme.spacing.xl};
-      font-size: 18px;
-  `}
-  
-  /* Style variants */
-  ${({ $variant, theme }) =>
-    $variant === 'primary' &&
-    css`
-      background-color: ${theme.colors.accent};
-      color: #333333; 
-      border: none;
-      box-shadow: ${theme.shadows.small};
-      
-      &:hover {
-        background-color: #${theme.colors.accent.substring(1)}dd;
-        transform: translateY(-2px);
-        box-shadow: ${theme.shadows.medium};
-      }
-      
-      &:active {
-        transform: translateY(0);
-      }
-      
-      &:disabled {
-        background-color: ${theme.colors.textMedium};
-        cursor: not-allowed;
-        transform: none;
-        box-shadow: none;
-      }
-  `}
-  
-  ${({ $variant, theme }) =>
-    $variant === 'secondary' &&
-    css`
-      background-color: ${theme.colors.primary};
-      color: ${theme.colors.white};
-      border: none;
-      
-      &:hover {
-        background-color: #${theme.colors.primary.substring(1)}dd;
-      }
-      
-      &:disabled {
-        background-color: ${theme.colors.textMedium};
-        cursor: not-allowed;
-      }
-  `}
-  
-  ${({ $variant, theme }) =>
-    $variant === 'outline' &&
-    css`
-      background-color: transparent;
-      color: ${theme.colors.primary};
-      border: 2px solid ${theme.colors.primary};
-      
-      &:hover {
-        background-color: #${theme.colors.primary.substring(1)}11;
-      }
-      
-      &:disabled {
-        border-color: ${theme.colors.textMedium};
-        color: ${theme.colors.textMedium};
-        cursor: not-allowed;
-      }
-  `}
-  
-  ${({ $variant, theme }) =>
-    $variant === 'text' &&
-    css`
-      background-color: transparent;
-      color: ${theme.colors.primary};
-      border: none;
-      padding-left: ${theme.spacing.sm};
-      padding-right: ${theme.spacing.sm};
-      
-      &:hover {
-        background-color: #${theme.colors.primary.substring(1)}11;
-      }
-      
-      &:disabled {
-        color: ${theme.colors.textMedium};
-        cursor: not-allowed;
-      }
-  `}
-`;
 
 export const Button: React.FC<ButtonProps> = ({
   children,
@@ -157,21 +31,38 @@ export const Button: React.FC<ButtonProps> = ({
   icon,
   iconPosition = 'left',
   whileTap,
-  ...rest 
+  className,
+  disabled,
+  ...rest
 }) => {
+  const baseStyles = "inline-flex items-center justify-center font-medium transition-all duration-200 cursor-pointer rounded-lg disabled:opacity-50 disabled:cursor-not-allowed";
+
+  const variants = {
+    primary: "bg-[#FFA500] text-[#333333] hover:bg-[#FFA500]/90 shadow-sm hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 text-zinc-900 border border-[#FFA500]",
+    secondary: "bg-[#007ACC] text-white hover:bg-[#007ACC]/90 shadow-sm hover:shadow-md",
+    outline: "bg-transparent text-[#007ACC] border-2 border-[#007ACC] hover:bg-[#007ACC]/10",
+    text: "bg-transparent text-[#007ACC] hover:bg-[#007ACC]/10 px-2",
+  };
+
+  const sizes = {
+    small: "text-sm py-1 px-3 h-8 gap-1.5",
+    medium: "text-base py-2 px-4 h-10 gap-2",
+    large: "text-lg py-3 px-6 h-12 gap-3",
+  };
+
+  const widthStyle = fullWidth ? "w-full" : "w-auto";
+  const flexDirection = iconPosition === 'right' ? 'flex-row-reverse' : 'flex-row';
+
   return (
-    <ButtonContainer
-      $variant={variant}
-      $size={size}
-      $fullWidth={fullWidth}
-      $hasIcon={!!icon}
-      $iconPosition={iconPosition}
-      whileTap={!rest.disabled ? whileTap ?? { scale: 0.98 } : undefined}
+    <motion.button
+      className={cn(baseStyles, variants[variant], sizes[size], widthStyle, flexDirection, className)}
+      whileTap={!disabled ? (whileTap ?? { scale: 0.98 }) : undefined}
+      disabled={disabled}
       {...rest}
     >
-      {icon && icon}
+      {icon && <span className={cn(iconPosition === 'right' ? 'ml-1' : 'mr-1')}>{icon}</span>}
       {children}
-    </ButtonContainer>
+    </motion.button>
   );
 };
 

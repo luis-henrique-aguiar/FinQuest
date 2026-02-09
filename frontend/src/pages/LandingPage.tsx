@@ -8,8 +8,8 @@ import {
   BookOpen,
   Star,
 } from "react-feather";
-import { FeatureCard } from "../components/landing/FeatureCard";
-import { ContentSection } from "../components/landing/ContentSection";
+import { FeatureCard } from '@/features/landing/components/FeatureCard';
+import { ContentSection } from '@/features/landing/components/ContentSection';
 import mascotImage from "../assets/images/fox.png";
 import { useNavigate } from "react-router-dom";
 

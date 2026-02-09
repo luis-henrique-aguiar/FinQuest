@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { BookOpen, Award, TrendingUp, Filter } from 'lucide-react';
 import { toast } from 'sonner';
-import { CourseCard } from '@/components/gamification/CourseCard';
+import { CourseCard } from '@/features/gamification/components/CourseCard';
 import { useCourses } from '@/features/course/hooks/useCourse';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';

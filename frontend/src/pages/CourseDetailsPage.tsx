@@ -1,31 +1,19 @@
 import React from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, BookOpen } from 'lucide-react';
-import { toast } from 'sonner';
-import { useCourse } from '@/features/course/hooks/useCourse';
-import { LessonListItem } from '@/components/course/LessonListItem';
+import { LessonListItem } from '@/features/course/components/LessonListItem';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ProgressBar } from '@/components/gamification/ProgressBar';
+import { ProgressBar } from '@/features/gamification/components/ProgressBar';
+import { useCourseDetails } from '@/features/course/hooks/useCourseDetails';
 
 export const CourseDetailsPage: React.FC = () => {
-  const { courseId } = useParams<{ courseId: string }>();
-  const navigate = useNavigate();
-
-  // TanStack Query hook
-  const { data: courseDetails, isLoading, error } = useCourse(courseId);
-
-  // Show error toast
-  React.useEffect(() => {
-    if (error) {
-      toast.error('Erro ao carregar curso. Tente novamente.');
-      navigate('/learn');
-    }
-  }, [error, navigate]);
-
-  const handleLessonClick = (lessonId: string) => {
-    navigate(`/learn/${courseId}/${lessonId}`);
-  };
+  const {
+    courseDetails,
+    isLoading,
+    handleLessonClick,
+    progressStats,
+    navigate,
+  } = useCourseDetails();
 
   if (isLoading) {
     return (
@@ -50,11 +38,6 @@ export const CourseDetailsPage: React.FC = () => {
       </div>
     );
   }
-
-  // Calculate progress
-  const completedCount = courseDetails.lessons.filter((l) => l.isCompleted).length;
-  const totalCount = courseDetails.lessons.length;
-  const progressPercentage = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
   return (
     <div className="max-w-4xl mx-auto p-4 md:p-8 flex flex-col gap-8">
@@ -89,16 +72,16 @@ export const CourseDetailsPage: React.FC = () => {
           <CardTitle className="text-lg font-semibold flex justify-between items-center">
             <span>Seu Progresso</span>
             <span className="text-sm font-normal text-zinc-500">
-              {completedCount} de {totalCount} lições concluídas
+              {progressStats.completedCount} de {progressStats.totalCount} lições concluídas
             </span>
           </CardTitle>
         </CardHeader>
         <CardContent>
           <ProgressBar
-            progress={progressPercentage}
+            progress={progressStats.progressPercentage}
             variant="xp"
             height={10}
-            tooltipText={`${progressPercentage}% concluído`}
+            tooltipText={`${progressStats.progressPercentage}% concluído`}
           />
         </CardContent>
       </Card>

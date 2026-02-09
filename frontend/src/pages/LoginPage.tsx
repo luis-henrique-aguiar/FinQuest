@@ -1,67 +1,23 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Mail, Lock, ArrowRight, Eye, EyeOff, User } from 'react-feather';
-import { useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { toast } from 'sonner';
 import { motion } from 'framer-motion';
-import { useAuthStore } from '@/stores/auth-store';
-import { loginSchema, type LoginSchema } from '@/features/auth/schemas/auth-schema';
 import mascotImage from '../assets/images/fox.png';
 import { Input } from '@/components/ui/input';
-
 import { Label } from '@/components/ui/label';
+import { useLogin } from '@/features/auth/hooks/useLogin';
 
 const LoginPage: React.FC = () => {
-  const navigate = useNavigate();
-  const login = useAuthStore((state) => state.login);
-  const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-
   const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<LoginSchema>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: {
-      email: '',
-      password: '',
+    form: {
+      register,
+      formState: { errors },
     },
-  });
-
-  const onSubmit = async (data: LoginSchema) => {
-    setIsLoading(true);
-    try {
-      await login(data.email, data.password);
-      toast.success('Bem-vindo(a) de volta!');
-      navigate('/home');
-    } catch (error: any) {
-      console.error('Erro no login:', error);
-      let msg = 'Ocorreu um erro inesperado. Tente novamente.';
-
-      if (error?.code) {
-        switch (error.code) {
-          case 'auth/invalid-credential':
-          case 'auth/user-not-found':
-          case 'auth/wrong-password':
-            msg = 'Email ou senha incorretos.';
-            break;
-          case 'auth/invalid-email':
-            msg = 'O formato do email é inválido.';
-            break;
-          case 'auth/too-many-requests':
-            msg = 'Muitas tentativas. Aguarde alguns instantes.';
-            break;
-          default:
-            msg = 'Erro ao autenticar. Tente novamente.';
-        }
-      }
-      toast.error(msg);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    showPassword,
+    isLoading,
+    togglePasswordVisibility,
+    onSubmit,
+    navigate,
+  } = useLogin();
 
   const floatingAnimation = {
     y: [0, -20, 0],
@@ -166,7 +122,7 @@ const LoginPage: React.FC = () => {
             </div>
           </motion.div>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6">
+          <form onSubmit={onSubmit} className="flex flex-col gap-6">
             <div className="flex flex-col gap-2">
               <Label htmlFor="email">Email</Label>
               <div className="relative flex items-center">
@@ -199,7 +155,7 @@ const LoginPage: React.FC = () => {
                 />
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
+                  onClick={togglePasswordVisibility}
                   className="absolute right-4 text-zinc-400 hover:text-[#007acc] transition-colors bg-transparent border-none cursor-pointer flex items-center justify-center p-1 rounded-full focus:outline-none"
                 >
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
@@ -213,7 +169,11 @@ const LoginPage: React.FC = () => {
             </div>
 
             <div className="flex justify-end">
-              <button type="button" className="text-[#007acc] text-sm font-semibold bg-transparent border-none p-0 cursor-pointer hover:underline hover:opacity-80 transition-all">
+              <button
+                type="button"
+                onClick={() => navigate('/forgot-password')}
+                className="text-[#007acc] text-sm font-semibold bg-transparent border-none p-0 cursor-pointer hover:underline hover:opacity-80 transition-all"
+              >
                 Esqueceu a senha?
               </button>
             </div>

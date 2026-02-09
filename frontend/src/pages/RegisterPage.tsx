@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import {
   User,
   Mail,
@@ -9,88 +8,27 @@ import {
   Eye,
   EyeOff,
 } from 'react-feather';
-import { useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { toast } from 'sonner';
 import { motion } from 'framer-motion';
-import { useAuthStore } from '@/stores/auth-store';
-import { registerSchema, type RegisterSchema } from '@/features/auth/schemas/auth-schema';
 import mascotImage from '../assets/images/fox.png';
 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import { useRegister } from '@/features/auth/hooks/useRegister';
 
 const RegisterPage = () => {
-  const navigate = useNavigate();
-  const registerUser = useAuthStore((state) => state.register);
-  const [showPassword, setShowPassword] = useState(false);
-  const [passwordStrength, setPasswordStrength] = useState(0);
-
   const {
-    register,
-    handleSubmit,
-    watch,
-    formState: { errors, isSubmitting },
-  } = useForm<RegisterSchema>({
-    resolver: zodResolver(registerSchema),
-    defaultValues: {
-      name: '',
-      email: '',
-      password: '',
-      confirmPassword: '',
+    form: {
+      register,
+      formState: { errors, isSubmitting },
     },
-  });
-
-  const password = watch('password');
-
-  useEffect(() => {
-    if (password) {
-      calculatePasswordStrength(password);
-    } else {
-      setPasswordStrength(0);
-    }
-  }, [password]);
-
-  const calculatePasswordStrength = (pass: string) => {
-    let strength = 0;
-    if (pass.length >= 6) strength++;
-    if (pass.length >= 10) strength++;
-    if (/[a-z]/.test(pass) && /[A-Z]/.test(pass)) strength++;
-    if (/\d/.test(pass)) strength++;
-    if (/[^a-zA-Z0-9]/.test(pass)) strength++;
-    setPasswordStrength(Math.min(strength, 4));
-  };
-
-
-  const onSubmit = async (data: RegisterSchema) => {
-    try {
-      await registerUser(data.email, data.password, data.name);
-      toast.success('Conta criada com sucesso! Bem-vindo ao FinQuest.');
-      navigate('/home');
-    } catch (error: any) {
-      console.error('Erro no registro:', error);
-      let msg = 'Ocorreu um erro inesperado. Tente novamente.';
-
-      if (error?.code) {
-        switch (error.code) {
-          case 'auth/email-already-in-use':
-            msg = 'Este email já está sendo usado.';
-            break;
-          case 'auth/invalid-email':
-            msg = 'O formato do email é inválido.';
-            break;
-          case 'auth/weak-password':
-            msg = 'A senha é muito fraca.';
-            break;
-          default:
-            msg = 'Erro ao criar conta. Tente novamente.';
-        }
-      }
-      toast.error(msg);
-    }
-  };
+    showPassword,
+    passwordStrength,
+    password,
+    togglePasswordVisibility,
+    onSubmit,
+    navigate,
+  } = useRegister();
 
   const benefits = [
     {
@@ -217,7 +155,7 @@ const RegisterPage = () => {
             <p className="text-zinc-500 dark:text-zinc-400 text-lg">Preencha os dados abaixo para começar.</p>
           </div>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6">
+          <form onSubmit={onSubmit} className="flex flex-col gap-6">
             <div className="flex flex-col gap-2">
               <Label htmlFor="name">Nome Completo</Label>
               <div className="relative flex items-center">
@@ -269,7 +207,7 @@ const RegisterPage = () => {
                 />
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
+                  onClick={togglePasswordVisibility}
                   className="absolute right-4 text-zinc-400 hover:text-[#28a745] transition-colors bg-transparent border-none cursor-pointer flex items-center justify-center p-1 rounded-full focus:outline-none"
                 >
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}

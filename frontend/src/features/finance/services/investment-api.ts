@@ -8,6 +8,8 @@ export interface InvestmentOption {
     rate: number;
     risk: 'baixo' | 'medio' | 'alto';
     liquidity: 'diaria' | 'mensal' | 'vencimento';
+    recommended?: boolean;
+    category?: 'renda_fixa' | 'tesouro' | 'poupanca';
 }
 
 export interface RawMarketData {
@@ -111,6 +113,7 @@ function getFallbackRates(): InvestmentRatesResponse {
                 rate: selic * 0.7 + tr,
                 risk: 'baixo',
                 liquidity: 'diaria',
+                category: 'poupanca',
             },
             {
                 id: 'cdb_100',
@@ -119,6 +122,8 @@ function getFallbackRates(): InvestmentRatesResponse {
                 rate: cdi,
                 risk: 'baixo',
                 liquidity: 'vencimento',
+                recommended: true,
+                category: 'renda_fixa',
             },
             {
                 id: 'cdb_110',
@@ -127,6 +132,7 @@ function getFallbackRates(): InvestmentRatesResponse {
                 rate: cdi * 1.1,
                 risk: 'baixo',
                 liquidity: 'vencimento',
+                category: 'renda_fixa',
             },
             {
                 id: 'lci_lca',
@@ -135,6 +141,7 @@ function getFallbackRates(): InvestmentRatesResponse {
                 rate: cdi * 0.9,
                 risk: 'baixo',
                 liquidity: 'vencimento',
+                category: 'renda_fixa',
             },
             {
                 id: 'tesouro_selic',
@@ -143,6 +150,7 @@ function getFallbackRates(): InvestmentRatesResponse {
                 rate: selic,
                 risk: 'baixo',
                 liquidity: 'diaria',
+                category: 'tesouro',
             },
             {
                 id: 'tesouro_ipca',
@@ -151,6 +159,7 @@ function getFallbackRates(): InvestmentRatesResponse {
                 rate: ipca + 6.0,
                 risk: 'medio',
                 liquidity: 'vencimento',
+                category: 'tesouro',
             },
         ],
         rawData: {

@@ -6,9 +6,9 @@ import React, {
   useCallback,
 } from "react";
 import { AnimatePresence } from "framer-motion";
-import { LevelUpModal } from "../components/gamification/LevelUpModal";
-import { BadgeUnlockedModal } from "../components/gamification/BadgeUnlockedModal";
-import type { BadgeDTO } from "../services/lessonService";
+import { LevelUpModal } from "@/features/gamification/components/LevelUpModal";
+import { BadgeUnlockedModal } from "@/features/gamification/components/BadgeUnlockedModal";
+import type { BadgeDTO } from "@/features/course/services/lesson-api";
 
 interface GamificationContextType {
   isLevelUpModalOpen: boolean;

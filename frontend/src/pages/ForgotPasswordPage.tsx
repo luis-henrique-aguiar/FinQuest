@@ -1,49 +1,19 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React from 'react';
 import { Mail, ArrowLeft, AlertCircle } from 'react-feather';
-import { sendPasswordResetEmail } from 'firebase/auth';
-import { auth } from '../firebase';
-import { useToast } from '../hooks/useToast';
-import { InputGroup } from '../components/auth/InputGroup';
+import { InputGroup } from '@/features/auth/components/InputGroup';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
+import { useForgotPassword } from '@/features/auth/hooks/useForgotPassword';
 
 const ForgotPasswordPage: React.FC = () => {
-  const navigate = useNavigate();
-  const { addToast } = useToast();
-  const [email, setEmail] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const handleResetPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    if (!email) {
-      setError("Por favor, informe seu email.");
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      await sendPasswordResetEmail(auth, email);
-
-      addToast("Email de redefinição enviado! Verifique sua caixa de entrada.", "success");
-      navigate('/login');
-
-    } catch (error: any) {
-      console.error("Erro ao enviar email de redefinição:", error);
-      let errorMessage = "Ocorreu um erro. Tente novamente.";
-      if (error.code === 'auth/user-not-found') {
-        errorMessage = "Nenhuma conta encontrada com este email.";
-      } else if (error.code === 'auth/invalid-email') {
-        errorMessage = "O email informado é inválido.";
-      }
-      setError(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const {
+    email,
+    setEmail,
+    isLoading,
+    error,
+    handleResetPassword,
+    navigate,
+  } = useForgotPassword();
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-zinc-50 dark:bg-zinc-950">

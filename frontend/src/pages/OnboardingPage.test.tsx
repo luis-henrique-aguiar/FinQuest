@@ -1,10 +1,9 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
-import { ThemeProvider } from 'styled-components';
-import { lightTheme } from '../styles/theme';
+
 import OnboardingPage from './OnboardingPage';
-import { presentationSteps } from '../data/onboarding-steps-data';
+import { presentationSteps } from '@/features/onboarding/data/onboarding-steps-data';
 
 const mockedNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {
@@ -13,11 +12,9 @@ vi.mock('react-router-dom', async () => {
 });
 
 const Wrapper = ({ children }: { children: React.ReactNode }) => (
-  <BrowserRouter>
-    <ThemeProvider theme={lightTheme}>
-      {children}
-    </ThemeProvider>
-  </BrowserRouter>
+    <BrowserRouter>
+        {children}
+    </BrowserRouter>
 );
 
 describe('OnboardingPage Component', () => {
@@ -73,15 +70,15 @@ describe('OnboardingPage Component', () => {
 
         // Navega até o último slide
         for (let i = 0; i < presentationSteps.length - 1; i++) {
-             const currentTitle = presentationSteps[i].title;
-             const nextTitle = presentationSteps[i+1].title;
+            const currentTitle = presentationSteps[i].title;
+            const nextTitle = presentationSteps[i + 1].title;
 
-             const button = await screen.findByTestId("button-onboarding");
-             fireEvent.click(button);
-             await waitFor(() => {
-                 expect(screen.queryByText(currentTitle)).not.toBeInTheDocument();
-                 expect(screen.getByText(nextTitle)).toBeInTheDocument();
-             });
+            const button = await screen.findByTestId("button-onboarding");
+            fireEvent.click(button);
+            await waitFor(() => {
+                expect(screen.queryByText(currentTitle)).not.toBeInTheDocument();
+                expect(screen.getByText(nextTitle)).toBeInTheDocument();
+            });
         }
 
         // Clica no botão final
@@ -94,7 +91,7 @@ describe('OnboardingPage Component', () => {
         expect(mockedNavigate).toHaveBeenCalledWith('/register');
     });
 
-     it('deve navegar para o slide correto ao clicar em um dot', async () => {
+    it('deve navegar para o slide correto ao clicar em um dot', async () => {
         render(<OnboardingPage onComplete={mockOnComplete} />, { wrapper: Wrapper });
         const dots = screen.getAllByRole('button', { name: /Ir para o passo/i });
         const lastDotIndex = presentationSteps.length - 1;

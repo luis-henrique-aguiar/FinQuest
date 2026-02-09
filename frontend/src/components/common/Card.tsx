@@ -1,73 +1,15 @@
 import React from 'react';
-import styled, { css } from 'styled-components';
-import { motion } from 'framer-motion';
+import { motion, type HTMLMotionProps } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
-interface CardProps {
+interface CardProps extends Omit<HTMLMotionProps<"div">, "onAnimationStart" | "onDragStart" | "onDragEnd" | "onDrag"> {
   children: React.ReactNode;
   variant?: 'default' | 'elevated' | 'outlined';
   padding?: 'none' | 'small' | 'medium' | 'large';
-  onClick?: () => void;
   interactive?: boolean;
   className?: string;
+  onClick?: () => void;
 }
-
-const StyledCard = styled(motion.div)<{
-  variant: 'default' | 'elevated' | 'outlined';
-  padding: 'none' | 'small' | 'medium' | 'large';
-  interactive: boolean;
-}>`
-  background-color: ${({ theme }) => theme.colors.white};
-  border-radius: ${({ theme }) => theme.borderRadius.medium};
-  overflow: hidden;
-  
-  ${({ variant, theme }) =>
-    variant === 'default' &&
-    css`
-      box-shadow: ${theme.shadows.small};
-    `}
-  
-  ${({ variant, theme }) =>
-    variant === 'elevated' &&
-    css`
-      box-shadow: ${theme.shadows.medium};
-    `}
-  
-  ${({ variant, theme }) =>
-    variant === 'outlined' &&
-    css`
-      border: 1px solid ${theme.colors.textMedium}33;
-      box-shadow: none;
-    `}
-  
-  ${({ padding, theme }) =>
-    padding === 'small' &&
-    css`
-      padding: ${theme.spacing.sm};
-    `}
-  
-  ${({ padding, theme }) =>
-    padding === 'medium' &&
-    css`
-      padding: ${theme.spacing.md};
-    `}
-  
-  ${({ padding, theme }) =>
-    padding === 'large' &&
-    css`
-      padding: ${theme.spacing.lg};
-    `}
-  
-  ${({ interactive }) =>
-    interactive &&
-    css`
-      cursor: pointer;
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
-      
-      &:hover {
-        transform: translateY(-4px);
-      }
-    `}
-`;
 
 export const Card: React.FC<CardProps> = ({
   children,
@@ -76,18 +18,36 @@ export const Card: React.FC<CardProps> = ({
   onClick,
   interactive = !!onClick,
   className,
+  ...props
 }) => {
+  const baseStyles = "bg-white dark:bg-zinc-900 rounded-2xl overflow-hidden transition-all duration-200 border-zinc-200 dark:border-zinc-800";
+
+  const variants = {
+    default: "shadow-sm border",
+    elevated: "shadow-md border",
+    outlined: "border border-zinc-200 dark:border-zinc-800 shadow-none",
+  };
+
+  const paddings = {
+    none: "p-0",
+    small: "p-3",
+    medium: "p-5",
+    large: "p-8",
+  };
+
+  const interactiveStyles = interactive
+    ? "cursor-pointer hover:-translate-y-1 hover:shadow-md active:scale-[0.99]"
+    : "";
+
   return (
-    <StyledCard
-      variant={variant}
-      padding={padding}
-      interactive={interactive}
+    <motion.div
+      className={cn(baseStyles, variants[variant], paddings[padding], interactiveStyles, className)}
       onClick={onClick}
-      className={className}
       whileTap={interactive ? { scale: 0.98 } : undefined}
+      {...props}
     >
       {children}
-    </StyledCard>
+    </motion.div>
   );
 };
 

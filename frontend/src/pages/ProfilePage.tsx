@@ -1,36 +1,35 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Lock, Award } from 'react-feather';
 import { toast } from 'sonner';
-import { useAuth } from '../hooks/useAuth';
-import {
-  useCurrentUserProfile,
-  useUpdateAvatar,
-  useUpdateProfile,
-  useUpdateEmail,
-} from '@/features/profile/hooks/useProfile';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import FinPoints from '../components/gamification/FinPoints';
-import ProgressBar from '../components/gamification/ProgressBar';
-import { AvatarEditor } from '../components/profile/AvatarEditor';
-import { EditableField } from '../components/profile/EditableField';
-import { PasswordChangeModal } from '../components/profile/PasswordChangeModal';
-import {
-  calculateLevelProgress,
-  getFinPointsForLevel,
-} from '../utils/levelingSystem';
-import { deleteImageByUrl, uploadProfileImageWithCompression } from '../services/storageService';
+import FinPoints from '@/features/gamification/components/FinPoints';
+import ProgressBar from '@/features/gamification/components/ProgressBar';
+import { AvatarEditor } from '@/features/profile/components/AvatarEditor';
+import { EditableField } from '@/features/profile/components/EditableField';
+import { PasswordChangeModal } from '@/features/profile/components/PasswordChangeModal';
+import { useProfileLogic } from '@/features/profile/hooks/useProfileLogic';
 
 /**
- * ProfilePage - Refactored with TanStack Query & Tailwind CSS
+ * ProfilePage - Refactored with Container/Presenter Pattern
  */
 export const ProfilePage: React.FC = () => {
-  const { user, logout } = useAuth();
-  const { isLoading, error } = useCurrentUserProfile();
-  const updateAvatar = useUpdateAvatar();
-  const updateProfile = useUpdateProfile();
-  const updateEmail = useUpdateEmail();
-  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const {
+    user,
+    isLoading,
+    error,
+    isPasswordModalOpen,
+    setIsPasswordModalOpen,
+    recentAchievements,
+    hasAchievements,
+    progressPercent,
+    tooltipMessage,
+    logout,
+    formatRegistrationDate,
+    handleSaveAvatar,
+    handleSaveName,
+    handleSaveEmail,
+  } = useProfileLogic();
 
   // Show loading state
   if (isLoading || !user) {
@@ -42,100 +41,6 @@ export const ProfilePage: React.FC = () => {
     toast.error('Erro ao carregar perfil');
     return <div className="p-8 text-center text-red-500">Erro ao carregar perfil. Tente novamente.</div>;
   }
-
-  const allAchievements = user.unlockedAchievements || [];
-  const recentAchievements = allAchievements.slice(-3).reverse();
-  const hasAchievements = allAchievements.length > 0;
-
-  const progressPercent = calculateLevelProgress(user.totalFinPoints);
-  const finPointsForNextLevel = getFinPointsForLevel(user.level + 1);
-  const tooltipMessage = `${user.totalFinPoints.toLocaleString()} / ${finPointsForNextLevel.toLocaleString()} FinPoints`;
-
-  const formatRegistrationDate = (dateString: string | undefined): string => {
-    if (!dateString) return 'N/A';
-
-    try {
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) return 'Data inválida';
-      return date.toLocaleDateString('pt-BR', {
-        month: 'long',
-        year: 'numeric',
-      });
-    } catch (error) {
-      return 'N/A';
-    }
-  };
-
-  /**
-   * Handle avatar save
-   */
-  const handleSaveAvatar = async (newAvatarUrl: string, file?: File) => {
-    try {
-      let finalAvatarUrl = newAvatarUrl;
-
-      // Upload to Firebase Storage if file provided
-      if (file) {
-        finalAvatarUrl = await uploadProfileImageWithCompression(
-          user.uid,
-          file,
-          user.avatarUrl || undefined
-        );
-      }
-      // Delete old Firebase image if switching to external URL
-      else if (user.avatarUrl && user.avatarUrl.includes('firebasestorage')) {
-        await deleteImageByUrl(user.avatarUrl);
-      }
-
-      // Use TanStack Query mutation
-      updateAvatar.mutate(finalAvatarUrl);
-    } catch (error: any) {
-      if (error.message?.includes('5MB')) {
-        toast.error('A imagem deve ter no máximo 5MB');
-      } else {
-        toast.error('Erro ao atualizar foto de perfil. Tente novamente.');
-      }
-      throw error;
-    }
-  };
-
-  /**
-   * Handle name update
-   */
-  const handleSaveName = async (newName: string) => {
-    const nameTrimmed = newName.trim();
-    if (nameTrimmed === user!.name) return;
-
-    try {
-      await updateProfile.mutateAsync({ name: nameTrimmed });
-    } catch (error) {
-      throw error;
-    }
-  };
-
-  /**
-   * Handle email update
-   */
-  const handleSaveEmail = async (newEmail: string) => {
-    const emailTrimmed = newEmail.trim();
-    if (emailTrimmed === user!.email) return;
-
-    try {
-      await updateEmail.mutateAsync(emailTrimmed);
-      await logout();
-      toast.success(
-        'E-mail atualizado com sucesso! Por segurança, você foi desconectado e deve fazer login novamente com seu novo e-mail.'
-      );
-    } catch (error: any) {
-      let errorMessage = 'Erro ao atualizar email. Tente novamente.';
-      if (error?.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error?.response?.data?.details) {
-        errorMessage = error.response.data.details[0];
-      }
-      toast.error(errorMessage);
-      throw error;
-    }
-  };
 
   return (
     <div className="max-w-4xl mx-auto flex flex-col gap-6 p-4">
